@@ -1,0 +1,6 @@
+<Project>
+  <ItemGroup Label="Packages">
+  </ItemGroup>
+
+  <Import Project="Directory.Packages.template.props" />
+</Project>
