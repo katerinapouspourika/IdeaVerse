@@ -4,6 +4,6 @@
   </ImportGroup>
 
   <PropertyGroup Label="Package">
-    <PackageProjectUrl>http://localhost</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/katerinapouspourika/IdeaVerse</PackageProjectUrl>
   </PropertyGroup>
 </Project>
