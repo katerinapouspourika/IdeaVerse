@@ -10,6 +10,7 @@
     <NoLogo>true</NoLogo>
     <!-- Prepend organization name to default namespace -->
     <RootNamespace>Pouspourika.$(MSBuildProjectName)</RootNamespace>
+    <AssemblyName>Pouspourika.$(MSBuildProjectName)</AssemblyName>    
     <!-- Enable global usings based on project type -->
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- Generate documentation file and ignore warnings for undocumented elements -->
@@ -49,8 +50,13 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <!-- Defaults to checked context for math operations, throws OverflowException when needed -->
-    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <!-- Defaults to unchecked context for math operations for performance -->
+    <!-- set to true to throws OverflowException when needed -->
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+  </PropertyGroup>
+
+  <PropertyGroup Label="OpenApi Source Generated Interceptors">
+    <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(ArtifactsPath) == '' AND $(DisableCustomArtifactsPath) != 'true'">
@@ -74,20 +80,12 @@
   </PropertyGroup>
 
   <PropertyGroup Label="Project Assets">
-    <ProjectIcon Condition="Exists('$(MSBuildThisFileDirectory)\icon.png')">
-      $(MSBuildThisFileDirectory)icon.png
-    </ProjectIcon>
-    <ProjectIcon Condition="Exists('$(MSBuildProjectDirectory)\icon.png')">
-      $(MSBuildProjectDirectory)icon.png
-    </ProjectIcon>
+    <ProjectIcon Condition="Exists('$(MSBuildThisFileDirectory)icon.png')">$(MSBuildThisFileDirectory)icon.png</ProjectIcon>
+    <ProjectIcon Condition="Exists('$(MSBuildProjectDirectory)\icon.png')">$(MSBuildProjectDirectory)\icon.png</ProjectIcon>
     <ProjectIconExists Condition="$(ProjectIcon) != ''">true</ProjectIconExists>
 
-    <ProjectReadMe Condition="Exists('$(MSBuildThisFileDirectory)\README.md')">
-      $(MSBuildThisFileDirectory)README.md
-    </ProjectReadMe>
-    <ProjectReadMe Condition="Exists('$(MSBuildProjectDirectory)\README.md')">
-      $(MSBuildProjectDirectory)README.md
-    </ProjectReadMe>
+    <ProjectReadMe Condition="Exists('$(MSBuildThisFileDirectory)README.md')">$(MSBuildThisFileDirectory)README.md</ProjectReadMe>
+    <ProjectReadMe Condition="Exists('$(MSBuildProjectDirectory)\README.md')">$(MSBuildProjectDirectory)\README.md</ProjectReadMe>
     <ProjectReadMeExists Condition="$(ProjectReadMe) != ''">true</ProjectReadMeExists>
   </PropertyGroup>
 
@@ -122,11 +120,6 @@
     <EFOptimizeContext>true</EFOptimizeContext>
   </PropertyGroup>
 
-  <!-- Mark assemblies as CLS compliant so the compiler warns on non compliant usage -->
-  <PropertyGroup Condition="$(IsPackable) == 'true'">
-    <ClsCompliant>true</ClsCompliant>
-    <GenerateSBOM>true</GenerateSBOM>
-  </PropertyGroup>
   <ItemGroup>
     <AssemblyAttribute Include="System.CLSCompliant">
       <_Parameter1>$(ClsCompliant)</_Parameter1>
@@ -154,13 +147,6 @@
       CopyToOutputDirectory="Never" Visible="false" />
   </ItemGroup>
 
-  <!-- Project internals are exposed to projects named $(Project).Tests by default -->
-  <ItemGroup
-    Condition="@(InternalsVisibleToSuffix->Count()) == 0 AND @(InternalsVisibleTo->Count()) == 0">
-    <InternalsVisibleToSuffix Include=".Tests" />
-    <InternalsVisibleToSuffix Include="Tests" />
-  </ItemGroup>
-
   <PropertyGroup Label="Package">
     <PackageId>$(RootNamespace)</PackageId>
     <Company>Katerina Pouspourika</Company>
@@ -178,7 +164,7 @@
     <EnablePackageValidation>true</EnablePackageValidation>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
   <ItemGroup Label="Versioning" Condition="'$(IsTestProject)' != 'true'">
