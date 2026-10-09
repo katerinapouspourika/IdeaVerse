@@ -6,9 +6,13 @@ IdeaVerse uses Claude-powered agents to generate, critique, and refine ideas. Th
 
 ## Layout
 
+- `src/IdeaVerse.Api/` — the web API (ASP.NET Minimal APIs, EF Core on PostgreSQL, ASP.NET Core Identity with cookie login). See its `README.md`.
 - `src/IdeaVerse.Agents/` — the ideation agents (generator, critic, refiner) and `IdeationPipeline`, built on the Anthropic C# SDK. See its `README.md`.
+- `tests/IdeaVerse.Api.Tests/` — integration tests that host the API in memory (`IdeaVerseApiFactory`) against SQLite and a `FakeTimeProvider`.
 - `tests/IdeaVerse.Agents.Tests/` — TUnit + NSubstitute tests. Agents talk to the model through `IStructuredModelClient`, so tests never call the API.
 - `samples/IdeaVerse.Agents.Sample/` — console app that runs the pipeline end to end (needs `ANTHROPIC_API_KEY`).
+
+`compose.yaml` runs PostgreSQL and the API locally (`docker compose up --build`).
 
 ## Build & test
 
@@ -52,6 +56,10 @@ Commit messages follow `.github/copilot-commit-message-instructions.md`.
 - Add a new agent by giving it a system prompt, an output schema, and a call to `IStructuredModelClient.CompleteAsync<T>`; follow `IdeaRefinerAgent` as the smallest example.
 
 ## Review & testing notes
+
+- API endpoints return another user's idea as 404, never 403. New endpoints must keep that ownership scoping in `IdeaService`.
+- Schema changes need an EF Core migration (`ef-migration` skill; `dotnet tool restore` provides `dotnet ef`). Migrations must apply on PostgreSQL; the SQLite test database is created from the model and does not exercise them.
+- API tests keep the fake clock on today's real date, because the test client drops login cookies already expired by the real clock.
 
 - In `src/IdeaVerse.Agents/`, check that stop reasons are handled before content is read, that output schemas match their C# records (snake_case, `additionalProperties: false`, every property required), and that no API key is hard-coded.
 - Agent tests substitute `IStructuredModelClient` and assert on the `StructuredPrompt` it receives; reuse `TestData` in the test project.

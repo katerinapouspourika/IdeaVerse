@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <!-- Tests address endpoints by relative route strings. -->
+    <NoWarn>$(NoWarn);CA2234</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="System.Net.Http.Json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="TUnit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\IdeaVerse.Api\IdeaVerse.Api.csproj" />
+  </ItemGroup>
+
+</Project>

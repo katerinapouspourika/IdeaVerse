@@ -7,6 +7,8 @@
   <Folder Name="/Configuration/">
     <File Path=".editorconfig" />
     <File Path="CLAUDE.md" />
+    <File Path="compose.yaml" />
+    <File Path=".config/dotnet-tools.json" />
     <File Path=".gitignore" />
     <File Path=".globalconfig" />
     <File Path=".runsettings" />
@@ -24,9 +26,11 @@
   <Folder Name="/src/">
     <File Path="src\Directory.Build.props" />
     <Project Path="src\IdeaVerse.Agents\IdeaVerse.Agents.csproj" />
+    <Project Path="src\IdeaVerse.Api\IdeaVerse.Api.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <File Path="tests\Directory.Build.props" />
     <Project Path="tests\IdeaVerse.Agents.Tests\IdeaVerse.Agents.Tests.csproj" />
+    <Project Path="tests\IdeaVerse.Api.Tests\IdeaVerse.Api.Tests.csproj" />
   </Folder>
 </Solution>
