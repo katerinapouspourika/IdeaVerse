@@ -57,7 +57,7 @@ Commit messages follow `.github/copilot-commit-message-instructions.md`.
 
 ## Review & testing notes
 
-- API endpoints return an inaccessible idea (and anything under it) as 404, never 403. Every query for ideas must go through `IdeaAccess.AccessibleIdeas`, the single access rule, so widening access (team members) changes one place.
+- Access to ideas lives in `IdeaAccess`: `AccessibleIdeas` (owner or team member) for viewing and editing, `OwnedIdeas` for owner-only actions (delete the idea, manage members). Every idea query must go through one of them. An idea the user cannot access, and anything under it, returns 404; an accessible idea whose action the user's role forbids returns 403.
 - Schema changes need an EF Core migration (`ef-migration` skill; `dotnet tool restore` provides `dotnet ef`). Migrations must apply on PostgreSQL; the SQLite test database is created from the model and does not exercise them.
 - API tests keep the fake clock on today's real date, because the test client drops login cookies already expired by the real clock.
 

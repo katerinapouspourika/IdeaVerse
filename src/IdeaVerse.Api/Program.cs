@@ -6,6 +6,7 @@ using Pouspourika.IdeaVerse.Api.Auth;
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Ideas;
+using Pouspourika.IdeaVerse.Api.Members;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +28,7 @@ builder.Services.ConfigureApplicationCookie(o =>
 
 builder.Services.AddScoped<IdeaService>();
 builder.Services.AddScoped<ComponentService>();
+builder.Services.AddScoped<MemberService>();
 
 var app = builder.Build();
 
@@ -44,6 +46,7 @@ app.UseAuthorization();
 app.MapAuthEndpoints();
 app.MapIdeaEndpoints();
 app.MapComponentEndpoints();
+app.MapMemberEndpoints();
 
 await app.MigrateDatabaseIfEnabledAsync();
 await app.RunAsync();
