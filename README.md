@@ -6,7 +6,7 @@ A starting point for new .NET projects, based on opinionated rules.
 
 1. In order to be able to update your repository with the latest changes, you can use the following command **after creating** your repo:
    ```bash
-   git remote add template https://github.com/kritikos-io/templates-dotnet
+   git remote add template https://github.com/katerinapouspourika/templates-dotnet-private
    git fetch --all
    git merge template/main --allow-unrelated-histories
    ```
@@ -20,6 +20,15 @@ A starting point for new .NET projects, based on opinionated rules.
    1. Solution.sln.DotSettings
    1. Solution.code-workspace
 
+## Updating this template from upstream
+
+This is a private copy of [kritikos-io/templates-dotnet](https://github.com/kritikos-io/templates-dotnet). To bring in upstream changes, run this in the template repository (not in projects created from it):
+
+```bash
+git remote add upstream https://github.com/kritikos-io/templates-dotnet
+git pull upstream main
+```
+
 ## Features
 
 Apart from a robust configuration, this template specifically includes:
@@ -28,6 +37,7 @@ Apart from a robust configuration, this template specifically includes:
 - Artifacts layout, to avoid bin/obj folders all over the place. These are placed in the `artifacts` folder at the solution level, and are further organized by project and configuration. Can also be overridden either at the project level or by a Directory.Build.props above the repository root to redirect them to a different location.
 - Central package management, to avoid version conflicts and make it easier to update dependencies.
 - Additional targets that enable change log generated from git history, and SBOM generation.
+- Claude Code setup: `CLAUDE.md`, the `.github` skills exposed under `.claude/skills`, `dotnet-reviewer` and `test-writer` subagents, and a SessionStart hook that installs the .NET SDK in cloud sessions. Fill in the project description at the top of `CLAUDE.md`.
 
 ## Docker
 

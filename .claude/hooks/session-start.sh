@@ -22,4 +22,7 @@ fi
 echo 'export DOTNET_CLI_TELEMETRY_OPTOUT=1' >> "$CLAUDE_ENV_FILE"
 echo 'export DOTNET_NOLOGO=1' >> "$CLAUDE_ENV_FILE"
 
-dotnet restore IdeaVerse.slnx --verbosity quiet
+solution=$(find . -maxdepth 1 -name '*.slnx' | head -n 1)
+if [ -n "$solution" ]; then
+  dotnet restore "$solution" --verbosity quiet
+fi
