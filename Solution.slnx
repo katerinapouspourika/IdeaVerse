@@ -6,6 +6,7 @@
   </Folder>
   <Folder Name="/Configuration/">
     <File Path=".editorconfig" />
+    <File Path="CLAUDE.md" />
     <File Path=".gitignore" />
     <File Path=".globalconfig" />
     <File Path=".runsettings" />
