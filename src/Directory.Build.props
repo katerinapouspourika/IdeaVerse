@@ -52,12 +52,12 @@
     <ItemGroup>
       <_GitVersionScopePath>
         <EscapedPath>$([MSBuild]::EnsureTrailingSlash($([MSBuild]::MakeRelative('$(MSBuildThisFileDirectory)..\',
-          '%(Identity)'))).Replace('\', '/').Replace('.', '\.').Replace('/', '\/'))</EscapedPath>
+          '%(Identity)'))).Replace('\', '/').Replace('.', '[.]'))</EscapedPath>
       </_GitVersionScopePath>
     </ItemGroup>
     <PropertyGroup>
       <_GitVersionIgnorePattern>^(?!@(_GitVersionScopePath->'%(EscapedPath)',
-        '|')|Directory\.Packages\.props|GitVersion\.yml).*</_GitVersionIgnorePattern>
+        '|')|Directory[.]Packages[.]props|GitVersion[.]yml).*</_GitVersionIgnorePattern>
       <_GitVersionTemplateContent>$([System.IO.File]::ReadAllText('$(GitVersionTemplateFile)'))</_GitVersionTemplateContent>
       <_GitVersionRenderedContent>$([System.Text.RegularExpressions.Regex]::Replace('$(_GitVersionTemplateContent)',
         '$(_GitVersionIgnorePathsRegex)', '$1$(_GitVersionIgnorePattern)'))</_GitVersionRenderedContent>
