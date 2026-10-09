@@ -21,6 +21,11 @@ dotnet format IdeaVerse.slnx --verify-no-changes
 - GitVersion scopes each project's version to the commits that touch it (see `src/Directory.Build.props`), so a new project fails the build with "No commits found on the current branch" until it has a commit. Commit it first, or pass `-p:DisableGitVersionTask=true` while iterating.
 - GitVersion also fails on shallow clones; run `git fetch --unshallow`. The SessionStart hook in `.claude/hooks/session-start.sh` does this (and installs the .NET 10 SDK) in Claude Code cloud sessions.
 
+## Branching
+
+- `main` holds released, stable code. `dev` is the integration branch.
+- Start every change on a new branch from `dev`, and open its pull request against `dev`. Never commit to or open pull requests against `main` directly; `dev` is merged into `main` once it is verified.
+
 ## Scoped conventions
 
 Read the matching file in `.github/instructions/` before editing these paths. They are the source of truth; do not restate them elsewhere.
