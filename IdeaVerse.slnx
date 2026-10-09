@@ -6,6 +6,7 @@
   </Folder>
   <Folder Name="/Configuration/">
     <File Path=".editorconfig" />
+    <File Path="CLAUDE.md" />
     <File Path=".gitignore" />
     <File Path=".globalconfig" />
     <File Path=".runsettings" />
@@ -18,11 +19,14 @@
   </Folder>
   <Folder Name="/samples/">
     <File Path="samples\Directory.Build.props" />
+    <Project Path="samples\IdeaVerse.Agents.Sample\IdeaVerse.Agents.Sample.csproj" />
   </Folder>
   <Folder Name="/src/">
     <File Path="src\Directory.Build.props" />
+    <Project Path="src\IdeaVerse.Agents\IdeaVerse.Agents.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <File Path="tests\Directory.Build.props" />
+    <Project Path="tests\IdeaVerse.Agents.Tests\IdeaVerse.Agents.Tests.csproj" />
   </Folder>
 </Solution>
