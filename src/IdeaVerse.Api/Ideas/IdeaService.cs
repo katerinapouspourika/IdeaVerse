@@ -8,7 +8,7 @@ using Pouspourika.IdeaVerse.Api.Data;
 /// Creates, reads, and changes ideas on behalf of their owner.
 /// </summary>
 /// <remarks>
-/// Every operation is scoped to the owner, so another user's idea behaves exactly like a missing one.
+/// Every operation goes through <see cref="IdeaAccess.AccessibleIdeas"/>, so an idea the user cannot access behaves exactly like a missing one.
 /// </remarks>
 /// <param name="context">The database context.</param>
 /// <param name="timeProvider">Clock used for timestamps and date rules.</param>
@@ -26,9 +26,9 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
   /// <param name="status">Optional status to filter by.</param>
   /// <param name="cancellationToken">Token to cancel the query.</param>
   /// <returns>The ideas.</returns>
-  public async Task<IReadOnlyList<Idea>> ListAsync(string ownerId, IdeaStatus? status, CancellationToken cancellationToken)
+  public async Task<IReadOnlyList<IdeaResponse>> ListAsync(string ownerId, IdeaStatus? status, CancellationToken cancellationToken)
   {
-    var query = context.Ideas.AsNoTracking().Where(i => i.OwnerId == ownerId);
+    var query = context.AccessibleIdeas(ownerId);
     if (status is { } filter)
     {
       query = query.Where(i => i.Status == filter);
@@ -37,6 +37,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
     return await query
       .OrderBy(i => i.TargetDate)
       .ThenBy(i => i.Title)
+      .Select(IdeaResponse.Projection(Today))
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
   }
@@ -47,9 +48,12 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
   /// <param name="ownerId">The owner's user identifier.</param>
   /// <param name="id">The idea identifier.</param>
   /// <param name="cancellationToken">Token to cancel the query.</param>
-  /// <returns>The idea, or <see langword="null"/> when the owner has no such idea.</returns>
-  public Task<Idea?> GetAsync(string ownerId, Guid id, CancellationToken cancellationToken)
-    => context.Ideas.FirstOrDefaultAsync(i => i.Id == id && i.OwnerId == ownerId, cancellationToken);
+  /// <returns>The idea, or <see langword="null"/> when the user cannot access such an idea.</returns>
+  public Task<IdeaResponse?> GetAsync(string ownerId, Guid id, CancellationToken cancellationToken)
+    => context.AccessibleIdeas(ownerId)
+      .Where(i => i.Id == id)
+      .Select(IdeaResponse.Projection(Today))
+      .FirstOrDefaultAsync(cancellationToken);
 
   /// <summary>
   /// Creates an idea in the <see cref="IdeaStatus.Planned"/> status.
@@ -58,7 +62,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
   /// <param name="request">The validated request.</param>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
   /// <returns>The created idea.</returns>
-  public async Task<Idea> CreateAsync(string ownerId, CreateIdeaRequest request, CancellationToken cancellationToken)
+  public async Task<IdeaResponse> CreateAsync(string ownerId, CreateIdeaRequest request, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(request);
 
@@ -75,7 +79,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
 
     context.Ideas.Add(idea);
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-    return idea;
+    return await ProjectAsync(idea.Id, cancellationToken).ConfigureAwait(false);
   }
 
   /// <summary>
@@ -90,7 +94,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
   {
     ArgumentNullException.ThrowIfNull(request);
 
-    var idea = await GetAsync(ownerId, id, cancellationToken).ConfigureAwait(false);
+    var idea = await FindAsync(ownerId, id, cancellationToken).ConfigureAwait(false);
     if (idea is null)
     {
       return IdeaChangeResult.NotFound();
@@ -120,7 +124,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
   {
     ArgumentNullException.ThrowIfNull(request);
 
-    var idea = await GetAsync(ownerId, id, cancellationToken).ConfigureAwait(false);
+    var idea = await FindAsync(ownerId, id, cancellationToken).ConfigureAwait(false);
     if (idea is null)
     {
       return IdeaChangeResult.NotFound();
@@ -151,8 +155,8 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
   /// <returns><see langword="true"/> when the idea existed and was deleted.</returns>
   public async Task<bool> DeleteAsync(string ownerId, Guid id, CancellationToken cancellationToken)
   {
-    var deleted = await context.Ideas
-      .Where(i => i.Id == id && i.OwnerId == ownerId)
+    var deleted = await context.AccessibleIdeas(ownerId)
+      .Where(i => i.Id == id)
       .ExecuteDeleteAsync(cancellationToken)
       .ConfigureAwait(false);
     return deleted > 0;
@@ -167,6 +171,28 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
     => string.IsNullOrWhiteSpace(description) ? null : description.Trim();
 
   /// <summary>
+  /// Loads a tracked idea the user can access, for changing it.
+  /// </summary>
+  /// <param name="ownerId">The owner's user identifier.</param>
+  /// <param name="id">The idea identifier.</param>
+  /// <param name="cancellationToken">Token to cancel the query.</param>
+  /// <returns>The idea, or <see langword="null"/>.</returns>
+  private Task<Idea?> FindAsync(string ownerId, Guid id, CancellationToken cancellationToken)
+    => context.AccessibleIdeas(ownerId).FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
+
+  /// <summary>
+  /// Reads an idea's response, including component counts, by identifier.
+  /// </summary>
+  /// <param name="id">The idea identifier; the caller has already checked access.</param>
+  /// <param name="cancellationToken">Token to cancel the query.</param>
+  /// <returns>The idea's response.</returns>
+  private Task<IdeaResponse> ProjectAsync(Guid id, CancellationToken cancellationToken)
+    => context.Ideas
+      .Where(i => i.Id == id)
+      .Select(IdeaResponse.Projection(Today))
+      .SingleAsync(cancellationToken);
+
+  /// <summary>
   /// Stamps <see cref="Idea.UpdatedAt"/> and saves a changed idea.
   /// </summary>
   /// <param name="idea">The changed, tracked idea.</param>
@@ -176,6 +202,6 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
   {
     idea.UpdatedAt = timeProvider.GetUtcNow();
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-    return IdeaChangeResult.Changed(idea);
+    return IdeaChangeResult.Changed(await ProjectAsync(idea.Id, cancellationToken).ConfigureAwait(false));
   }
 }

@@ -1,5 +1,6 @@
 namespace Pouspourika.IdeaVerse.Api.Ideas;
 
+using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Data;
 
 /// <summary>
@@ -58,6 +59,11 @@ public sealed class Idea
   public int PostponeCount { get; set; }
 
   /// <summary>
+  /// Gets the things the idea needs before it can be implemented.
+  /// </summary>
+  public ICollection<Component> Components { get; init; } = [];
+
+  /// <summary>
   /// Gets when the idea was created.
   /// </summary>
   public DateTimeOffset CreatedAt { get; init; }
@@ -66,11 +72,4 @@ public sealed class Idea
   /// Gets or sets when the idea was last changed.
   /// </summary>
   public DateTimeOffset UpdatedAt { get; set; }
-
-  /// <summary>
-  /// Returns whether the target date has passed without the idea being done.
-  /// </summary>
-  /// <param name="today">The current date.</param>
-  /// <returns><see langword="true"/> when the idea is overdue.</returns>
-  public bool IsOverdue(DateOnly today) => Status != IdeaStatus.Done && TargetDate < today;
 }
