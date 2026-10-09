@@ -53,8 +53,7 @@ internal static class IdeaEndpoints
     CancellationToken cancellationToken)
   {
     var ideas = await service.ListAsync(user.GetUserId(), status, cancellationToken).ConfigureAwait(false);
-    var today = service.Today;
-    return TypedResults.Ok(ideas.Select(i => IdeaResponse.From(i, today)).ToArray());
+    return TypedResults.Ok(ideas.ToArray());
   }
 
   /// <summary>
@@ -72,7 +71,7 @@ internal static class IdeaEndpoints
     CancellationToken cancellationToken)
   {
     var idea = await service.GetAsync(user.GetUserId(), id, cancellationToken).ConfigureAwait(false);
-    return idea is null ? TypedResults.NotFound() : TypedResults.Ok(IdeaResponse.From(idea, service.Today));
+    return idea is null ? TypedResults.NotFound() : TypedResults.Ok(idea);
   }
 
   /// <summary>
@@ -90,7 +89,7 @@ internal static class IdeaEndpoints
     CancellationToken cancellationToken)
   {
     var idea = await service.CreateAsync(user.GetUserId(), request, cancellationToken).ConfigureAwait(false);
-    return TypedResults.CreatedAtRoute(IdeaResponse.From(idea, service.Today), GetIdeaRouteName, new { id = idea.Id });
+    return TypedResults.CreatedAtRoute(idea, GetIdeaRouteName, new { id = idea.Id });
   }
 
   /// <summary>
@@ -110,7 +109,7 @@ internal static class IdeaEndpoints
     CancellationToken cancellationToken)
   {
     var result = await service.UpdateAsync(user.GetUserId(), id, request, cancellationToken).ConfigureAwait(false);
-    return ToHttpResult(result, service.Today);
+    return ToHttpResult(result);
   }
 
   /// <summary>
@@ -130,7 +129,7 @@ internal static class IdeaEndpoints
     CancellationToken cancellationToken)
   {
     var result = await service.PostponeAsync(user.GetUserId(), id, request, cancellationToken).ConfigureAwait(false);
-    return ToHttpResult(result, service.Today);
+    return ToHttpResult(result);
   }
 
   /// <summary>
@@ -154,12 +153,11 @@ internal static class IdeaEndpoints
   /// Maps an <see cref="IdeaChangeResult"/> to its HTTP response.
   /// </summary>
   /// <param name="result">The service result.</param>
-  /// <param name="today">The current date, for the response's overdue flag.</param>
   /// <returns>The HTTP result.</returns>
-  private static Results<Ok<IdeaResponse>, NotFound, ValidationProblem, ProblemHttpResult> ToHttpResult(IdeaChangeResult result, DateOnly today)
+  private static Results<Ok<IdeaResponse>, NotFound, ValidationProblem, ProblemHttpResult> ToHttpResult(IdeaChangeResult result)
     => result.Outcome switch
     {
-      IdeaChangeOutcome.Changed => TypedResults.Ok(IdeaResponse.From(result.Idea!, today)),
+      IdeaChangeOutcome.Changed => TypedResults.Ok(result.Idea!),
       IdeaChangeOutcome.NotFound => TypedResults.NotFound(),
       IdeaChangeOutcome.Invalid => TypedResults.ValidationProblem(new Dictionary<string, string[]>(StringComparer.Ordinal)
       {

@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
 using Pouspourika.IdeaVerse.Api.Auth;
+using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Ideas;
 
@@ -25,6 +26,7 @@ builder.Services.ConfigureApplicationCookie(o =>
 });
 
 builder.Services.AddScoped<IdeaService>();
+builder.Services.AddScoped<ComponentService>();
 
 var app = builder.Build();
 
@@ -41,6 +43,7 @@ app.UseAuthorization();
 
 app.MapAuthEndpoints();
 app.MapIdeaEndpoints();
+app.MapComponentEndpoints();
 
 await app.MigrateDatabaseIfEnabledAsync();
 await app.RunAsync();

@@ -1,6 +1,6 @@
 # IdeaVerse.Api
 
-Web API for planning ideas: each idea has a target implementation date, a status, and an owner.
+Web API for planning ideas: each idea has a target implementation date, a status, an owner, and the components it needs.
 
 ## Getting Started
 
@@ -35,7 +35,16 @@ The OpenAPI document is served at `/openapi/v1.json` in Development.
 | `POST` | `/api/v1/ideas/{id}/postpone` | Move to a later date, mark `Postponed`, and count the postponement. Completed ideas cannot be postponed. |
 | `DELETE` | `/api/v1/ideas/{id}` | Delete an idea. |
 
-Statuses are `Planned`, `InProgress`, `Postponed`, and `Done`. Responses include `isOverdue`: the target date has passed and the idea is not done.
+Statuses are `Planned`, `InProgress`, `Postponed`, and `Done`. Responses include `isOverdue` (the target date has passed and the idea is not done) and component progress as `componentCount` and `completedComponentCount`.
+
+- **Components** — the things an idea needs before it can be implemented (a budget, a designer, a venue), under `/api/v1/ideas/{ideaId}/components`. Each has a title, optional notes, a done flag with the time it was completed, and a position. Deleting an idea deletes its components.
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/v1/ideas/{ideaId}/components` | List an idea's components in order. |
+| `POST` | `/api/v1/ideas/{ideaId}/components` | Add a component to the end of the list. |
+| `PUT` | `/api/v1/ideas/{ideaId}/components/{componentId}` | Replace title, notes, and done flag. |
+| `DELETE` | `/api/v1/ideas/{ideaId}/components/{componentId}` | Delete a component. |
 
 Validation errors return `400` with RFC 9457 problem details whose `errors` are keyed by camelCase field name.
 
