@@ -1,6 +1,6 @@
 # IdeaVerse
 
-IdeaVerse uses Claude-powered agents to generate, critique, and refine ideas. The repository is built from the `kritikos-io/templates-dotnet` template; its agent guidance lives under `.github/` and is shared by GitHub Copilot and Claude Code.
+IdeaVerse uses Claude-powered agents to generate, critique, and refine ideas. The repository is built from the private template `katerinapouspourika/templates-dotnet-private` (a copy of `kritikos-io/templates-dotnet`); its agent guidance lives under `.github/` and is shared by GitHub Copilot and Claude Code.
 
 @.github/copilot-instructions.md
 
@@ -45,3 +45,8 @@ Commit messages follow `.github/copilot-commit-message-instructions.md`.
 - Default model is `claude-opus-5-5` (configurable via `Ideation:Model`). Requests use structured outputs, so each agent declares a JSON schema with snake_case properties that maps onto its C# record.
 - Requests go through the beta Messages endpoint with `fallbacks: "default"` so a policy refusal is retried server-side; turn it off with `Ideation:EnableRefusalFallback=false`.
 - Add a new agent by giving it a system prompt, an output schema, and a call to `IStructuredModelClient.CompleteAsync<T>`; follow `IdeaRefinerAgent` as the smallest example.
+
+## Review & testing notes
+
+- In `src/IdeaVerse.Agents/`, check that stop reasons are handled before content is read, that output schemas match their C# records (snake_case, `additionalProperties: false`, every property required), and that no API key is hard-coded.
+- Agent tests substitute `IStructuredModelClient` and assert on the `StructuredPrompt` it receives; reuse `TestData` in the test project.
