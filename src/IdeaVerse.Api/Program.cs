@@ -7,6 +7,7 @@ using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Ideas;
 using Pouspourika.IdeaVerse.Api.Members;
+using Pouspourika.IdeaVerse.Api.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +35,7 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseWebAppFiles();
 
 if (app.Environment.IsDevelopment())
 {
@@ -47,6 +49,7 @@ app.MapAuthEndpoints();
 app.MapIdeaEndpoints();
 app.MapComponentEndpoints();
 app.MapMemberEndpoints();
+app.MapWebAppFallback();
 
 await app.MigrateDatabaseIfEnabledAsync();
 await app.RunAsync();

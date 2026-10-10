@@ -27,6 +27,7 @@
     <File Path="src\Directory.Build.props" />
     <Project Path="src\IdeaVerse.Agents\IdeaVerse.Agents.csproj" />
     <Project Path="src\IdeaVerse.Api\IdeaVerse.Api.csproj" />
+    <File Path="src\IdeaVerse.Web\package.json" />
   </Folder>
   <Folder Name="/tests/">
     <File Path="tests\Directory.Build.props" />

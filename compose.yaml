@@ -1,6 +1,6 @@
-# Local development stack: PostgreSQL plus the API.
+# Local stack: PostgreSQL plus the API, which also serves the web app.
 #   docker compose up --build
-# The API listens on http://localhost:8080 and applies database migrations on startup.
+# Open http://localhost:8080. The API applies database migrations on startup.
 
 services:
   db:
@@ -26,6 +26,7 @@ services:
       target: final
       args:
         PUBLISHED_PROJECT: IdeaVerse.Api
+        WEB_PROJECT: IdeaVerse.Web
         RUNTIME_BASE: web
     depends_on:
       db:

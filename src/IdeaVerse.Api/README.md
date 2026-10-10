@@ -21,6 +21,8 @@ dotnet run --project src/IdeaVerse.Api -- --environment Development --urls http:
 
 The OpenAPI document is served at `/openapi/v1.json` in Development.
 
+The API also serves the web app (`src/IdeaVerse.Web`) from `wwwroot` when one is present, as in the Docker image. Unknown `/api` routes return 404; any other unknown route returns the app's `index.html` so client-side routes load. Content-hashed files under `/assets` are cached for a year; everything else is revalidated.
+
 ## Features
 
 - **Accounts** — ASP.NET Core Identity under `/api/v1/auth`: `register`, `login`, `logout`, password reset, and account info. The web app signs in with `POST /api/v1/auth/login?useCookies=true`, which sets an HTTP-only, `SameSite=Strict` cookie named `IdeaVerse.Auth`.
