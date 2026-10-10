@@ -42,13 +42,13 @@ export const ideasRoute = 'GET /api/v1/workspaces/ws-1/ideas';
 
 /** A signed-in user who owns one workspace, with no reminders or invitations. */
 export const signedIn = {
-  'GET /api/v1/auth/manage/info': { status: 200, body: { email: 'kat@example.com' } },
+  'GET /api/v1/account': { status: 200, body: { email: 'kat@example.com', timeZone: 'UTC' } },
   'GET /api/v1/notifications': { status: 200, body: { items: [], unreadCount: 0 } },
   'GET /api/v1/workspaces': { status: 200, body: [aWorkspace()] },
   'GET /api/v1/invitations': { status: 200, body: [] },
 };
 
-export const signedOut = { 'GET /api/v1/auth/manage/info': { status: 401 } };
+export const signedOut = { 'GET /api/v1/account': { status: 401 } };
 
 export function anIdea(overrides: Partial<Idea> = {}): Idea {
   return {

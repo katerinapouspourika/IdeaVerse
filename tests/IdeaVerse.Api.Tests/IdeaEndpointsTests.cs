@@ -119,6 +119,36 @@ public class IdeaEndpointsTests
   }
 
   [Test]
+  public async Task Create_DateBeforeUtcTodayButTodayInUsersZone_ReturnsCreated()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    await client.SetTimeZoneAsync("Pacific/Honolulu");
+
+    using var response = await client.CreateIdeaAsync("Launch", Today.AddDays(-1));
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Created);
+  }
+
+  [Test]
+  public async Task Get_DueTodayInUtcButYesterdayInUsersZone_ReportsOverdueForThatUserOnly()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var ahead = await factory.CreateSignedInClientAsync("ahead@example.com");
+    await factory.JoinAsync(owner, ahead, "ahead@example.com");
+    await ahead.SetTimeZoneAsync("Pacific/Kiritimati");
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today)).ReadIdeaAsync();
+    factory.Time.Advance(TimeSpan.FromHours(12));
+
+    var forOwner = await (await owner.GetAsync($"/api/v1/ideas/{idea.Id}")).ReadIdeaAsync();
+    var forAhead = await (await ahead.GetAsync($"/api/v1/ideas/{idea.Id}")).ReadIdeaAsync();
+
+    await Assert.That(forOwner.IsOverdue).IsFalse();
+    await Assert.That(forAhead.IsOverdue).IsTrue();
+  }
+
+  [Test]
   public async Task Create_TargetDateToday_ReturnsCreated()
   {
     await using var factory = new IdeaVerseApiFactory();

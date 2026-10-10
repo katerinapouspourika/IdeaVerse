@@ -11,12 +11,4 @@ using System.ComponentModel.DataAnnotations;
 public sealed record CreateIdeaRequest(
   [property: Required(AllowEmptyStrings = false), MaxLength(Idea.TitleMaxLength)] string Title,
   [property: MaxLength(Idea.DescriptionMaxLength)] string? Description,
-  DateOnly TargetDate) : IValidatableObject
-{
-  /// <inheritdoc/>
-  public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-  {
-    ArgumentNullException.ThrowIfNull(validationContext);
-    return TargetDateRules.RequireNotInPast(TargetDate, validationContext);
-  }
-}
+  DateOnly TargetDate);

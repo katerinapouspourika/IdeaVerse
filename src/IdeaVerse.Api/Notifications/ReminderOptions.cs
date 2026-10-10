@@ -24,6 +24,14 @@ public sealed class ReminderOptions
   public TimeSpan Interval { get; set; } = TimeSpan.FromHours(1);
 
   /// <summary>
+  /// Gets or sets the local time of day from which each person's reminders for that day are raised and emailed.
+  /// </summary>
+  /// <remarks>
+  /// Reminders go out at the job's first run at or after this time in each person's time zone.
+  /// </remarks>
+  public TimeOnly SendAt { get; set; } = new(8, 0);
+
+  /// <summary>
   /// Gets or sets how long a failed reminder email keeps being retried.
   /// </summary>
   [Range(typeof(TimeSpan), "00:00:00", "7.00:00:00")]

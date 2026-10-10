@@ -12,6 +12,7 @@ import { NewWorkspacePage } from './pages/NewWorkspacePage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { PeoplePage } from './pages/PeoplePage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { SettingsPage } from './pages/SettingsPage';
 
 export const routes = [
   {
@@ -32,6 +33,7 @@ export const routes = [
           { path: '/people', element: <PeoplePage /> },
           { path: '/invitations', element: <InvitationsPage /> },
           { path: '/workspaces/new', element: <NewWorkspacePage /> },
+          { path: '/settings', element: <SettingsPage /> },
         ],
       },
       { path: '*', element: <Navigate to="/" replace /> },

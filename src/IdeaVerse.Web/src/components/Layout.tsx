@@ -45,7 +45,9 @@ function TopBar() {
       {account && (
         <div className="account">
           <NotificationBell />
-          <span className="muted">{account.email}</span>
+          <Link to="/settings" className="muted account-link" title="Settings">
+            {account.email}
+          </Link>
           <button type="button" className="button ghost" onClick={() => void signOut()}>
             Sign out
           </button>

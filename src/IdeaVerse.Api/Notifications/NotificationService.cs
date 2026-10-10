@@ -2,6 +2,7 @@ namespace Pouspourika.IdeaVerse.Api.Notifications;
 
 using Microsoft.EntityFrameworkCore;
 
+using Pouspourika.IdeaVerse.Api.Accounts;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Ideas;
 
@@ -12,8 +13,9 @@ using Pouspourika.IdeaVerse.Api.Ideas;
 /// Only reminders about ideas the user still owns or is on the team of, in a workspace they are still in, are listed, so leaving or being removed from either hides the idea's reminders.
 /// </remarks>
 /// <param name="context">The database context.</param>
-/// <param name="timeProvider">Clock for read times and message wording.</param>
-public sealed class NotificationService(IdeaVerseDbContext context, TimeProvider timeProvider)
+/// <param name="calendar">Tells the user's local date, for message wording.</param>
+/// <param name="timeProvider">Clock for read times.</param>
+public sealed class NotificationService(IdeaVerseDbContext context, UserCalendar calendar, TimeProvider timeProvider)
 {
   /// <summary>
   /// How many reminders a list returns.
@@ -39,7 +41,7 @@ public sealed class NotificationService(IdeaVerseDbContext context, TimeProvider
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
 
-    var today = timeProvider.Today();
+    var today = await calendar.TodayAsync(userId, cancellationToken).ConfigureAwait(false);
     var items = rows
       .Select(n => new NotificationResponse(n.Id, n.IdeaId, n.Title, n.Kind, n.TargetDate, ReminderSchedule.Message(n.Kind, n.Title, n.TargetDate, today), n.CreatedAt, n.ReadAt))
       .ToList();
