@@ -19,7 +19,7 @@ Open `http://localhost:5173`. The dev server forwards `/api` to the API, so the 
 ## Features
 
 - **Accounts** — sign up, sign in, and sign out with the API's cookie login. Signed-out visitors are sent to the login page and returned to where they were going.
-  - **Settings** — the email in the header opens `/settings`, where the user picks their time zone. An account without one gets the browser's time zone on first sign-in.
+  - **Settings** — the email in the header opens `/settings`, where the user picks their time zone and which reminders they get (coming up, due tomorrow, due today, overdue), and whether they are also emailed. An account without a time zone gets the browser's on first sign-in.
   - New accounts confirm their email first: sign-up shows "Check your inbox", the emailed link opens `/confirm-email`, and signing in before confirming explains why and offers to resend the link.
   - "Forgot your password?" on the sign-in page emails a link to `/reset-password`, where the user chooses a new one. Locally, these emails arrive in Mailpit at `http://localhost:8025`.
 - **Workspaces** — the header's workspace menu switches between the user's workspaces (the choice is remembered in the browser) or starts a new one at `/workspaces/new`. Someone in no workspace yet sees a welcome page to join one they were invited to or create their own.

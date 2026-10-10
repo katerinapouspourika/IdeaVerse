@@ -574,3 +574,17 @@ textarea:focus-visible,
   text-decoration: underline;
   cursor: pointer;
 }
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choices legend {
+  margin-bottom: 8px;
+  font-weight: 600;
+}

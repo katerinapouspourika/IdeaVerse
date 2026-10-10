@@ -1,6 +1,7 @@
 namespace Pouspourika.IdeaVerse.Api.Tests;
 
 using Pouspourika.IdeaVerse.Api.Ideas;
+using Pouspourika.IdeaVerse.Api.Notifications;
 
 using TUnit.Assertions.Enums;
 
@@ -101,6 +102,58 @@ public class ReminderServiceTests
 
     await Assert.That(factory.Mail.Sent.Select(m => (m.To, m.Subject))).IsEquivalentTo(
       [("owner@example.com", "Due tomorrow: Launch"), ("member@example.com", "Due today: Launch")]);
+  }
+
+  [Test]
+  public async Task RunAsync_KindTurnedOff_SkipsIt()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    await SetRemindersAsync(owner, email: true, ReminderKind.Today, ReminderKind.Overdue);
+    (await owner.CreateIdeaAsync("Launch", Today.AddDays(1))).Dispose();
+
+    var tomorrow = await factory.RunRemindersAsync();
+    factory.Time.Advance(TimeSpan.FromDays(1));
+    var today = await factory.RunRemindersAsync();
+
+    await Assert.That(tomorrow.Raised).IsEqualTo(0);
+    await Assert.That(today.Raised).IsEqualTo(1);
+    await Assert.That(factory.Mail.Sent.Select(m => m.Subject)).IsEquivalentTo(["Due today: Launch"]);
+  }
+
+  [Test]
+  public async Task RunAsync_EmailsTurnedOff_RaisesInAppOnly()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    await SetRemindersAsync(owner, email: false, Enum.GetValues<ReminderKind>());
+    (await owner.CreateIdeaAsync("Launch", Today.AddDays(1))).Dispose();
+
+    var result = await factory.RunRemindersAsync();
+    var inApp = await owner.GetFromJsonAsync<NotificationsResponse>("/api/v1/notifications", Json.Options);
+
+    await Assert.That(result).IsEqualTo(new ReminderRunResult(1, 0));
+    await Assert.That(inApp!.UnreadCount).IsEqualTo(1);
+    await Assert.That(factory.Mail.Sent).IsEmpty();
+  }
+
+  [Test]
+  public async Task RunAsync_EmailsTurnedBackOn_DoesNotEmailRemindersRaisedWhileOff()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    await SetRemindersAsync(owner, email: false, Enum.GetValues<ReminderKind>());
+    (await owner.CreateIdeaAsync("Launch", Today.AddDays(1))).Dispose();
+    await factory.RunRemindersAsync();
+
+    await SetRemindersAsync(owner, email: true, Enum.GetValues<ReminderKind>());
+    var sameDay = await factory.RunRemindersAsync();
+    factory.Time.Advance(TimeSpan.FromDays(1));
+    var nextDay = await factory.RunRemindersAsync();
+
+    await Assert.That(sameDay.Emailed).IsEqualTo(0);
+    await Assert.That(nextDay.Emailed).IsEqualTo(1);
+    await Assert.That(factory.Mail.Sent.Select(m => m.Subject)).IsEquivalentTo(["Due today: Launch"]);
   }
 
   [Test]
@@ -219,5 +272,11 @@ public class ReminderServiceTests
     var result = await factory.RunRemindersAsync();
 
     await Assert.That(result.Emailed).IsEqualTo(0);
+  }
+
+  private static async Task SetRemindersAsync(HttpClient client, bool email, params ReminderKind[] kinds)
+  {
+    using var response = await client.PutAsJsonAsync("/api/v1/account/reminders", new Accounts.UpdateRemindersRequest(email, kinds), Json.Options);
+    response.EnsureSuccessStatusCode();
   }
 }

@@ -3,9 +3,14 @@ namespace Pouspourika.IdeaVerse.Api.Tests;
 using System.Net;
 
 using Pouspourika.IdeaVerse.Api.Accounts;
+using Pouspourika.IdeaVerse.Api.Notifications;
+
+using TUnit.Assertions.Enums;
 
 public class AccountEndpointsTests
 {
+  private static readonly int[] UnknownKind = [9];
+
   [Test]
   public async Task Get_NewAccount_ReturnsEmailAndNoTimeZone()
   {
@@ -14,7 +19,41 @@ public class AccountEndpointsTests
 
     var account = await client.GetFromJsonAsync<AccountResponse>("/api/v1/account", Json.Options);
 
-    await Assert.That(account).IsEqualTo(new AccountResponse("owner@example.com", null));
+    await Assert.That(account!.Email).IsEqualTo("owner@example.com");
+    await Assert.That(account.TimeZone).IsNull();
+    await Assert.That(account.EmailReminders).IsTrue();
+    await Assert.That(account.ReminderKinds).IsEquivalentTo(
+      [ReminderKind.ComingUp, ReminderKind.Tomorrow, ReminderKind.Today, ReminderKind.Overdue],
+      CollectionOrdering.Matching);
+  }
+
+  [Test]
+  public async Task UpdateReminders_SomeKindsWithoutEmail_SavesThem()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+
+    using var response = await client.PutAsJsonAsync(
+      "/api/v1/account/reminders",
+      new UpdateRemindersRequest(EmailReminders: false, [ReminderKind.Overdue, ReminderKind.Today]),
+      Json.Options);
+    var account = await client.GetFromJsonAsync<AccountResponse>("/api/v1/account", Json.Options);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+    await Assert.That(account!.EmailReminders).IsFalse();
+    await Assert.That(account.ReminderKinds).IsEquivalentTo([ReminderKind.Today, ReminderKind.Overdue], CollectionOrdering.Matching);
+  }
+
+  [Test]
+  public async Task UpdateReminders_UnknownKind_ReturnsValidationProblem()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+
+    using var response = await client.PutAsJsonAsync("/api/v1/account/reminders", new { emailReminders = true, reminderKinds = UnknownKind });
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+    await Assert.That((await response.ReadValidationErrorsAsync()).Keys).Contains("reminderKinds");
   }
 
   [Test]

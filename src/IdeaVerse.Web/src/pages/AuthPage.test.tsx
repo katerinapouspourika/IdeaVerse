@@ -28,7 +28,7 @@ describe('AuthPage', () => {
   it('signs in with a cookie and opens the ideas list', async () => {
     let signedInNow = false;
     const calls = fakeApi({
-      'GET /api/v1/account': () => (signedInNow ? { status: 200, body: { email: 'kat@example.com', timeZone: 'UTC' } } : { status: 401 }),
+      'GET /api/v1/account': () => (signedInNow ? { status: 200, body: { email: 'kat@example.com', timeZone: 'UTC', emailReminders: true, reminderKinds: ['ComingUp', 'Tomorrow', 'Today', 'Overdue'] } } : { status: 401 }),
       'POST /api/v1/auth/login?useCookies=true': () => {
         signedInNow = true;
         return { status: 200 };
@@ -50,7 +50,7 @@ describe('AuthPage', () => {
   it('returns to the page the visitor was going to after signing in', async () => {
     let signedInNow = false;
     fakeApi({
-      'GET /api/v1/account': () => (signedInNow ? { status: 200, body: { email: 'kat@example.com', timeZone: 'UTC' } } : { status: 401 }),
+      'GET /api/v1/account': () => (signedInNow ? { status: 200, body: { email: 'kat@example.com', timeZone: 'UTC', emailReminders: true, reminderKinds: ['ComingUp', 'Tomorrow', 'Today', 'Overdue'] } } : { status: 401 }),
       'POST /api/v1/auth/login?useCookies=true': () => {
         signedInNow = true;
         return { status: 200 };

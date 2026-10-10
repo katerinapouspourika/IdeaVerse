@@ -123,6 +123,15 @@ export interface Account {
   email: string;
   /** IANA time zone deciding the user's "today" and when reminders arrive; `null` until chosen, when UTC applies. */
   timeZone: string | null;
+  /** Whether reminders are emailed as well as shown in the app. */
+  emailReminders: boolean;
+  /** The reminder kinds the user gets, in stage order. */
+  reminderKinds: ReminderKind[];
+}
+
+export interface ReminderSettings {
+  emailReminders: boolean;
+  reminderKinds: ReminderKind[];
 }
 
 export const statusLabels: Record<IdeaStatus, string> = {

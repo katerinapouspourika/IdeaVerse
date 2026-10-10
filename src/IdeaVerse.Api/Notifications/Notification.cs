@@ -59,5 +59,8 @@ public sealed class Notification
   /// <summary>
   /// Gets or sets when the reminder was emailed, or <see langword="null"/> until an email succeeds.
   /// </summary>
+  /// <remarks>
+  /// Turning reminder emails back on also sets it on reminders raised while they were off, so those are never emailed late.
+  /// </remarks>
   public DateTimeOffset? EmailedAt { get; set; }
 }
