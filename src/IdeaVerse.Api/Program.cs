@@ -3,8 +3,10 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
+using Pouspourika.IdeaVerse.Agents;
 using Pouspourika.IdeaVerse.Api;
 using Pouspourika.IdeaVerse.Api.Accounts;
+using Pouspourika.IdeaVerse.Api.Ai;
 using Pouspourika.IdeaVerse.Api.Auth;
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Data;
@@ -51,6 +53,9 @@ builder.Services.AddEmail();
 builder.Services.AddOptions<AppOptions>().BindConfiguration(AppOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
 builder.Services.AddOptions<ReminderOptions>().BindConfiguration(ReminderOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
 builder.Services.AddScoped<ReminderService>();
+builder.Services.AddIdeationAgents().BindConfiguration(IdeationOptions.SectionName);
+builder.Services.AddOptions<AiOptions>().BindConfiguration(AiOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
+builder.Services.AddScoped<AiService>();
 builder.Services.AddHostedService<ReminderWorker>();
 
 var app = builder.Build();
@@ -75,6 +80,7 @@ app.MapIdeaEndpoints();
 app.MapComponentEndpoints();
 app.MapMemberEndpoints();
 app.MapNotificationEndpoints();
+app.MapAiEndpoints();
 app.MapWebAppFallback();
 
 await app.MigrateDatabaseIfEnabledAsync();

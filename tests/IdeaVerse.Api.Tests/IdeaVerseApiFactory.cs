@@ -25,7 +25,8 @@ using Pouspourika.IdeaVerse.Api.Workspaces;
 /// The clock starts on today's real date: login cookies expire relative to the app's clock, and the test client drops cookies that are already expired by the real one.
 /// </remarks>
 /// <param name="webRoot">Optional folder to serve as the web app's <c>wwwroot</c>.</param>
-internal sealed class IdeaVerseApiFactory(string? webRoot = null) : WebApplicationFactory<Program>
+/// <param name="settings">Optional configuration overrides, such as AI help settings.</param>
+internal sealed class IdeaVerseApiFactory(string? webRoot = null, IReadOnlyDictionary<string, string?>? settings = null) : WebApplicationFactory<Program>
 {
   public const string Password = "Passw0rd!";
 
@@ -36,6 +37,8 @@ internal sealed class IdeaVerseApiFactory(string? webRoot = null) : WebApplicati
   public static DateOnly Today { get; } = DateOnly.FromDateTime(DateTime.UtcNow);
 
   public FakeMailSender Mail { get; } = new();
+
+  public FakeModelClient Model { get; } = new();
 
   public FakeTimeProvider Time { get; } = new(new DateTimeOffset(Today, new TimeOnly(9, 0), TimeSpan.Zero));
 
@@ -95,6 +98,12 @@ internal sealed class IdeaVerseApiFactory(string? webRoot = null) : WebApplicati
     builder.UseEnvironment("Testing");
     builder.UseSetting("Reminders:Enabled", "false");
     builder.UseSetting("App:PublicUrl", AppUrl);
+    builder.UseSetting(Ai.AiOptions.ApiKeySetting, "test-key");
+    foreach (var (key, value) in settings ?? new Dictionary<string, string?>())
+    {
+      builder.UseSetting(key, value);
+    }
+
     if (webRoot is not null)
     {
       builder.UseWebRoot(webRoot);
@@ -110,6 +119,9 @@ internal sealed class IdeaVerseApiFactory(string? webRoot = null) : WebApplicati
 
       services.RemoveAll<IMailSender>();
       services.AddSingleton<IMailSender>(Mail);
+
+      services.RemoveAll<Agents.Infrastructure.IStructuredModelClient>();
+      services.AddSingleton<Agents.Infrastructure.IStructuredModelClient>(Model);
 
       services.RemoveAll<TimeProvider>();
       services.AddSingleton<TimeProvider>(Time);

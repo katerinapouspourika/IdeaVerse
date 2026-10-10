@@ -76,4 +76,5 @@ Commit messages follow `.github/copilot-commit-message-instructions.md`.
 - API tests keep the fake clock on today's real date, because the test client drops login cookies already expired by the real clock.
 
 - In `src/IdeaVerse.Agents/`, check that stop reasons are handled before content is read, that output schemas match their C# records (snake_case, `additionalProperties: false`, every property required), and that no API key is hard-coded.
+- The API uses the agents for AI help (`Ai/AiService`). API tests never call Claude: `IdeaVerseApiFactory.Model` is a `FakeModelClient` that answers each prompt `Operation` with canned snake_case JSON, deserialized as the real client does, so a schema that no longer matches its record fails there too.
 - Agent tests substitute `IStructuredModelClient` and assert on the `StructuredPrompt` it receives; reuse `TestData` in the test project.

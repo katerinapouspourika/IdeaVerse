@@ -142,3 +142,33 @@ export const statusLabels: Record<IdeaStatus, string> = {
 };
 
 export const statuses = Object.keys(statusLabels) as IdeaStatus[];
+
+/** Whether AI help is set up, and how much of today's allowance the workspace used. */
+export interface AiStatus {
+  enabled: boolean;
+  used: number;
+  limit: number;
+}
+
+export interface ComponentSuggestion {
+  title: string;
+  notes: string;
+}
+
+export interface IdeaImprovement {
+  strengths: string[];
+  weaknesses: string[];
+  title: string;
+  description: string;
+}
+
+export interface BrainstormedIdea {
+  title: string;
+  summary: string;
+  targetAudience: string;
+  differentiator: string;
+  /** The critic's score, from 1 to 10. */
+  score: number;
+  strengths: string[];
+  weaknesses: string[];
+}

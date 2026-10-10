@@ -50,6 +50,8 @@ services:
       Email__SmtpHost: mail
       Email__SmtpPort: "1025"
       App__PublicUrl: http://localhost:8080
+      # AI help: export ANTHROPIC_API_KEY before `docker compose up` to turn it on; without it, AI help is hidden.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
 
 volumes:
   db-data:

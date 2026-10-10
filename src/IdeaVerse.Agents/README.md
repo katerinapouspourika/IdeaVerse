@@ -25,6 +25,8 @@ dotnet run --project samples/IdeaVerse.Agents.Sample -- --topic "Helping remote 
 - **`IdeaGeneratorAgent`** brainstorms a diverse set of ideas for a brief.
 - **`IdeaCriticAgent`** scores each idea from 1 to 10 with strengths and weaknesses.
 - **`IdeaRefinerAgent`** turns an idea and its critique into a pitch, key features, risks, and next steps.
+- **`ComponentSuggesterAgent`** lists what an existing idea needs before it can happen (people, budget, approvals, assets), leaving out what the team already listed.
+- **`IdeaImproverAgent`** critiques an existing idea and rewrites its title and description to answer the critique.
 - **`IdeationPipeline`** runs generate → critique → rank, then refines the top ideas concurrently.
 - Every agent uses structured outputs, so responses deserialize straight into C# records.
 - Requests are traced on the `Pouspourika.IdeaVerse.Agents` `ActivitySource`, tagged with model and token usage.

@@ -140,6 +140,11 @@
           "SQLitePCLRaw.core": "2.1.12"
         }
       },
+      "Microsoft.Extensions.AI.Abstractions": {
+        "type": "Transitive",
+        "resolved": "10.5.1",
+        "contentHash": "nB0l3IlsVbNeUxsE7nZNb9GY8rP1OSeqpj0pseORPejt474HNKEauTWTLdSJPkSvPlRMxowZNMo6nyp7APAiSg=="
+      },
       "Microsoft.Extensions.Caching.Abstractions": {
         "type": "Transitive",
         "resolved": "10.0.12",
@@ -541,13 +546,32 @@
           "TUnit.Core": "1.73.19"
         }
       },
+      "Pouspourika.IdeaVerse.Agents": {
+        "type": "Project",
+        "dependencies": {
+          "Anthropic": "[12.55.0, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.12, )",
+          "Microsoft.Extensions.Logging.Abstractions": "[10.0.12, )",
+          "Microsoft.Extensions.Options.DataAnnotations": "[10.0.12, )"
+        }
+      },
       "Pouspourika.IdeaVerse.Api": {
         "type": "Project",
         "dependencies": {
           "MailKit": "[4.18.1, )",
           "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "[10.0.12, )",
           "Microsoft.AspNetCore.OpenApi": "[10.0.12, )",
-          "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )"
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )",
+          "Pouspourika.IdeaVerse.Agents": "[1.0.0, )"
+        }
+      },
+      "Anthropic": {
+        "type": "CentralTransitive",
+        "requested": "[12.55.0, )",
+        "resolved": "12.55.0",
+        "contentHash": "Gpf6no4CBXnB2RwP1BItFgwXQcsGNX4rKcgYEdoMOVgnCIZ8xODdueEJrklCEFUh5CPld7xGmfDKZz5y0U59uQ==",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.5.1"
         }
       },
       "MailKit": {
@@ -640,6 +664,16 @@
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.12",
           "Microsoft.Extensions.Primitives": "10.0.12"
+        }
+      },
+      "Microsoft.Extensions.Options.DataAnnotations": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.12, )",
+        "resolved": "10.0.12",
+        "contentHash": "rPqU/cnDMmL4Gx7sglNnYwh/upWxSLTwVe0ysT88WH9HEE3OfZgaT7TyM86C4GeXwDsDQaj95fUGL5jEB3vxng==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.12",
+          "Microsoft.Extensions.Options": "10.0.12"
         }
       },
       "Npgsql.EntityFrameworkCore.PostgreSQL": {
