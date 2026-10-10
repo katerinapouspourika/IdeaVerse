@@ -50,3 +50,6 @@ docker compose up --build
 
 > [!NOTE]
 > Dates are compared in UTC, matching the API's notion of "today" and "overdue".
+
+> [!NOTE]
+> The logo in `public/` (`logo.png`, `favicon.ico`, `apple-touch-icon.png`) is cut from the original at `branding/ideaverse-logo.png`, with its white background made transparent. Regenerate all three from that file when the logo changes. In dark mode the logo sits on a white tile, because the navy lines do not show on a dark background.

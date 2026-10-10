@@ -16,6 +16,7 @@ export function Layout() {
     <div className="shell">
       <header className="topbar">
         <Link to="/" className="brand">
+          <img src="/logo.png" alt="" className="logo" width="32" height="32" />
           IdeaVerse
         </Link>
         {account && (
