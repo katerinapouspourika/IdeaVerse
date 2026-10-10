@@ -26,3 +26,8 @@ solution=$(find . -maxdepth 1 -name '*.slnx' | head -n 1)
 if [ -n "$solution" ]; then
   dotnet restore "$solution" --verbosity quiet
 fi
+
+# Install the web app's packages so its lint, type-check, and tests run.
+if [ -f src/IdeaVerse.Web/package-lock.json ]; then
+  npm ci --prefix src/IdeaVerse.Web --no-audit --no-fund --loglevel=error
+fi

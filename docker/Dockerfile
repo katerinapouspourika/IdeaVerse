@@ -87,6 +87,18 @@ RUN if ls *.json 1>/dev/null 2>&1; then \
   echo "No OpenAPI documents found, skipping lint"; \
   fi
 
+FROM node:lts-alpine AS web-build
+ARG WEB_PROJECT
+WORKDIR /web
+COPY --link src/${WEB_PROJECT}/ ./
+RUN --mount=type=cache,target=/root/.npm \
+  mkdir -p /web-dist && \
+  if [ -n "${WEB_PROJECT}" ]; then \
+  npm ci && npm run build && cp -r dist/. /web-dist/; \
+  else \
+  echo "No WEB_PROJECT set, skipping web build"; \
+  fi
+
 FROM test AS publish
 ARG CONFIGURATION
 ARG PUBLISHED_PROJECT
@@ -162,6 +174,7 @@ ARG RUNTIME_BASE
 ENV LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
 
 COPY --link --from=publish --chown=root:root /app/publish .
+COPY --link --from=web-build --chown=root:root /web-dist/ ./wwwroot/
 COPY --link --from=openapi-lint --chown=root:root /openapi/ /app/openapi/
 COPY --link --from=pyroscope-agent --chown=root:root /opt/pyroscope/ /pyroscope/
 RUN if [ "${RUNTIME_BASE}" = "self-contained" ]; then \

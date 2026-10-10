@@ -20,7 +20,8 @@ using Pouspourika.IdeaVerse.Api.Data;
 /// <remarks>
 /// The clock starts on today's real date: login cookies expire relative to the app's clock, and the test client drops cookies that are already expired by the real one.
 /// </remarks>
-internal sealed class IdeaVerseApiFactory : WebApplicationFactory<Program>
+/// <param name="webRoot">Optional folder to serve as the web app's <c>wwwroot</c>.</param>
+internal sealed class IdeaVerseApiFactory(string? webRoot = null) : WebApplicationFactory<Program>
 {
   public const string Password = "Passw0rd!";
 
@@ -48,6 +49,11 @@ internal sealed class IdeaVerseApiFactory : WebApplicationFactory<Program>
   {
     connection.Open();
     builder.UseEnvironment("Testing");
+    if (webRoot is not null)
+    {
+      builder.UseWebRoot(webRoot);
+    }
+
     builder.ConfigureTestServices(services =>
     {
       services.RemoveAll<DbContextOptions<IdeaVerseDbContext>>();
