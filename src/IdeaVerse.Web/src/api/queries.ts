@@ -311,3 +311,22 @@ export function useBrainstorm(workspaceId: string) {
     request<BrainstormedIdea[]>('POST', `/api/v1/workspaces/${workspaceId}/ai/brainstorm`, { brief }),
   );
 }
+
+export function useDeleteWorkspace(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => request<void>('DELETE', `/api/v1/workspaces/${workspaceId}`),
+    onSuccess: () => {
+      client.removeQueries({ queryKey: ['ideas', workspaceId] });
+      void client.invalidateQueries({ queryKey: keys.workspaces });
+    },
+  });
+}
+
+export function useTransferOwnership(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => request<Workspace>('POST', `/api/v1/workspaces/${workspaceId}/transfer`, { userId }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.workspaces }),
+  });
+}

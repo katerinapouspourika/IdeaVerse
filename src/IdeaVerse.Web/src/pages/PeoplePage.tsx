@@ -4,6 +4,8 @@ import { Navigate, useNavigate } from 'react-router';
 import { formatDate } from '../api/dates';
 import {
   useChangeRole,
+  useDeleteWorkspace,
+  useTransferOwnership,
   useInvitations,
   useInvite,
   useRemoveWorkspaceMember,
@@ -47,7 +49,77 @@ function People({ workspace }: { workspace: Workspace }) {
       ) : (
         <p className="muted small">Only the workspace’s owner and admins can invite people.</p>
       )}
+      {workspace.role === 'Owner' && <DangerZone workspace={workspace} />}
     </div>
+  );
+}
+
+/** The owner's irreversible actions: handing the workspace over, and deleting it. */
+function DangerZone({ workspace }: { workspace: Workspace }) {
+  const members = useWorkspaceMembers(workspace.id);
+  const transfer = useTransferOwnership(workspace.id);
+  const remove = useDeleteWorkspace(workspace.id);
+  const navigate = useNavigate();
+  const [successor, setSuccessor] = useState('');
+  const [confirmName, setConfirmName] = useState('');
+  const others = (members.data ?? []).filter((m) => m.role !== 'Owner');
+
+  const handOver = (event: FormEvent) => {
+    event.preventDefault();
+    const person = others.find((m) => m.userId === successor);
+    if (person && window.confirm(`Make ${person.email} the owner of ${workspace.name}? You will stay as an admin.`)) {
+      transfer.mutate(successor, { onSuccess: () => setSuccessor('') });
+    }
+  };
+
+  const deleteWorkspace = (event: FormEvent) => {
+    event.preventDefault();
+    remove.mutate(undefined, { onSuccess: () => void navigate('/') });
+  };
+
+  return (
+    <section className="card danger stack" aria-labelledby="danger-heading">
+      <h2 id="danger-heading">Danger zone</h2>
+      <form className="stack" onSubmit={handOver} aria-label="Transfer ownership">
+        <p className="muted small">Hand the workspace to someone else in it. You stay on as an admin and can then leave.</p>
+        {others.length === 0 ? (
+          <p className="muted small">Invite someone first; there is nobody to hand it to yet.</p>
+        ) : (
+          <div className="row wrap end">
+            <Field label="New owner" className="grow">
+              {(props) => (
+                <select {...props} required value={successor} onChange={(e) => setSuccessor(e.target.value)}>
+                  <option value="">Choose a person…</option>
+                  {others.map((m) => (
+                    <option key={m.userId} value={m.userId}>
+                      {m.email}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
+            <button type="submit" className="button" disabled={!successor || transfer.isPending}>
+              Transfer ownership
+            </button>
+          </div>
+        )}
+        <ErrorMessage error={transfer.error} />
+      </form>
+      <form className="stack" onSubmit={deleteWorkspace} aria-label="Delete workspace">
+        <p className="muted small">
+          Deleting removes every idea, component, team, reminder, and invitation in {workspace.name}, for everyone. It cannot be undone.
+        </p>
+        <div className="row wrap end">
+          <Field label={`Type “${workspace.name}” to confirm`} className="grow">
+            {(props) => <input {...props} value={confirmName} onChange={(e) => setConfirmName(e.target.value)} autoComplete="off" />}
+          </Field>
+          <button type="submit" className="button danger" disabled={confirmName.trim() !== workspace.name || remove.isPending}>
+            Delete workspace
+          </button>
+        </div>
+        <ErrorMessage error={remove.error} />
+      </form>
+    </section>
   );
 }
 

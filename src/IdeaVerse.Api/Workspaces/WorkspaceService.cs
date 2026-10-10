@@ -21,6 +21,11 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
   private const string RoleField = nameof(ChangeRoleRequest.Role);
 
   /// <summary>
+  /// Why someone other than the owner may not delete or hand over the workspace.
+  /// </summary>
+  private const string OwnerOnlyMessage = "Only the workspace's owner can do this.";
+
+  /// <summary>
   /// Lists the user's workspaces by name.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
@@ -87,6 +92,79 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
     return new WorkspaceChangeResult(
       ChangeOutcome.Changed,
       new WorkspaceResponse(workspace.Id, workspace.Name, membership.Role, memberCount, workspace.CreatedAt));
+  }
+
+  /// <summary>
+  /// Deletes a workspace with all its ideas, their components, teams, and reminders, its people, and its invitations.
+  /// </summary>
+  /// <param name="userId">The signed-in user's identifier; must be the owner.</param>
+  /// <param name="workspaceId">The workspace identifier.</param>
+  /// <param name="cancellationToken">Token to cancel the operation.</param>
+  /// <returns>The outcome.</returns>
+  public async Task<WorkspaceChangeResult> DeleteAsync(string userId, Guid workspaceId, CancellationToken cancellationToken)
+  {
+    var role = await context.RoleInAsync(userId, workspaceId, cancellationToken).ConfigureAwait(false);
+    if (role is null)
+    {
+      return WorkspaceChangeResult.NotFound();
+    }
+
+    if (role != WorkspaceRole.Owner)
+    {
+      return WorkspaceChangeResult.Forbidden(OwnerOnlyMessage);
+    }
+
+    await context.Workspaces.Where(w => w.Id == workspaceId).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+    return new WorkspaceChangeResult(ChangeOutcome.Changed);
+  }
+
+  /// <summary>
+  /// Makes someone else in the workspace its owner; the previous owner stays as an admin.
+  /// </summary>
+  /// <param name="userId">The signed-in user's identifier; must be the owner.</param>
+  /// <param name="workspaceId">The workspace identifier.</param>
+  /// <param name="request">The validated request.</param>
+  /// <param name="cancellationToken">Token to cancel the operation.</param>
+  /// <returns>The outcome, carrying the workspace as the previous owner now sees it.</returns>
+  public async Task<WorkspaceChangeResult> TransferOwnershipAsync(string userId, Guid workspaceId, TransferOwnershipRequest request, CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(request);
+
+    var members = await context.WorkspaceMembers
+      .Include(m => m.Workspace)
+      .Where(m => m.WorkspaceId == workspaceId && (m.UserId == userId || m.UserId == request.UserId))
+      .ToListAsync(cancellationToken)
+      .ConfigureAwait(false);
+    var owner = members.FirstOrDefault(m => m.UserId == userId);
+    if (owner is null)
+    {
+      return WorkspaceChangeResult.NotFound();
+    }
+
+    if (owner.Role != WorkspaceRole.Owner)
+    {
+      return WorkspaceChangeResult.Forbidden(OwnerOnlyMessage);
+    }
+
+    if (request.UserId == userId)
+    {
+      return WorkspaceChangeResult.Invalid(nameof(TransferOwnershipRequest.UserId), "You already own this workspace.");
+    }
+
+    var successor = members.FirstOrDefault(m => m.UserId == request.UserId);
+    if (successor is null)
+    {
+      return WorkspaceChangeResult.Invalid(nameof(TransferOwnershipRequest.UserId), "Choose someone who is in this workspace.");
+    }
+
+    successor.Role = WorkspaceRole.Owner;
+    owner.Role = WorkspaceRole.Admin;
+    await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    var workspace = owner.Workspace!;
+    var memberCount = await context.WorkspaceMembers.CountAsync(m => m.WorkspaceId == workspaceId, cancellationToken).ConfigureAwait(false);
+    return new WorkspaceChangeResult(
+      ChangeOutcome.Changed,
+      new WorkspaceResponse(workspace.Id, workspace.Name, owner.Role, memberCount, workspace.CreatedAt));
   }
 
   /// <summary>

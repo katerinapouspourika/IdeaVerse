@@ -36,6 +36,8 @@ The API also serves the web app (`src/IdeaVerse.Web`) from `wwwroot` when one is
 | `GET` | `/api/v1/workspaces` | List the user's workspaces by name, with their `role` and `memberCount`. |
 | `POST` | `/api/v1/workspaces` | Create a workspace owned by the user. |
 | `PUT` | `/api/v1/workspaces/{id}` | Owner or admin: rename it. |
+| `DELETE` | `/api/v1/workspaces/{id}` | Owner only: delete it with all its ideas, components, teams, reminders, people, and invitations. |
+| `POST` | `/api/v1/workspaces/{id}/transfer` | Owner only: make the person with `userId` the owner; the previous owner becomes an admin and can then leave. |
 | `GET` | `/api/v1/workspaces/{id}/members` | List its people: owner, then admins, then members, each by email. |
 | `PUT` | `/api/v1/workspaces/{id}/members/{userId}` | Owner or admin: make someone `Admin` or `Member`. The owner's role cannot change (409). |
 | `DELETE` | `/api/v1/workspaces/{id}/members/{userId}` | Owner or admin removes someone, or anyone leaves. Takes them off the teams of its ideas; ideas they own stay. The owner cannot leave (409). |
