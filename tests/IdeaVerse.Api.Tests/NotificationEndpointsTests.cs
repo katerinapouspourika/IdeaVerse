@@ -97,6 +97,7 @@ public class NotificationEndpointsTests
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
     using var member = await factory.CreateSignedInClientAsync("member@example.com");
+    await factory.JoinAsync(owner, member, "member@example.com");
     var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(1))).ReadIdeaAsync();
     var added = await (await owner.AddMemberAsync(idea.Id, "member@example.com")).ReadMemberAsync();
     await factory.RunRemindersAsync();

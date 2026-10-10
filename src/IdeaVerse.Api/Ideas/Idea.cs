@@ -3,6 +3,7 @@ namespace Pouspourika.IdeaVerse.Api.Ideas;
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Members;
+using Pouspourika.IdeaVerse.Api.Workspaces;
 
 /// <summary>
 /// An idea scheduled for implementation on a target date.
@@ -23,6 +24,16 @@ public sealed class Idea
   /// Gets the identifier.
   /// </summary>
   public Guid Id { get; init; } = Guid.CreateVersion7();
+
+  /// <summary>
+  /// Gets the identifier of the <see cref="Workspaces.Workspace"/> the idea belongs to.
+  /// </summary>
+  public Guid WorkspaceId { get; init; }
+
+  /// <summary>
+  /// Gets the workspace.
+  /// </summary>
+  public Workspace? Workspace { get; init; }
 
   /// <summary>
   /// Gets the identifier of the <see cref="User"/> who owns the idea.

@@ -63,7 +63,7 @@ public class ComponentEndpointsTests
   }
 
   [Test]
-  public async Task Create_AnotherUsersIdea_ReturnsNotFound()
+  public async Task Create_IdeaInAnotherWorkspace_ReturnsNotFound()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
@@ -106,7 +106,7 @@ public class ComponentEndpointsTests
   }
 
   [Test]
-  public async Task List_AnotherUsersIdea_ReturnsNotFound()
+  public async Task List_IdeaInAnotherWorkspace_ReturnsNotFound()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
@@ -183,7 +183,7 @@ public class ComponentEndpointsTests
   }
 
   [Test]
-  public async Task Update_AnotherUsersComponent_ReturnsNotFound()
+  public async Task Update_ComponentInAnotherWorkspace_ReturnsNotFound()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
@@ -212,7 +212,7 @@ public class ComponentEndpointsTests
   }
 
   [Test]
-  public async Task Delete_AnotherUsersComponent_ReturnsNotFoundAndKeepsIt()
+  public async Task Delete_ComponentInAnotherWorkspace_ReturnsNotFoundAndKeepsIt()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
@@ -225,6 +225,41 @@ public class ComponentEndpointsTests
 
     await Assert.That(delete.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
     await Assert.That(await list.ReadComponentsAsync()).Count().IsEqualTo(1);
+  }
+
+  [Test]
+  public async Task Viewer_ListsComponentsButCannotChangeThem()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var viewer = await factory.CreateSignedInClientAsync("viewer@example.com");
+    await factory.JoinAsync(owner, viewer, "viewer@example.com");
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    var component = await (await owner.CreateComponentAsync(idea.Id, "Budget")).ReadComponentAsync();
+
+    using var list = await viewer.GetAsync($"/api/v1/ideas/{idea.Id}/components");
+    using var create = await viewer.CreateComponentAsync(idea.Id, "Venue");
+    using var update = await viewer.UpdateComponentAsync(idea.Id, component.Id, new UpdateComponentRequest("Budget", null, IsDone: true));
+    using var delete = await viewer.DeleteAsync($"/api/v1/ideas/{idea.Id}/components/{component.Id}");
+    using var missing = await viewer.DeleteAsync($"/api/v1/ideas/{idea.Id}/components/{Guid.NewGuid()}");
+
+    await Assert.That((await list.ReadComponentsAsync()).Select(c => c.Title)).IsEquivalentTo(["Budget"]);
+    await Assert.That(create.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+    await Assert.That(update.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+    await Assert.That(delete.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+    await Assert.That(missing.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+  }
+
+  [Test]
+  public async Task Update_MissingComponentOfEditableIdea_ReturnsNotFound()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    var idea = await (await client.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+
+    using var response = await client.UpdateComponentAsync(idea.Id, Guid.NewGuid(), new UpdateComponentRequest("Budget", null, IsDone: true));
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
   }
 
   [Test]
@@ -254,7 +289,7 @@ public class ComponentEndpointsTests
     (await client.UpdateComponentAsync(idea.Id, budget.Id, new UpdateComponentRequest("Budget", null, IsDone: true))).Dispose();
 
     using var get = await client.GetAsync($"/api/v1/ideas/{idea.Id}");
-    using var list = await client.GetAsync("/api/v1/ideas");
+    using var list = await client.ListIdeasAsync(await client.WorkspaceIdAsync());
     var fromGet = await get.ReadIdeaAsync();
     var fromList = (await list.ReadIdeasAsync()).Single();
 

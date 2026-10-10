@@ -3,32 +3,45 @@ namespace Pouspourika.IdeaVerse.Api.Ideas;
 using Microsoft.EntityFrameworkCore;
 
 using Pouspourika.IdeaVerse.Api.Data;
+using Pouspourika.IdeaVerse.Api.Workspaces;
 
 /// <summary>
-/// Creates, reads, and changes ideas on behalf of their owner and team members.
+/// Creates, reads, and changes the ideas of the user's workspaces.
 /// </summary>
 /// <remarks>
-/// Every operation goes through <see cref="IdeaAccess.AccessibleIdeas"/>, so an idea the user cannot access behaves exactly like a missing one.
+/// Every operation goes through <see cref="IdeaAccess"/>, so an idea outside the user's workspaces behaves exactly like a missing one,
+/// and a visible idea the user may not change is forbidden.
 /// </remarks>
 /// <param name="context">The database context.</param>
 /// <param name="timeProvider">Clock used for timestamps and date rules.</param>
 public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timeProvider)
 {
   /// <summary>
+  /// Why a user who can see an idea may not change it.
+  /// </summary>
+  private const string NotOnTeamMessage = "Only the idea's team and the workspace's admins can change this idea.";
+
+  /// <summary>
   /// Gets today's date in UTC.
   /// </summary>
   public DateOnly Today => timeProvider.Today();
 
   /// <summary>
-  /// Lists the ideas the user owns or is a member of, soonest target date first.
+  /// Lists a workspace's ideas, soonest target date first.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
+  /// <param name="workspaceId">The workspace identifier.</param>
   /// <param name="status">Optional status to filter by.</param>
   /// <param name="cancellationToken">Token to cancel the query.</param>
-  /// <returns>The ideas.</returns>
-  public async Task<IReadOnlyList<IdeaResponse>> ListAsync(string userId, IdeaStatus? status, CancellationToken cancellationToken)
+  /// <returns>The ideas, or <see langword="null"/> when the user is not in the workspace.</returns>
+  public async Task<IReadOnlyList<IdeaResponse>?> ListAsync(string userId, Guid workspaceId, IdeaStatus? status, CancellationToken cancellationToken)
   {
-    var query = context.AccessibleIdeas(userId);
+    if (await context.RoleInAsync(userId, workspaceId, cancellationToken).ConfigureAwait(false) is null)
+    {
+      return null;
+    }
+
+    var query = context.VisibleIdeas(userId).Where(i => i.WorkspaceId == workspaceId);
     if (status is { } filter)
     {
       query = query.Where(i => i.Status == filter);
@@ -37,38 +50,45 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
     return await query
       .OrderBy(i => i.TargetDate)
       .ThenBy(i => i.Title)
-      .Select(IdeaResponse.Projection(Today, userId))
+      .Select(IdeaResponse.Projection(context, Today, userId))
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
   }
 
   /// <summary>
-  /// Gets an idea the user can access.
+  /// Gets an idea the user can see.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="id">The idea identifier.</param>
   /// <param name="cancellationToken">Token to cancel the query.</param>
-  /// <returns>The idea, or <see langword="null"/> when the user cannot access such an idea.</returns>
+  /// <returns>The idea, or <see langword="null"/> when the user cannot see such an idea.</returns>
   public Task<IdeaResponse?> GetAsync(string userId, Guid id, CancellationToken cancellationToken)
-    => context.AccessibleIdeas(userId)
+    => context.VisibleIdeas(userId)
       .Where(i => i.Id == id)
-      .Select(IdeaResponse.Projection(Today, userId))
+      .Select(IdeaResponse.Projection(context, Today, userId))
       .FirstOrDefaultAsync(cancellationToken);
 
   /// <summary>
-  /// Creates an idea in the <see cref="IdeaStatus.Planned"/> status.
+  /// Creates an idea in the <see cref="IdeaStatus.Planned"/> status. Anyone in the workspace may create one.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier, who becomes the owner.</param>
+  /// <param name="workspaceId">The workspace identifier.</param>
   /// <param name="request">The validated request.</param>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
-  /// <returns>The created idea.</returns>
-  public async Task<IdeaResponse> CreateAsync(string userId, CreateIdeaRequest request, CancellationToken cancellationToken)
+  /// <returns>The created idea, or <see langword="null"/> when the user is not in the workspace.</returns>
+  public async Task<IdeaResponse?> CreateAsync(string userId, Guid workspaceId, CreateIdeaRequest request, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(request);
+
+    if (await context.RoleInAsync(userId, workspaceId, cancellationToken).ConfigureAwait(false) is null)
+    {
+      return null;
+    }
 
     var now = timeProvider.GetUtcNow();
     var idea = new Idea
     {
+      WorkspaceId = workspaceId,
       OwnerId = userId,
       Title = request.Title.Trim(),
       Description = Normalize(request.Description),
@@ -83,7 +103,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
   }
 
   /// <summary>
-  /// Replaces the editable fields of an idea the user can access.
+  /// Replaces the editable fields of an idea the user can edit.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="id">The idea identifier.</param>
@@ -94,10 +114,10 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
   {
     ArgumentNullException.ThrowIfNull(request);
 
-    var idea = await FindAsync(userId, id, cancellationToken).ConfigureAwait(false);
+    var idea = await context.EditableIdeas(userId).FirstOrDefaultAsync(i => i.Id == id, cancellationToken).ConfigureAwait(false);
     if (idea is null)
     {
-      return IdeaChangeResult.NotFound();
+      return IdeaChangeResult.Denied(await context.DenialAsync(userId, id, cancellationToken).ConfigureAwait(false), NotOnTeamMessage);
     }
 
     if (request.TargetDate != idea.TargetDate && request.TargetDate < Today)
@@ -113,7 +133,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
   }
 
   /// <summary>
-  /// Moves an idea the user can access to a later target date and marks it <see cref="IdeaStatus.Postponed"/>.
+  /// Moves an idea the user can edit to a later target date and marks it <see cref="IdeaStatus.Postponed"/>.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="id">The idea identifier.</param>
@@ -124,10 +144,10 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
   {
     ArgumentNullException.ThrowIfNull(request);
 
-    var idea = await FindAsync(userId, id, cancellationToken).ConfigureAwait(false);
+    var idea = await context.EditableIdeas(userId).FirstOrDefaultAsync(i => i.Id == id, cancellationToken).ConfigureAwait(false);
     if (idea is null)
     {
-      return IdeaChangeResult.NotFound();
+      return IdeaChangeResult.Denied(await context.DenialAsync(userId, id, cancellationToken).ConfigureAwait(false), NotOnTeamMessage);
     }
 
     if (idea.Status == IdeaStatus.Done)
@@ -147,25 +167,19 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
   }
 
   /// <summary>
-  /// Deletes an idea. Only its owner may delete it.
+  /// Deletes an idea. Only its owner and the workspace's owner and admins may delete it.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="id">The idea identifier.</param>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
   /// <returns>The outcome of the deletion.</returns>
-  public async Task<IdeaChangeOutcome> DeleteAsync(string userId, Guid id, CancellationToken cancellationToken)
+  public async Task<ChangeOutcome> DeleteAsync(string userId, Guid id, CancellationToken cancellationToken)
   {
-    var deleted = await context.OwnedIdeas(userId)
+    var deleted = await context.ManagedIdeas(userId)
       .Where(i => i.Id == id)
       .ExecuteDeleteAsync(cancellationToken)
       .ConfigureAwait(false);
-    if (deleted > 0)
-    {
-      return IdeaChangeOutcome.Changed;
-    }
-
-    var isMember = await context.AccessibleIdeas(userId).AnyAsync(i => i.Id == id, cancellationToken).ConfigureAwait(false);
-    return isMember ? IdeaChangeOutcome.Forbidden : IdeaChangeOutcome.NotFound;
+    return deleted > 0 ? ChangeOutcome.Changed : await context.DenialAsync(userId, id, cancellationToken).ConfigureAwait(false);
   }
 
   /// <summary>
@@ -177,16 +191,6 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
     => string.IsNullOrWhiteSpace(description) ? null : description.Trim();
 
   /// <summary>
-  /// Loads a tracked idea the user can access, for changing it.
-  /// </summary>
-  /// <param name="userId">The signed-in user's identifier.</param>
-  /// <param name="id">The idea identifier.</param>
-  /// <param name="cancellationToken">Token to cancel the query.</param>
-  /// <returns>The idea, or <see langword="null"/>.</returns>
-  private Task<Idea?> FindAsync(string userId, Guid id, CancellationToken cancellationToken)
-    => context.AccessibleIdeas(userId).FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
-
-  /// <summary>
   /// Reads an idea's response, including component counts, by identifier.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier, for the response's role.</param>
@@ -196,7 +200,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
   private Task<IdeaResponse> ProjectAsync(string userId, Guid id, CancellationToken cancellationToken)
     => context.Ideas
       .Where(i => i.Id == id)
-      .Select(IdeaResponse.Projection(Today, userId))
+      .Select(IdeaResponse.Projection(context, Today, userId))
       .SingleAsync(cancellationToken);
 
   /// <summary>

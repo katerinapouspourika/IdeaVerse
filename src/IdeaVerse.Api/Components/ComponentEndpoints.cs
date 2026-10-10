@@ -1,5 +1,6 @@
 namespace Pouspourika.IdeaVerse.Api.Components;
 
+using System.Diagnostics;
 using System.Security.Claims;
 
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -13,7 +14,7 @@ using Pouspourika.IdeaVerse.Api.Validation;
 internal static class ComponentEndpoints
 {
   /// <summary>
-  /// Maps the component endpoints. All require a signed-in user who can access the idea.
+  /// Maps the component endpoints. All require a signed-in user in the idea's workspace; changes also require being able to edit the idea.
   /// </summary>
   /// <param name="endpoints">The route builder.</param>
   /// <returns>The same route builder.</returns>
@@ -36,7 +37,7 @@ internal static class ComponentEndpoints
   /// <param name="user">The signed-in user.</param>
   /// <param name="service">The component service.</param>
   /// <param name="cancellationToken">Token to cancel the request.</param>
-  /// <returns>The components, or 404 when the idea is not accessible.</returns>
+  /// <returns>The components, or 404 when the idea is not visible.</returns>
   private static async Task<Results<Ok<ComponentResponse[]>, NotFound>> ListAsync(
     Guid ideaId,
     ClaimsPrincipal user,
@@ -57,18 +58,22 @@ internal static class ComponentEndpoints
   /// <param name="user">The signed-in user.</param>
   /// <param name="service">The component service.</param>
   /// <param name="cancellationToken">Token to cancel the request.</param>
-  /// <returns>201 with the component, or 404 when the idea is not accessible.</returns>
-  private static async Task<Results<Created<ComponentResponse>, NotFound>> CreateAsync(
+  /// <returns>201 with the component, 404 when the idea is not visible, or 403 when the user cannot edit it.</returns>
+  private static async Task<Results<Created<ComponentResponse>, NotFound, ProblemHttpResult>> CreateAsync(
     Guid ideaId,
     CreateComponentRequest request,
     ClaimsPrincipal user,
     ComponentService service,
     CancellationToken cancellationToken)
   {
-    var component = await service.CreateAsync(user.GetUserId(), ideaId, request, cancellationToken).ConfigureAwait(false);
-    return component is null
-      ? TypedResults.NotFound()
-      : TypedResults.Created($"/api/v1/ideas/{ideaId}/components/{component.Id}", ComponentResponse.From(component));
+    var result = await service.CreateAsync(user.GetUserId(), ideaId, request, cancellationToken).ConfigureAwait(false);
+    return result.Outcome switch
+    {
+      ChangeOutcome.Changed => TypedResults.Created($"/api/v1/ideas/{ideaId}/components/{result.Component!.Id}", ComponentResponse.From(result.Component)),
+      ChangeOutcome.NotFound => TypedResults.NotFound(),
+      ChangeOutcome.Forbidden => Forbidden(),
+      ChangeOutcome.Invalid or ChangeOutcome.Conflict or _ => throw new UnreachableException($"Unhandled outcome {result.Outcome}."),
+    };
   }
 
   /// <summary>
@@ -80,8 +85,8 @@ internal static class ComponentEndpoints
   /// <param name="user">The signed-in user.</param>
   /// <param name="service">The component service.</param>
   /// <param name="cancellationToken">Token to cancel the request.</param>
-  /// <returns>The updated component, or 404.</returns>
-  private static async Task<Results<Ok<ComponentResponse>, NotFound>> UpdateAsync(
+  /// <returns>The updated component, 404, or 403 when the user cannot edit the idea.</returns>
+  private static async Task<Results<Ok<ComponentResponse>, NotFound, ProblemHttpResult>> UpdateAsync(
     Guid ideaId,
     Guid componentId,
     UpdateComponentRequest request,
@@ -89,8 +94,14 @@ internal static class ComponentEndpoints
     ComponentService service,
     CancellationToken cancellationToken)
   {
-    var component = await service.UpdateAsync(user.GetUserId(), ideaId, componentId, request, cancellationToken).ConfigureAwait(false);
-    return component is null ? TypedResults.NotFound() : TypedResults.Ok(ComponentResponse.From(component));
+    var result = await service.UpdateAsync(user.GetUserId(), ideaId, componentId, request, cancellationToken).ConfigureAwait(false);
+    return result.Outcome switch
+    {
+      ChangeOutcome.Changed => TypedResults.Ok(ComponentResponse.From(result.Component!)),
+      ChangeOutcome.NotFound => TypedResults.NotFound(),
+      ChangeOutcome.Forbidden => Forbidden(),
+      ChangeOutcome.Invalid or ChangeOutcome.Conflict or _ => throw new UnreachableException($"Unhandled outcome {result.Outcome}."),
+    };
   }
 
   /// <summary>
@@ -101,14 +112,25 @@ internal static class ComponentEndpoints
   /// <param name="user">The signed-in user.</param>
   /// <param name="service">The component service.</param>
   /// <param name="cancellationToken">Token to cancel the request.</param>
-  /// <returns>204, or 404.</returns>
-  private static async Task<Results<NoContent, NotFound>> DeleteAsync(
+  /// <returns>204, 404, or 403 when the user cannot edit the idea.</returns>
+  private static async Task<Results<NoContent, NotFound, ProblemHttpResult>> DeleteAsync(
     Guid ideaId,
     Guid componentId,
     ClaimsPrincipal user,
     ComponentService service,
     CancellationToken cancellationToken)
-    => await service.DeleteAsync(user.GetUserId(), ideaId, componentId, cancellationToken).ConfigureAwait(false)
-      ? TypedResults.NoContent()
-      : TypedResults.NotFound();
+    => (await service.DeleteAsync(user.GetUserId(), ideaId, componentId, cancellationToken).ConfigureAwait(false)).Outcome switch
+    {
+      ChangeOutcome.Changed => TypedResults.NoContent(),
+      ChangeOutcome.NotFound => TypedResults.NotFound(),
+      ChangeOutcome.Forbidden => Forbidden(),
+      ChangeOutcome.Invalid or ChangeOutcome.Conflict or _ => throw new UnreachableException("Deleting a component is never invalid or conflicting."),
+    };
+
+  /// <summary>
+  /// Builds the 403 response for a user who can see an idea but not change its components.
+  /// </summary>
+  /// <returns>The problem result.</returns>
+  private static ProblemHttpResult Forbidden()
+    => TypedResults.Problem(detail: ComponentChangeResult.ForbiddenMessage, statusCode: StatusCodes.Status403Forbidden);
 }

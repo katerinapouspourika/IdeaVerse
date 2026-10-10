@@ -10,10 +10,11 @@ using Pouspourika.IdeaVerse.Api.Ideas;
 /// Manages who is on an idea's team.
 /// </summary>
 /// <remarks>
-/// Anyone on the team can see it; only the owner adds or removes members, and a member may remove themselves.
+/// Everyone in the idea's workspace sees the team. The idea's owner and the workspace's owner and admins add and remove members,
+/// who must already be in the workspace; a member may remove themselves.
 /// </remarks>
 /// <param name="context">The database context.</param>
-/// <param name="userManager">Identity user manager, for finding accounts by email.</param>
+/// <param name="userManager">Identity user manager, for normalizing email addresses.</param>
 /// <param name="timeProvider">Clock used for timestamps.</param>
 public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> userManager, TimeProvider timeProvider)
 {
@@ -28,10 +29,10 @@ public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> 
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="ideaId">The idea identifier.</param>
   /// <param name="cancellationToken">Token to cancel the query.</param>
-  /// <returns>The team, or <see langword="null"/> when the user cannot access the idea.</returns>
+  /// <returns>The team, or <see langword="null"/> when the user cannot see the idea.</returns>
   public async Task<IReadOnlyList<MemberResponse>?> ListAsync(string userId, Guid ideaId, CancellationToken cancellationToken)
   {
-    var owner = await context.AccessibleIdeas(userId)
+    var owner = await context.VisibleIdeas(userId)
       .Where(i => i.Id == ideaId)
       .Select(i => new MemberResponse(i.OwnerId, i.Owner!.Email!, IdeaRole.Owner, i.CreatedAt))
       .FirstOrDefaultAsync(cancellationToken)
@@ -52,9 +53,9 @@ public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> 
   }
 
   /// <summary>
-  /// Adds the account registered with the requested email to the idea's team.
+  /// Adds the person in the idea's workspace with the requested email to the idea's team.
   /// </summary>
-  /// <param name="userId">The signed-in user's identifier; must own the idea.</param>
+  /// <param name="userId">The signed-in user's identifier; must manage the idea.</param>
   /// <param name="ideaId">The idea identifier.</param>
   /// <param name="request">The validated request.</param>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
@@ -63,41 +64,47 @@ public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> 
   {
     ArgumentNullException.ThrowIfNull(request);
 
-    var ownerId = await FindOwnerIdAsync(userId, ideaId, cancellationToken).ConfigureAwait(false);
-    if (ownerId is null)
+    var idea = await context.ManagedIdeas(userId)
+      .Where(i => i.Id == ideaId)
+      .Select(i => new { i.OwnerId, i.WorkspaceId })
+      .FirstOrDefaultAsync(cancellationToken)
+      .ConfigureAwait(false);
+    if (idea is null)
     {
-      return MemberChangeResult.NotFound();
+      return MemberChangeResult.Denied(
+        await context.DenialAsync(userId, ideaId, cancellationToken).ConfigureAwait(false),
+        "Only the idea's owner and the workspace's admins can add team members.");
     }
 
-    if (ownerId != userId)
-    {
-      return MemberChangeResult.Forbidden("Only the idea's owner can add team members.");
-    }
-
-    var account = await userManager.FindByEmailAsync(request.Email.Trim()).ConfigureAwait(false);
+    var email = userManager.NormalizeEmail(request.Email.Trim());
+    var account = await context.WorkspaceMembers
+      .Where(m => m.WorkspaceId == idea.WorkspaceId && m.User!.NormalizedEmail == email)
+      .Select(m => new { m.UserId, m.User!.Email })
+      .FirstOrDefaultAsync(cancellationToken)
+      .ConfigureAwait(false);
     if (account is null)
     {
-      return MemberChangeResult.Invalid(EmailField, "No IdeaVerse account uses this email. Ask them to sign up first.");
+      return MemberChangeResult.Invalid(EmailField, "No one in this workspace uses this email. Invite them to the workspace first.");
     }
 
-    if (account.Id == ownerId)
+    if (account.UserId == idea.OwnerId)
     {
       return MemberChangeResult.Invalid(EmailField, "The owner is already on the idea.");
     }
 
-    if (await context.IdeaMembers.AnyAsync(m => m.IdeaId == ideaId && m.UserId == account.Id, cancellationToken).ConfigureAwait(false))
+    if (await context.IdeaMembers.AnyAsync(m => m.IdeaId == ideaId && m.UserId == account.UserId, cancellationToken).ConfigureAwait(false))
     {
       return MemberChangeResult.Conflict("This person is already a team member.");
     }
 
-    var member = new IdeaMember { IdeaId = ideaId, UserId = account.Id, AddedAt = timeProvider.GetUtcNow() };
+    var member = new IdeaMember { IdeaId = ideaId, UserId = account.UserId, AddedAt = timeProvider.GetUtcNow() };
     context.IdeaMembers.Add(member);
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-    return MemberChangeResult.Changed(new MemberResponse(account.Id, account.Email!, IdeaRole.Member, member.AddedAt));
+    return MemberChangeResult.Changed(new MemberResponse(account.UserId, account.Email!, IdeaRole.Member, member.AddedAt));
   }
 
   /// <summary>
-  /// Removes a member from the idea's team. The owner may remove anyone; a member may remove only themselves.
+  /// Removes a member from the idea's team. Those who manage the idea may remove anyone but its owner; a member may remove only themselves.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="ideaId">The idea identifier.</param>
@@ -106,20 +113,24 @@ public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> 
   /// <returns>The outcome.</returns>
   public async Task<MemberChangeResult> RemoveAsync(string userId, Guid ideaId, string memberUserId, CancellationToken cancellationToken)
   {
-    var ownerId = await FindOwnerIdAsync(userId, ideaId, cancellationToken).ConfigureAwait(false);
-    if (ownerId is null)
+    var idea = await context.VisibleIdeas(userId)
+      .Where(i => i.Id == ideaId)
+      .Select(i => new { i.OwnerId, CanManage = context.ManagedIdeas(userId).Any(m => m.Id == i.Id) })
+      .FirstOrDefaultAsync(cancellationToken)
+      .ConfigureAwait(false);
+    if (idea is null)
     {
       return MemberChangeResult.NotFound();
     }
 
-    if (memberUserId == ownerId)
+    if (memberUserId == idea.OwnerId)
     {
       return MemberChangeResult.Conflict("The owner cannot be removed from their idea.");
     }
 
-    if (userId != ownerId && userId != memberUserId)
+    if (!idea.CanManage && userId != memberUserId)
     {
-      return MemberChangeResult.Forbidden("Only the idea's owner can remove other team members.");
+      return MemberChangeResult.Forbidden("Only the idea's owner and the workspace's admins can remove other team members.");
     }
 
     var removed = await context.IdeaMembers
@@ -128,17 +139,4 @@ public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> 
       .ConfigureAwait(false);
     return removed > 0 ? MemberChangeResult.Changed() : MemberChangeResult.NotFound();
   }
-
-  /// <summary>
-  /// Finds the owner of an idea the user can access.
-  /// </summary>
-  /// <param name="userId">The signed-in user's identifier.</param>
-  /// <param name="ideaId">The idea identifier.</param>
-  /// <param name="cancellationToken">Token to cancel the query.</param>
-  /// <returns>The owner's identifier, or <see langword="null"/> when the user cannot access the idea.</returns>
-  private Task<string?> FindOwnerIdAsync(string userId, Guid ideaId, CancellationToken cancellationToken)
-    => context.AccessibleIdeas(userId)
-      .Where(i => i.Id == ideaId)
-      .Select(i => i.OwnerId)
-      .FirstOrDefaultAsync(cancellationToken);
 }

@@ -64,8 +64,11 @@ public sealed partial class ReminderService(
   private static partial void LogEmailFailed(ILogger logger, Exception exception, Guid notificationId);
 
   /// <summary>
-  /// Creates a notification for each team member of each unfinished idea whose reminder stage has no notification yet.
+  /// Creates a notification for each team member, owner included, of each unfinished idea whose reminder stage has no notification yet.
   /// </summary>
+  /// <remarks>
+  /// Only people still in the idea's workspace are reminded.
+  /// </remarks>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
   /// <returns>How many notifications were created.</returns>
   private async Task<int> RaiseDueRemindersAsync(CancellationToken cancellationToken)
@@ -84,6 +87,7 @@ public sealed partial class ReminderService(
         i.TargetDate,
         i.OwnerId,
         MemberIds = i.Members.Select(m => m.UserId).ToList(),
+        WorkspaceUserIds = i.Workspace!.Members.Select(w => w.UserId).ToList(),
         Sent = context.Notifications
           .Where(n => n.IdeaId == i.Id && n.TargetDate == i.TargetDate)
           .Select(n => new { n.UserId, n.Kind })
@@ -96,7 +100,8 @@ public sealed partial class ReminderService(
     foreach (var idea in ideas)
     {
       var kind = ReminderSchedule.KindFor(idea.TargetDate, today)!.Value;
-      foreach (var userId in idea.MemberIds.Prepend(idea.OwnerId).Distinct(StringComparer.Ordinal))
+      var team = idea.MemberIds.Prepend(idea.OwnerId).Intersect(idea.WorkspaceUserIds, StringComparer.Ordinal);
+      foreach (var userId in team)
       {
         if (idea.Sent.Any(s => s.UserId == userId && s.Kind == kind))
         {

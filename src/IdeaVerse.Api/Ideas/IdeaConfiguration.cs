@@ -15,6 +15,8 @@ internal sealed class IdeaConfiguration : IEntityTypeConfiguration<Idea>
     builder.Property(i => i.Description).HasMaxLength(Idea.DescriptionMaxLength);
     builder.Property(i => i.Status).HasConversion<string>().HasMaxLength(20);
     builder.HasOne(i => i.Owner).WithMany().HasForeignKey(i => i.OwnerId).OnDelete(DeleteBehavior.Cascade);
+    builder.HasOne(i => i.Workspace).WithMany(w => w.Ideas).HasForeignKey(i => i.WorkspaceId).OnDelete(DeleteBehavior.Cascade);
     builder.HasIndex(i => new { i.OwnerId, i.TargetDate });
+    builder.HasIndex(i => new { i.WorkspaceId, i.TargetDate });
   }
 }

@@ -6,11 +6,13 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Ideas;
+using Pouspourika.IdeaVerse.Api.Invitations;
 using Pouspourika.IdeaVerse.Api.Members;
 using Pouspourika.IdeaVerse.Api.Notifications;
+using Pouspourika.IdeaVerse.Api.Workspaces;
 
 /// <summary>
-/// Database context holding Identity accounts, ideas, their components and team members, and reminders.
+/// Database context holding Identity accounts, workspaces and their invitations, ideas, their components and team members, and reminders.
 /// </summary>
 /// <param name="options">The context options.</param>
 public sealed class IdeaVerseDbContext(DbContextOptions<IdeaVerseDbContext> options) : IdentityDbContext<User>(options)
@@ -19,6 +21,21 @@ public sealed class IdeaVerseDbContext(DbContextOptions<IdeaVerseDbContext> opti
   /// EF Core's SQLite provider name, compared by value so the API does not depend on the SQLite package.
   /// </summary>
   private const string SqliteProviderName = "Microsoft.EntityFrameworkCore.Sqlite";
+
+  /// <summary>
+  /// Gets the workspaces.
+  /// </summary>
+  public DbSet<Workspace> Workspaces => Set<Workspace>();
+
+  /// <summary>
+  /// Gets the people in all workspaces.
+  /// </summary>
+  public DbSet<WorkspaceMember> WorkspaceMembers => Set<WorkspaceMember>();
+
+  /// <summary>
+  /// Gets the pending invitations to all workspaces.
+  /// </summary>
+  public DbSet<Invitation> Invitations => Set<Invitation>();
 
   /// <summary>
   /// Gets the ideas.

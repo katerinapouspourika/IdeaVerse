@@ -63,7 +63,7 @@ public sealed class WebAppTests : IDisposable
     await using var factory = new IdeaVerseApiFactory(webRoot.FullName);
     var client = factory.CreateClient();
 
-    using var response = await client.GetAsync("/api/v1/ideas");
+    using var response = await client.GetAsync("/api/v1/workspaces");
 
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
   }

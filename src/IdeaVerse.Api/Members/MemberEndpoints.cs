@@ -7,7 +7,6 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 using Pouspourika.IdeaVerse.Api.Auth;
-using Pouspourika.IdeaVerse.Api.Ideas;
 using Pouspourika.IdeaVerse.Api.Validation;
 
 /// <summary>
@@ -16,7 +15,7 @@ using Pouspourika.IdeaVerse.Api.Validation;
 internal static class MemberEndpoints
 {
   /// <summary>
-  /// Maps the team member endpoints. All require a signed-in user who can access the idea.
+  /// Maps the team member endpoints. All require a signed-in user in the idea's workspace.
   /// </summary>
   /// <param name="endpoints">The route builder.</param>
   /// <returns>The same route builder.</returns>
@@ -50,14 +49,14 @@ internal static class MemberEndpoints
   }
 
   /// <summary>
-  /// Adds a registered user to the idea's team by email.
+  /// Adds someone from the idea's workspace to its team by email.
   /// </summary>
   /// <param name="ideaId">The idea identifier.</param>
   /// <param name="request">The validated request.</param>
   /// <param name="user">The signed-in user.</param>
   /// <param name="service">The member service.</param>
   /// <param name="cancellationToken">Token to cancel the request.</param>
-  /// <returns>201 with the member, 404, 403 for a non-owner, 400 for an unknown email, or 409 for an existing member.</returns>
+  /// <returns>201 with the member, 404, 403 for someone who does not manage the idea, 400 for an email outside the workspace, or 409 for an existing member.</returns>
   private static async Task<Results<Created<MemberResponse>, NotFound, ValidationProblem, ProblemHttpResult>> AddAsync(
     Guid ideaId,
     AddMemberRequest request,
@@ -68,14 +67,14 @@ internal static class MemberEndpoints
     var result = await service.AddAsync(user.GetUserId(), ideaId, request, cancellationToken).ConfigureAwait(false);
     return result.Outcome switch
     {
-      IdeaChangeOutcome.Changed => TypedResults.Created($"/api/v1/ideas/{ideaId}/members/{result.Member!.UserId}", result.Member),
-      IdeaChangeOutcome.NotFound => TypedResults.NotFound(),
-      IdeaChangeOutcome.Invalid => TypedResults.ValidationProblem(new Dictionary<string, string[]>(StringComparer.Ordinal)
+      ChangeOutcome.Changed => TypedResults.Created($"/api/v1/ideas/{ideaId}/members/{result.Member!.UserId}", result.Member),
+      ChangeOutcome.NotFound => TypedResults.NotFound(),
+      ChangeOutcome.Invalid => TypedResults.ValidationProblem(new Dictionary<string, string[]>(StringComparer.Ordinal)
       {
         [JsonNamingPolicy.CamelCase.ConvertName(result.Field!)] = [result.Message!],
       }),
-      IdeaChangeOutcome.Conflict => TypedResults.Problem(detail: result.Message, statusCode: StatusCodes.Status409Conflict),
-      IdeaChangeOutcome.Forbidden => TypedResults.Problem(detail: result.Message, statusCode: StatusCodes.Status403Forbidden),
+      ChangeOutcome.Conflict => TypedResults.Problem(detail: result.Message, statusCode: StatusCodes.Status409Conflict),
+      ChangeOutcome.Forbidden => TypedResults.Problem(detail: result.Message, statusCode: StatusCodes.Status403Forbidden),
       _ => throw new UnreachableException($"Unhandled outcome {result.Outcome}."),
     };
   }
@@ -88,7 +87,7 @@ internal static class MemberEndpoints
   /// <param name="user">The signed-in user.</param>
   /// <param name="service">The member service.</param>
   /// <param name="cancellationToken">Token to cancel the request.</param>
-  /// <returns>204, 404, 403 when removing someone else as a member, or 409 when removing the owner.</returns>
+  /// <returns>204, 404, 403 when removing someone else without managing the idea, or 409 when removing the owner.</returns>
   private static async Task<Results<NoContent, NotFound, ProblemHttpResult>> RemoveAsync(
     Guid ideaId,
     string memberUserId,
@@ -99,11 +98,11 @@ internal static class MemberEndpoints
     var result = await service.RemoveAsync(user.GetUserId(), ideaId, memberUserId, cancellationToken).ConfigureAwait(false);
     return result.Outcome switch
     {
-      IdeaChangeOutcome.Changed => TypedResults.NoContent(),
-      IdeaChangeOutcome.NotFound => TypedResults.NotFound(),
-      IdeaChangeOutcome.Conflict => TypedResults.Problem(detail: result.Message, statusCode: StatusCodes.Status409Conflict),
-      IdeaChangeOutcome.Forbidden => TypedResults.Problem(detail: result.Message, statusCode: StatusCodes.Status403Forbidden),
-      IdeaChangeOutcome.Invalid or _ => throw new UnreachableException($"Unhandled outcome {result.Outcome}."),
+      ChangeOutcome.Changed => TypedResults.NoContent(),
+      ChangeOutcome.NotFound => TypedResults.NotFound(),
+      ChangeOutcome.Conflict => TypedResults.Problem(detail: result.Message, statusCode: StatusCodes.Status409Conflict),
+      ChangeOutcome.Forbidden => TypedResults.Problem(detail: result.Message, statusCode: StatusCodes.Status403Forbidden),
+      ChangeOutcome.Invalid or _ => throw new UnreachableException($"Unhandled outcome {result.Outcome}."),
     };
   }
 }
