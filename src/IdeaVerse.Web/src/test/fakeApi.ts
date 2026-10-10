@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-import type { Idea, Workspace } from '../api/types';
+import type { Account, Idea, Workspace } from '../api/types';
 
 type Handler = (body: unknown) => { status: number; body?: unknown };
 
@@ -40,9 +40,17 @@ export function aWorkspace(overrides: Partial<Workspace> = {}): Workspace {
 /** The route listing the ideas of the default workspace. */
 export const ideasRoute = 'GET /api/v1/workspaces/ws-1/ideas';
 
+/** The signed-in user's account: UTC, every reminder, by email. */
+export const signedInAccount: Account = {
+  email: 'kat@example.com',
+  timeZone: 'UTC',
+  emailReminders: true,
+  reminderKinds: ['ComingUp', 'Tomorrow', 'Today', 'Overdue'],
+};
+
 /** A signed-in user who owns one workspace, with no reminders or invitations. */
 export const signedIn = {
-  'GET /api/v1/account': { status: 200, body: { email: 'kat@example.com', timeZone: 'UTC' } },
+  'GET /api/v1/account': { status: 200, body: signedInAccount },
   'GET /api/v1/notifications': { status: 200, body: { items: [], unreadCount: 0 } },
   'GET /api/v1/workspaces': { status: 200, body: [aWorkspace()] },
   'GET /api/v1/invitations': { status: 200, body: [] },

@@ -69,7 +69,8 @@ public sealed partial class ReminderService(
   /// </summary>
   /// <remarks>
   /// Only people still in the idea's workspace are reminded. Each person's stage follows their own local date, and is raised
-  /// only once their local time reaches <see cref="ReminderOptions.SendAt"/>, so reminders arrive in the morning.
+  /// only once their local time reaches <see cref="ReminderOptions.SendAt"/>, so reminders arrive in the morning. Kinds a person
+  /// turned off are skipped.
   /// </remarks>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
   /// <returns>How many notifications were created.</returns>
@@ -99,10 +100,10 @@ public sealed partial class ReminderService(
       .ConfigureAwait(false);
 
     var recipientIds = ideas.SelectMany(i => i.MemberIds.Append(i.OwnerId)).Distinct(StringComparer.Ordinal).ToList();
-    var zones = await context.Users
+    var recipients = await context.Users
       .Where(u => recipientIds.Contains(u.Id))
-      .Select(u => new { u.Id, u.TimeZone })
-      .ToDictionaryAsync(u => u.Id, u => TimeZones.Find(u.TimeZone), StringComparer.Ordinal, cancellationToken)
+      .Select(u => new { u.Id, u.TimeZone, u.MutedReminderKinds })
+      .ToDictionaryAsync(u => u.Id, u => (Zone: TimeZones.Find(u.TimeZone), Muted: u.MutedReminderKinds), StringComparer.Ordinal, cancellationToken)
       .ConfigureAwait(false);
 
     var created = 0;
@@ -111,9 +112,11 @@ public sealed partial class ReminderService(
       var team = idea.MemberIds.Prepend(idea.OwnerId).Intersect(idea.WorkspaceUserIds, StringComparer.Ordinal);
       foreach (var userId in team)
       {
-        var localNow = timeProvider.LocalNow(zones.GetValueOrDefault(userId, TimeZoneInfo.Utc));
+        var (zone, muted) = recipients.GetValueOrDefault(userId, (TimeZoneInfo.Utc, 0));
+        var localNow = timeProvider.LocalNow(zone);
         if (TimeOnly.FromDateTime(localNow) < sendAt
           || ReminderSchedule.KindFor(idea.TargetDate, DateOnly.FromDateTime(localNow)) is not { } kind
+          || !User.Wants(muted, kind)
           || idea.Sent.Any(s => s.UserId == userId && s.Kind == kind))
         {
           continue;
@@ -133,7 +136,7 @@ public sealed partial class ReminderService(
   /// </summary>
   /// <remarks>
   /// A failed email is logged and left for the next run; one failure does not stop the rest.
-  /// Reminders for people no longer on the idea's team or in its workspace are not emailed.
+  /// Reminders for people no longer on the idea's team or in its workspace, or who turned reminder emails off, are not emailed.
   /// </remarks>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
   /// <returns>How many emails were sent.</returns>
@@ -144,7 +147,7 @@ public sealed partial class ReminderService(
     var oldest = now - settings.EmailRetryWindow;
 
     var pending = await context.Notifications
-      .Where(n => n.EmailedAt == null && n.CreatedAt >= oldest)
+      .Where(n => n.EmailedAt == null && n.CreatedAt >= oldest && n.User!.EmailReminders)
       .Where(n => context.WorkspaceMembers.Any(w => w.WorkspaceId == n.Idea!.WorkspaceId && w.UserId == n.UserId))
       .Where(n => n.Idea!.OwnerId == n.UserId || n.Idea.Members.Any(m => m.UserId == n.UserId))
       .Select(n => new { Notification = n, n.User!.Email, n.User.TimeZone, IdeaTitle = n.Idea!.Title })

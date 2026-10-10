@@ -3,7 +3,7 @@ import { createContext, use, useEffect, type ReactNode } from 'react';
 
 import { ApiError, request } from '../api/client';
 import { browserTimeZone, setTimeZone } from '../api/dates';
-import type { Account } from '../api/types';
+import type { Account, ReminderSettings } from '../api/types';
 
 interface Auth {
   account: Account | null;
@@ -14,6 +14,8 @@ interface Auth {
   logout: () => Promise<void>;
   /** Saves the account's time zone. */
   updateTimeZone: (timeZone: string) => Promise<void>;
+  /** Saves which reminders the account gets and whether they are emailed. */
+  updateReminders: (settings: ReminderSettings) => Promise<void>;
 }
 
 const AuthContext = createContext<Auth | null>(null);
@@ -31,6 +33,11 @@ async function saveTimeZone(client: QueryClient, timeZone: string) {
   applyTimeZone(account);
   client.setQueryData(accountKey, account);
   await client.invalidateQueries({ predicate: (query) => query.queryKey[0] !== accountKey[0] });
+}
+
+/** Saves the account's reminder settings. */
+async function saveReminders(client: QueryClient, settings: ReminderSettings) {
+  client.setQueryData(accountKey, await request<Account>('PUT', '/api/v1/account/reminders', settings));
 }
 
 /** Loads the signed-in account, or `null` when the login cookie is missing or expired. */
@@ -78,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext value={{ account: data ?? null, isLoading, login, register, logout, updateTimeZone: (timeZone) => saveTimeZone(client, timeZone) }}>
+    <AuthContext value={{ account: data ?? null, isLoading, login, register, logout, updateTimeZone: (timeZone) => saveTimeZone(client, timeZone), updateReminders: (settings) => saveReminders(client, settings) }}>
       {children}
     </AuthContext>
   );
