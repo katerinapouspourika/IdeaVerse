@@ -3,16 +3,32 @@ import { Link } from 'react-router';
 
 import { daysUntil, describeDue, formatDate } from '../api/dates';
 import { useIdeas } from '../api/queries';
-import { statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
+import { statuses, statusLabels, type Idea, type IdeaStatus, type Workspace } from '../api/types';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { Progress } from '../components/Progress';
 import { StatusBadge } from '../components/StatusBadge';
+import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { NewIdeaForm } from './NewIdeaForm';
+import { WelcomePage } from './WelcomePage';
 
 export function IdeasPage() {
+  const { current, isLoading, error } = useWorkspace();
+
+  if (isLoading) {
+    return <p className="muted">Loading…</p>;
+  }
+
+  if (!current) {
+    return error ? <ErrorMessage error={error} /> : <WelcomePage />;
+  }
+
+  return <WorkspaceIdeas key={current.id} workspace={current} />;
+}
+
+function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const [status, setStatus] = useState<IdeaStatus | undefined>();
   const [adding, setAdding] = useState(false);
-  const ideas = useIdeas(status);
+  const ideas = useIdeas(workspace.id, status);
 
   return (
     <div className="stack">
@@ -25,7 +41,7 @@ export function IdeasPage() {
         )}
       </div>
 
-      {adding && <NewIdeaForm onDone={() => setAdding(false)} />}
+      {adding && <NewIdeaForm workspaceId={workspace.id} onDone={() => setAdding(false)} />}
 
       <nav className="tabs" aria-label="Filter by status">
         <FilterTab label="All" active={status === undefined} onClick={() => setStatus(undefined)} />
@@ -86,7 +102,7 @@ function IdeaList({ ideas, filtered }: { ideas: Idea[]; filtered: boolean }) {
                 <Progress done={idea.completedComponentCount} total={idea.componentCount} />
               </div>
               <div className="row small muted">
-                {idea.role === 'Member' ? <span>Shared with you</span> : <span>{idea.memberCount === 0 ? 'Only you' : `You + ${idea.memberCount}`}</span>}
+                <span>{describeTeam(idea)}</span>
                 {idea.postponeCount > 0 && <span>Postponed {idea.postponeCount}×</span>}
               </div>
             </Link>
@@ -95,4 +111,12 @@ function IdeaList({ ideas, filtered }: { ideas: Idea[]; filtered: boolean }) {
       </ul>
     </>
   );
+}
+
+/** Who the idea belongs to, from the user's point of view. */
+function describeTeam(idea: Idea): string {
+  if (idea.role === 'Owner') {
+    return idea.memberCount === 0 ? 'Only you' : `You + ${idea.memberCount}`;
+  }
+  return idea.role === 'Member' ? `You’re on ${idea.ownerEmail}’s team` : `By ${idea.ownerEmail}`;
 }

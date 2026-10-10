@@ -2,10 +2,49 @@
 
 export type IdeaStatus = 'Planned' | 'InProgress' | 'Postponed' | 'Done';
 
-export type IdeaRole = 'Owner' | 'Member';
+/** The user's relationship to an idea: its owner, on its team, or someone else in its workspace. */
+export type IdeaRole = 'Owner' | 'Member' | 'Viewer';
+
+export type WorkspaceRole = 'Owner' | 'Admin' | 'Member';
+
+export interface Workspace {
+  id: string;
+  name: string;
+  role: WorkspaceRole;
+  memberCount: number;
+  createdAt: string;
+}
+
+export interface WorkspaceMember {
+  userId: string;
+  email: string;
+  role: WorkspaceRole;
+  joinedAt: string;
+}
+
+/** An open invitation, as the workspace's owner and admins see it. */
+export interface Invitation {
+  id: string;
+  email: string;
+  role: WorkspaceRole;
+  invitedByEmail: string;
+  sentAt: string;
+  expiresAt: string;
+}
+
+/** An open invitation, as the invited person sees it. */
+export interface ReceivedInvitation {
+  id: string;
+  workspaceId: string;
+  workspaceName: string;
+  role: WorkspaceRole;
+  invitedByEmail: string;
+  expiresAt: string;
+}
 
 export interface Idea {
   id: string;
+  workspaceId: string;
   title: string;
   description: string | null;
   /** ISO date, `YYYY-MM-DD`. */
@@ -14,6 +53,11 @@ export interface Idea {
   postponeCount: number;
   isOverdue: boolean;
   role: IdeaRole;
+  /** Whether the user may edit, postpone, and change the components of the idea. */
+  canEdit: boolean;
+  /** Whether the user may delete the idea and manage its team. */
+  canManage: boolean;
+  ownerEmail: string;
   memberCount: number;
   componentCount: number;
   completedComponentCount: number;

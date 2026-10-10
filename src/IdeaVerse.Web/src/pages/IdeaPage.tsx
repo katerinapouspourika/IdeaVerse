@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 
 import { ApiError } from '../api/client';
@@ -9,6 +9,7 @@ import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { Progress } from '../components/Progress';
 import { StatusBadge } from '../components/StatusBadge';
+import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { ComponentsSection } from './ComponentsSection';
 import { TeamSection } from './TeamSection';
 
@@ -23,7 +24,7 @@ export function IdeaPage() {
   if (idea.error instanceof ApiError && idea.error.status === 404) {
     return (
       <div className="card empty">
-        <p>This idea doesn’t exist or isn’t shared with you.</p>
+        <p>This idea doesn’t exist or isn’t in one of your workspaces.</p>
         <Link to="/">Back to ideas</Link>
       </div>
     );
@@ -38,6 +39,15 @@ export function IdeaPage() {
 
 function IdeaDetail({ idea }: { idea: Idea }) {
   const [editing, setEditing] = useState(false);
+  const { all, current, select } = useWorkspace();
+  const ideaWorkspaceId = idea.workspaceId;
+  const switchTo = current?.id !== ideaWorkspaceId && all.some((w) => w.id === ideaWorkspaceId) ? ideaWorkspaceId : null;
+
+  useEffect(() => {
+    if (switchTo) {
+      select(switchTo);
+    }
+  }, [switchTo, select]);
 
   return (
     <div className="stack">
@@ -60,18 +70,24 @@ function IdeaDetail({ idea }: { idea: Idea }) {
           </p>
           {idea.description && <p className="description">{idea.description}</p>}
           <Progress done={idea.completedComponentCount} total={idea.componentCount} />
-          <div className="row">
-            <button type="button" className="button" onClick={() => setEditing(true)}>
-              Edit details
-            </button>
-          </div>
+          {idea.canEdit ? (
+            <div className="row">
+              <button type="button" className="button" onClick={() => setEditing(true)}>
+                Edit details
+              </button>
+            </div>
+          ) : (
+            <p className="muted small">
+              {idea.ownerEmail}’s idea. You can follow it here; only its team and the workspace’s admins can change it.
+            </p>
+          )}
         </section>
       )}
 
-      {idea.status !== 'Done' && <PostponeForm idea={idea} />}
-      <ComponentsSection ideaId={idea.id} />
+      {idea.canEdit && idea.status !== 'Done' && <PostponeForm idea={idea} />}
+      <ComponentsSection ideaId={idea.id} canEdit={idea.canEdit} />
       <TeamSection idea={idea} />
-      {idea.role === 'Owner' && <DeleteIdea idea={idea} />}
+      {idea.canManage && <DeleteIdea idea={idea} />}
     </div>
   );
 }
@@ -175,7 +191,7 @@ function DeleteIdea({ idea }: { idea: Idea }) {
   return (
     <section className="card danger stack">
       <h2>Delete idea</h2>
-      <p className="muted small">Only you, as the owner, can delete this idea.</p>
+      <p className="muted small">Only the idea’s owner and the workspace’s admins can delete it.</p>
       <ErrorMessage error={remove.error} />
       <div className="row">
         <button type="button" className="button danger" onClick={confirmAndDelete} disabled={remove.isPending}>

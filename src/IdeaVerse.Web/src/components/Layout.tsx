@@ -1,10 +1,26 @@
-import { Link, Outlet, useNavigate } from 'react-router';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router';
 
 import { useAuth } from '../auth/AuthContext';
+import { useWorkspace, WorkspaceProvider } from '../workspaces/WorkspaceContext';
+import { WorkspaceSwitcher } from '../workspaces/WorkspaceSwitcher';
 import { NotificationBell } from './NotificationBell';
 
 export function Layout() {
+  return (
+    <WorkspaceProvider>
+      <div className="shell">
+        <TopBar />
+        <main className="content">
+          <Outlet />
+        </main>
+      </div>
+    </WorkspaceProvider>
+  );
+}
+
+function TopBar() {
   const { account, logout } = useAuth();
+  const { current } = useWorkspace();
   const navigate = useNavigate();
 
   const signOut = async () => {
@@ -13,25 +29,28 @@ export function Layout() {
   };
 
   return (
-    <div className="shell">
-      <header className="topbar">
+    <header className="topbar">
+      <div className="row">
         <Link to="/" className="brand">
           <img src="/logo.png" alt="" className="logo" width="32" height="32" />
           IdeaVerse
         </Link>
-        {account && (
-          <div className="account">
-            <NotificationBell />
-            <span className="muted">{account.email}</span>
-            <button type="button" className="button ghost" onClick={() => void signOut()}>
-              Sign out
-            </button>
-          </div>
+        {account && <WorkspaceSwitcher />}
+        {account && current && (
+          <NavLink to="/people" className="nav-link">
+            People
+          </NavLink>
         )}
-      </header>
-      <main className="content">
-        <Outlet />
-      </main>
-    </div>
+      </div>
+      {account && (
+        <div className="account">
+          <NotificationBell />
+          <span className="muted">{account.email}</span>
+          <button type="button" className="button ghost" onClick={() => void signOut()}>
+            Sign out
+          </button>
+        </div>
+      )}
+    </header>
   );
 }

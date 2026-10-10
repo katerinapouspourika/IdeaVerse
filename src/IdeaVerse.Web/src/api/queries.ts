@@ -1,10 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { request } from './client';
-import type { Component, ComponentInput, ComponentUpdate, Idea, IdeaInput, IdeaStatus, IdeaUpdate, Member, Notifications } from './types';
+import type {
+  Component,
+  ComponentInput,
+  ComponentUpdate,
+  Idea,
+  IdeaInput,
+  IdeaStatus,
+  IdeaUpdate,
+  Invitation,
+  Member,
+  Notifications,
+  ReceivedInvitation,
+  Workspace,
+  WorkspaceMember,
+  WorkspaceRole,
+} from './types';
 
 export const keys = {
-  ideas: (status?: IdeaStatus) => ['ideas', status ?? 'all'] as const,
+  workspaces: ['workspaces'] as const,
+  workspaceMembers: (workspaceId: string) => ['workspaces', workspaceId, 'members'] as const,
+  invitations: (workspaceId: string) => ['workspaces', workspaceId, 'invitations'] as const,
+  receivedInvitations: ['invitations'] as const,
+  ideas: (workspaceId: string, status?: IdeaStatus) => ['ideas', workspaceId, status ?? 'all'] as const,
   idea: (id: string) => ['idea', id] as const,
   components: (ideaId: string) => ['idea', ideaId, 'components'] as const,
   members: (ideaId: string) => ['idea', ideaId, 'members'] as const,
@@ -14,10 +33,116 @@ export const keys = {
 /** How often the app checks for new reminders while open. */
 export const notificationPollMs = 60_000;
 
-export function useIdeas(status?: IdeaStatus) {
+export function useWorkspaces(enabled = true) {
+  return useQuery({ queryKey: keys.workspaces, queryFn: () => request<Workspace[]>('GET', '/api/v1/workspaces'), enabled });
+}
+
+export function useCreateWorkspace() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => request<Workspace>('POST', '/api/v1/workspaces', { name }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.workspaces }),
+  });
+}
+
+export function useRenameWorkspace(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => request<Workspace>('PUT', `/api/v1/workspaces/${workspaceId}`, { name }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.workspaces, exact: true }),
+  });
+}
+
+export function useWorkspaceMembers(workspaceId: string) {
   return useQuery({
-    queryKey: keys.ideas(status),
-    queryFn: () => request<Idea[]>('GET', status ? `/api/v1/ideas?status=${status}` : '/api/v1/ideas'),
+    queryKey: keys.workspaceMembers(workspaceId),
+    queryFn: () => request<WorkspaceMember[]>('GET', `/api/v1/workspaces/${workspaceId}/members`),
+  });
+}
+
+/** Refreshes everything a change to a workspace's people can affect: workspaces, people, and ideas. */
+function useInvalidatePeople() {
+  const client = useQueryClient();
+  return () => {
+    void client.invalidateQueries({ queryKey: keys.workspaces });
+    void client.invalidateQueries({ queryKey: ['ideas'] });
+    void client.invalidateQueries({ queryKey: ['idea'] });
+  };
+}
+
+export function useChangeRole(workspaceId: string) {
+  const invalidate = useInvalidatePeople();
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: WorkspaceRole }) =>
+      request<WorkspaceMember>('PUT', `/api/v1/workspaces/${workspaceId}/members/${userId}`, { role }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRemoveWorkspaceMember(workspaceId: string) {
+  const invalidate = useInvalidatePeople();
+  return useMutation({
+    mutationFn: (userId: string) => request<void>('DELETE', `/api/v1/workspaces/${workspaceId}/members/${userId}`),
+    onSuccess: invalidate,
+  });
+}
+
+export function useInvitations(workspaceId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: keys.invitations(workspaceId),
+    queryFn: () => request<Invitation[]>('GET', `/api/v1/workspaces/${workspaceId}/invitations`),
+    enabled,
+  });
+}
+
+export function useInvite(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { email: string; role: WorkspaceRole }) =>
+      request<Invitation>('POST', `/api/v1/workspaces/${workspaceId}/invitations`, input),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.invitations(workspaceId) }),
+  });
+}
+
+export function useRevokeInvitation(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (invitationId: string) => request<void>('DELETE', `/api/v1/workspaces/${workspaceId}/invitations/${invitationId}`),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.invitations(workspaceId) }),
+  });
+}
+
+export function useReceivedInvitations() {
+  return useQuery({
+    queryKey: keys.receivedInvitations,
+    queryFn: () => request<ReceivedInvitation[]>('GET', '/api/v1/invitations'),
+  });
+}
+
+export function useAcceptInvitation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (invitationId: string) => request<Workspace>('POST', `/api/v1/invitations/${invitationId}/accept`),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.receivedInvitations });
+      void client.invalidateQueries({ queryKey: keys.workspaces });
+    },
+  });
+}
+
+export function useDeclineInvitation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (invitationId: string) => request<void>('DELETE', `/api/v1/invitations/${invitationId}`),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.receivedInvitations }),
+  });
+}
+
+export function useIdeas(workspaceId: string, status?: IdeaStatus) {
+  const query = status ? `?status=${status}` : '';
+  return useQuery({
+    queryKey: keys.ideas(workspaceId, status),
+    queryFn: () => request<Idea[]>('GET', `/api/v1/workspaces/${workspaceId}/ideas${query}`),
   });
 }
 
@@ -50,10 +175,10 @@ function useInvalidateIdea() {
   };
 }
 
-export function useCreateIdea() {
+export function useCreateIdea(workspaceId: string) {
   const invalidate = useInvalidateIdea();
   return useMutation({
-    mutationFn: (input: IdeaInput) => request<Idea>('POST', '/api/v1/ideas', input),
+    mutationFn: (input: IdeaInput) => request<Idea>('POST', `/api/v1/workspaces/${workspaceId}/ideas`, input),
     onSuccess: () => invalidate(),
   });
 }

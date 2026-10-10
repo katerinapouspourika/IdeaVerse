@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { fakeApi, signedOut } from '../test/fakeApi';
+import { aWorkspace, fakeApi, ideasRoute, signedOut } from '../test/fakeApi';
 import { renderApp } from '../test/render';
 
 describe('AuthPage', () => {
@@ -33,7 +33,8 @@ describe('AuthPage', () => {
         signedInNow = true;
         return { status: 200 };
       },
-      'GET /api/v1/ideas': { status: 200, body: [] },
+      'GET /api/v1/workspaces': { status: 200, body: [aWorkspace()] },
+      [ideasRoute]: { status: 200, body: [] },
     });
     const router = renderApp('/login');
 
@@ -44,6 +45,28 @@ describe('AuthPage', () => {
     expect(await screen.findByRole('heading', { name: 'Ideas' })).toBeInTheDocument();
     await waitFor(() => expect(router.state.location.pathname).toBe('/'));
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ email: 'kat@example.com', password: 'Passw0rd!' });
+  });
+
+  it('returns to the page the visitor was going to after signing in', async () => {
+    let signedInNow = false;
+    fakeApi({
+      'GET /api/v1/auth/manage/info': () => (signedInNow ? { status: 200, body: { email: 'kat@example.com' } } : { status: 401 }),
+      'POST /api/v1/auth/login?useCookies=true': () => {
+        signedInNow = true;
+        return { status: 200 };
+      },
+      'GET /api/v1/notifications': { status: 200, body: { items: [], unreadCount: 0 } },
+      'GET /api/v1/workspaces': { status: 200, body: [aWorkspace()] },
+      'GET /api/v1/invitations': { status: 200, body: [] },
+    });
+    const router = renderApp('/invitations');
+
+    await userEvent.type(await screen.findByLabelText('Email'), 'kat@example.com');
+    await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!');
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByRole('heading', { name: 'Invitations' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/invitations');
   });
 
   it('shows the password rules the API rejects on registration', async () => {

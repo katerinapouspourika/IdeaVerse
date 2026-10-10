@@ -5,8 +5,8 @@ import { useCreateIdea } from '../api/queries';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 
-export function NewIdeaForm({ onDone }: { onDone: () => void }) {
-  const create = useCreateIdea();
+export function NewIdeaForm({ workspaceId, onDone }: { workspaceId: string; onDone: () => void }) {
+  const create = useCreateIdea(workspaceId);
   const today = todayIso();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
