@@ -13,9 +13,19 @@ using Pouspourika.IdeaVerse.Api.Notifications;
 public sealed class User : IdentityUser
 {
   /// <summary>
+  /// Maximum length of <see cref="DisplayName"/>.
+  /// </summary>
+  public const int DisplayNameMaxLength = 100;
+
+  /// <summary>
   /// Maximum length of <see cref="TimeZone"/>.
   /// </summary>
   public const int TimeZoneMaxLength = 64;
+
+  /// <summary>
+  /// Gets or sets the name others see, such as "Katerina Pouspourika"; <see langword="null"/> until set, when the email is shown instead.
+  /// </summary>
+  public string? DisplayName { get; set; }
 
   /// <summary>
   /// Gets or sets the IANA time zone, such as <c>Europe/Athens</c>, that decides the user's "today" and when their reminders arrive.

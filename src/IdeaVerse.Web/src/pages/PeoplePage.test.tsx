@@ -5,13 +5,13 @@ import type { Invitation, WorkspaceMember } from '../api/types';
 import { aWorkspace, fakeApi, ideasRoute, signedIn } from '../test/fakeApi';
 import { renderApp } from '../test/render';
 
-const kat: WorkspaceMember = { userId: 'u-kat', email: 'kat@example.com', role: 'Owner', joinedAt: '2026-10-01T09:00:00Z' };
-const mia: WorkspaceMember = { userId: 'u-mia', email: 'mia@example.com', role: 'Member', joinedAt: '2026-10-02T09:00:00Z' };
+const kat: WorkspaceMember = { userId: 'u-kat', email: 'kat@example.com', name: null, role: 'Owner', joinedAt: '2026-10-01T09:00:00Z' };
+const mia: WorkspaceMember = { userId: 'u-mia', email: 'mia@example.com', name: null, role: 'Member', joinedAt: '2026-10-02T09:00:00Z' };
 const pending: Invitation = {
   id: 'inv-1',
   email: 'new@example.com',
   role: 'Member',
-  invitedByEmail: 'kat@example.com',
+  invitedByEmail: 'kat@example.com', invitedByName: null,
   sentAt: '2026-10-03T09:00:00Z',
   expiresAt: '2099-10-10T09:00:00Z',
 };

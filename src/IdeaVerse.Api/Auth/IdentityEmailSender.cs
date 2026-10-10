@@ -24,6 +24,11 @@ internal sealed class IdentityEmailSender(IMailSender mailSender, IOptions<AppOp
   public const string ConfirmationSubject = "Confirm your IdeaVerse email";
 
   /// <summary>
+  /// Subject of the email confirming a new address for an existing account.
+  /// </summary>
+  public const string ChangeEmailSubject = "Confirm your new IdeaVerse email";
+
+  /// <summary>
   /// Subject of the password reset email.
   /// </summary>
   public const string PasswordResetSubject = "Reset your IdeaVerse password";
@@ -31,18 +36,25 @@ internal sealed class IdentityEmailSender(IMailSender mailSender, IOptions<AppOp
   /// <inheritdoc/>
   /// <remarks>
   /// Keeps the query of Identity's confirmation link (user id, code, and any changed email) and points it at the web app's
-  /// <c>/confirm-email</c> page, which calls the API to confirm.
+  /// <c>/confirm-email</c> page, which calls the API to confirm. A confirmed account asking for a different address gets
+  /// a change-of-address email instead of the welcome.
   /// </remarks>
   public Task SendConfirmationLinkAsync(User user, string email, string confirmationLink)
   {
+    ArgumentNullException.ThrowIfNull(user);
     var query = new Uri(WebUtility.HtmlDecode(confirmationLink)).Query;
     var link = app.Value.Link($"/confirm-email{query}");
-    return mailSender.SendAsync(
-      new MailMessage(
+    var changing = user.EmailConfirmed && !string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase);
+    var message = changing
+      ? new MailMessage(
+        email,
+        ChangeEmailSubject,
+        $"Someone asked to change the email address of an IdeaVerse account to this one.\n\nConfirm it to make the change:\n{link}\n\nUntil you do, the account keeps its current address. If this wasn't you, ignore this email.")
+      : new MailMessage(
         email,
         ConfirmationSubject,
-        $"Welcome to IdeaVerse!\n\nConfirm your email address to start using your account:\n{link}\n\nIf you didn't sign up, you can ignore this email."),
-      CancellationToken.None);
+        $"Welcome to IdeaVerse!\n\nConfirm your email address to start using your account:\n{link}\n\nIf you didn't sign up, you can ignore this email.");
+    return mailSender.SendAsync(message, CancellationToken.None);
   }
 
   /// <inheritdoc/>

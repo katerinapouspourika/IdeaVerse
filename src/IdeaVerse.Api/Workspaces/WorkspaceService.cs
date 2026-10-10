@@ -168,7 +168,7 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
   }
 
   /// <summary>
-  /// Lists the people in a workspace: the owner first, then admins, then members, each by email.
+  /// Lists the people in a workspace: the owner first, then admins, then members, each by name, or email for those without one.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="workspaceId">The workspace identifier.</param>
@@ -183,10 +183,10 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
 
     var members = await context.WorkspaceMembers
       .Where(m => m.WorkspaceId == workspaceId)
-      .Select(m => new WorkspaceMemberResponse(m.UserId, m.User!.Email!, m.Role, m.JoinedAt))
+      .Select(m => new WorkspaceMemberResponse(m.UserId, m.User!.Email!, m.User.DisplayName, m.Role, m.JoinedAt))
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
-    return [.. members.OrderBy(m => m.Role).ThenBy(m => m.Email, StringComparer.OrdinalIgnoreCase)];
+    return [.. members.OrderBy(m => m.Role).ThenBy(m => m.Name ?? m.Email, StringComparer.OrdinalIgnoreCase)];
   }
 
   /// <summary>
@@ -242,7 +242,7 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
     }
 
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-    return new WorkspaceChangeResult(ChangeOutcome.Changed, Member: new WorkspaceMemberResponse(member.UserId, member.User!.Email!, member.Role, member.JoinedAt));
+    return new WorkspaceChangeResult(ChangeOutcome.Changed, Member: new WorkspaceMemberResponse(member.UserId, member.User!.Email!, member.User.DisplayName, member.Role, member.JoinedAt));
   }
 
   /// <summary>

@@ -4,7 +4,7 @@ import { Link } from 'react-router';
 import { daysUntil, describeDue, formatDate } from '../api/dates';
 import { BrainstormPanel, describeBrainstormed } from '../ai/BrainstormPanel';
 import { useAiStatus, useIdeas } from '../api/queries';
-import { statuses, statusLabels, type Idea, type IdeaStatus, type Workspace } from '../api/types';
+import { personLabel, statuses, statusLabels, type Idea, type IdeaStatus, type Workspace } from '../api/types';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { Progress } from '../components/Progress';
 import { StatusBadge } from '../components/StatusBadge';
@@ -142,5 +142,6 @@ function describeTeam(idea: Idea): string {
   if (idea.role === 'Owner') {
     return idea.memberCount === 0 ? 'Only you' : `You + ${idea.memberCount}`;
   }
-  return idea.role === 'Member' ? `You’re on ${idea.ownerEmail}’s team` : `By ${idea.ownerEmail}`;
+  const owner = personLabel(idea.ownerName, idea.ownerEmail);
+  return idea.role === 'Member' ? `You’re on ${owner}’s team` : `By ${owner}`;
 }

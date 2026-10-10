@@ -5,12 +5,12 @@ import type { Component, Idea, Member, WorkspaceMember } from '../api/types';
 import { anIdea, aWorkspace, fakeApi, signedIn } from '../test/fakeApi';
 import { renderApp } from '../test/render';
 
-const owner: Member = { userId: 'u-kat', email: 'kat@example.com', role: 'Owner', addedAt: '2026-10-01T09:00:00Z' };
-const mia: Member = { userId: 'u-mia', email: 'mia@example.com', role: 'Member', addedAt: '2026-10-02T09:00:00Z' };
+const owner: Member = { userId: 'u-kat', email: 'kat@example.com', name: null, role: 'Owner', addedAt: '2026-10-01T09:00:00Z' };
+const mia: Member = { userId: 'u-mia', email: 'mia@example.com', name: null, role: 'Member', addedAt: '2026-10-02T09:00:00Z' };
 const people: WorkspaceMember[] = [
-  { userId: 'u-kat', email: 'kat@example.com', role: 'Owner', joinedAt: '2026-10-01T09:00:00Z' },
-  { userId: 'u-mia', email: 'mia@example.com', role: 'Member', joinedAt: '2026-10-01T09:00:00Z' },
-  { userId: 'u-leo', email: 'leo@example.com', role: 'Member', joinedAt: '2026-10-01T09:00:00Z' },
+  { userId: 'u-kat', email: 'kat@example.com', name: null, role: 'Owner', joinedAt: '2026-10-01T09:00:00Z' },
+  { userId: 'u-mia', email: 'mia@example.com', name: null, role: 'Member', joinedAt: '2026-10-01T09:00:00Z' },
+  { userId: 'u-leo', email: 'leo@example.com', name: null, role: 'Member', joinedAt: '2026-10-01T09:00:00Z' },
 ];
 const budget: Component = {
   id: 'c-1',

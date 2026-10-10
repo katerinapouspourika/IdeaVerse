@@ -16,6 +16,10 @@ interface Auth {
   updateTimeZone: (timeZone: string) => Promise<void>;
   /** Saves which reminders the account gets and whether they are emailed. */
   updateReminders: (settings: ReminderSettings) => Promise<void>;
+  /** Saves the name others see; blank to show the email instead. */
+  updateDisplayName: (displayName: string) => Promise<void>;
+  /** Deletes the account after checking its password, then forgets the session. */
+  deleteAccount: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<Auth | null>(null);
@@ -32,6 +36,12 @@ async function saveTimeZone(client: QueryClient, timeZone: string) {
   const account = await request<Account>('PUT', '/api/v1/account', { timeZone });
   applyTimeZone(account);
   client.setQueryData(accountKey, account);
+  await client.invalidateQueries({ predicate: (query) => query.queryKey[0] !== accountKey[0] });
+}
+
+/** Saves the account's display name, then refreshes everything that shows people. */
+async function saveDisplayName(client: QueryClient, displayName: string) {
+  client.setQueryData(accountKey, await request<Account>('PUT', '/api/v1/account/profile', { displayName }));
   await client.invalidateQueries({ predicate: (query) => query.queryKey[0] !== accountKey[0] });
 }
 
@@ -77,6 +87,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await request('POST', '/api/v1/auth/register', { email, password });
   };
 
+  const deleteAccount = async (password: string) => {
+    await request('POST', '/api/v1/account/delete', { password });
+    forgetOtherData();
+    applyTimeZone(null);
+    client.setQueryData(accountKey, null);
+  };
+
   const logout = async () => {
     await request('POST', '/api/v1/auth/logout');
     forgetOtherData();
@@ -84,11 +101,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     client.setQueryData(accountKey, null);
   };
 
-  return (
-    <AuthContext value={{ account: data ?? null, isLoading, login, register, logout, updateTimeZone: (timeZone) => saveTimeZone(client, timeZone), updateReminders: (settings) => saveReminders(client, settings) }}>
-      {children}
-    </AuthContext>
-  );
+  const auth: Auth = {
+    account: data ?? null,
+    isLoading,
+    login,
+    register,
+    logout,
+    updateTimeZone: (timeZone) => saveTimeZone(client, timeZone),
+    updateReminders: (settings) => saveReminders(client, settings),
+    updateDisplayName: (displayName) => saveDisplayName(client, displayName),
+    deleteAccount,
+  };
+
+  return <AuthContext value={auth}>{children}</AuthContext>;
 }
 
 export function useAuth(): Auth {

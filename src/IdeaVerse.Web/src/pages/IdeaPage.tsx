@@ -5,7 +5,7 @@ import { ImproveIdea } from '../ai/ImproveIdea';
 import { ApiError } from '../api/client';
 import { addDays, describeDue, formatDate, todayIso } from '../api/dates';
 import { useDeleteIdea, useIdea, usePostponeIdea, useUpdateIdea } from '../api/queries';
-import { statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
+import { personLabel, statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { Progress } from '../components/Progress';
@@ -82,7 +82,7 @@ function IdeaDetail({ idea }: { idea: Idea }) {
             </>
           ) : (
             <p className="muted small">
-              {idea.ownerEmail}’s idea. You can follow it here; only its team and the workspace’s admins can change it.
+              {personLabel(idea.ownerName, idea.ownerEmail)}’s idea. You can follow it here; only its team and the workspace’s admins can change it.
             </p>
           )}
         </section>

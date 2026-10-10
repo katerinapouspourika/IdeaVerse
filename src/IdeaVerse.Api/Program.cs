@@ -44,6 +44,7 @@ builder.Services.ConfigureApplicationCookie(o =>
 });
 
 builder.Services.AddScoped<UserCalendar>();
+builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<WorkspaceService>();
 builder.Services.AddScoped<InvitationService>();
 builder.Services.AddScoped<IdeaService>();

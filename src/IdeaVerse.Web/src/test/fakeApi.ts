@@ -43,6 +43,7 @@ export const ideasRoute = 'GET /api/v1/workspaces/ws-1/ideas';
 /** The signed-in user's account: UTC, every reminder, by email. */
 export const signedInAccount: Account = {
   email: 'kat@example.com',
+  displayName: null,
   timeZone: 'UTC',
   emailReminders: true,
   reminderKinds: ['ComingUp', 'Tomorrow', 'Today', 'Overdue'],
@@ -72,6 +73,7 @@ export function anIdea(overrides: Partial<Idea> = {}): Idea {
     canEdit: true,
     canManage: true,
     ownerEmail: 'kat@example.com',
+    ownerName: null,
     memberCount: 0,
     componentCount: 0,
     completedComponentCount: 0,
