@@ -27,6 +27,8 @@ internal sealed class IdeaVerseApiFactory(string? webRoot = null) : WebApplicati
 {
   public const string Password = "Passw0rd!";
 
+  public const string AppUrl = "https://app.example.com";
+
   private readonly SqliteConnection connection = new("DataSource=:memory:");
 
   public static DateOnly Today { get; } = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -38,15 +40,24 @@ internal sealed class IdeaVerseApiFactory(string? webRoot = null) : WebApplicati
   public async Task<HttpClient> CreateSignedInClientAsync(string email = "owner@example.com")
   {
     var client = CreateClient();
-    var credentials = new { email, password = Password };
+    await RegisterAndConfirmAsync(client, email);
 
-    using var register = await client.PostAsJsonAsync("/api/v1/auth/register", credentials);
-    register.EnsureSuccessStatusCode();
-
-    using var login = await client.PostAsJsonAsync("/api/v1/auth/login?useCookies=true", credentials);
+    using var login = await client.PostAsJsonAsync("/api/v1/auth/login?useCookies=true", new { email, password = Password });
     login.EnsureSuccessStatusCode();
 
     return client;
+  }
+
+  // Confirms through the email link, as a user would, and removes that email so tests only see the email they cause.
+  public async Task RegisterAndConfirmAsync(HttpClient client, string email)
+  {
+    using var register = await client.PostAsJsonAsync("/api/v1/auth/register", new { email, password = Password });
+    register.EnsureSuccessStatusCode();
+
+    var confirmation = Mail.Take(email, Auth.IdentityEmailSender.ConfirmationSubject);
+    var link = FakeMailSender.LinkIn(confirmation, $"{AppUrl}/confirm-email");
+    using var confirm = await client.GetAsync($"/api/v1/auth/confirmEmail{link.Query}");
+    confirm.EnsureSuccessStatusCode();
   }
 
   public async Task<ReminderRunResult> RunRemindersAsync()
@@ -60,7 +71,7 @@ internal sealed class IdeaVerseApiFactory(string? webRoot = null) : WebApplicati
     connection.Open();
     builder.UseEnvironment("Testing");
     builder.UseSetting("Reminders:Enabled", "false");
-    builder.UseSetting("Reminders:AppUrl", "https://app.example.com");
+    builder.UseSetting("App:PublicUrl", AppUrl);
     if (webRoot is not null)
     {
       builder.UseWebRoot(webRoot);

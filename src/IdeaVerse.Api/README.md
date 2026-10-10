@@ -25,7 +25,9 @@ The API also serves the web app (`src/IdeaVerse.Web`) from `wwwroot` when one is
 
 ## Features
 
-- **Accounts** — ASP.NET Core Identity under `/api/v1/auth`: `register`, `login`, `logout`, password reset, and account info. The web app signs in with `POST /api/v1/auth/login?useCookies=true`, which sets an HTTP-only, `SameSite=Strict` cookie named `IdeaVerse.Auth`.
+- **Accounts** — ASP.NET Core Identity under `/api/v1/auth`: `register`, `login`, `logout`, email confirmation, password reset, and account info. The web app signs in with `POST /api/v1/auth/login?useCookies=true`, which sets an HTTP-only, `SameSite=Strict` cookie named `IdeaVerse.Auth`.
+  - **Email confirmation** — `register` emails a link to the web app's `/confirm-email` page, which calls `GET /api/v1/auth/confirmEmail`. Until then `login` returns 401 with `detail: "NotAllowed"`; `POST /api/v1/auth/resendConfirmationEmail` sends a new link. Accounts created before confirmation was required were marked confirmed by the `MarksExistingAccountsConfirmed` migration.
+  - **Password reset** — `POST /api/v1/auth/forgotPassword` emails a link to the web app's `/reset-password` page, which calls `POST /api/v1/auth/resetPassword` with the code. Both endpoints answer the same whether or not the account exists. Reset links work once, for one day.
 - **Ideas** — under `/api/v1/ideas`, visible to their owner and team members; anyone else gets 404. Members can edit and postpone an idea; only the owner can delete it (members get 403).
 
 | Method | Route | Purpose |
@@ -72,13 +74,14 @@ Reminders about ideas the user can no longer access (they left or were removed) 
 
 | Key | Default | Description |
 | --- | --- | --- |
+| `App:PublicUrl` | `http://localhost:8080` (`http://localhost:5173` in Development) | The web app's public address, used for links in emails. |
+| `Auth:RequireConfirmedEmail` | `true` | Accounts must confirm their email before signing in. |
 | `ConnectionStrings:IdeaVerse` | local `ideaverse` database in Development | PostgreSQL connection string. |
 | `Database:MigrateOnStartup` | `true` in Development, otherwise `false` | Applies pending EF Core migrations at startup. Other environments use the Docker `migrations` target. |
 | `Reminders:Enabled` | `true` | Runs the reminder background job. |
 | `Reminders:Interval` | `01:00:00` (one minute in Development) | How often the job runs. |
-| `Reminders:AppUrl` | `http://localhost:8080` | Web app address used in email links. |
 | `Reminders:EmailRetryWindow` | `2.00:00:00` | How long a failed reminder email keeps being retried. |
-| `Email:From` | `IdeaVerse <reminders@ideaverse.local>` | Sender of reminder emails. |
+| `Email:From` | `IdeaVerse <no-reply@ideaverse.local>` | Sender of reminder and account emails. |
 | `Email:SmtpHost` | empty (`localhost` in Development) | SMTP server. When empty, emails are logged instead of sent. |
 | `Email:SmtpPort` | `587` (`1025` in Development) | SMTP port. |
 | `Email:RequireTls` | `false` | Require STARTTLS; otherwise TLS is used when the server offers it. |

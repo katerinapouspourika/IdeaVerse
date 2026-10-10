@@ -49,7 +49,7 @@ services:
       Database__MigrateOnStartup: "true"
       Email__SmtpHost: mail
       Email__SmtpPort: "1025"
-      Reminders__AppUrl: http://localhost:8080
+      App__PublicUrl: http://localhost:8080
 
 volumes:
   db-data:

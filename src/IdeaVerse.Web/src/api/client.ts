@@ -27,7 +27,7 @@ type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
 /**
  * Calls the API on the same origin, sending the login cookie.
- * Resolves with the parsed JSON body, or `undefined` for empty responses.
+ * Resolves with the parsed JSON body, or `undefined` for empty or non-JSON responses.
  */
 export async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
   const response = await fetch(path, {
@@ -38,7 +38,8 @@ export async function request<T>(method: Method, path: string, body?: unknown): 
   });
 
   const text = await response.text();
-  const data: unknown = text ? JSON.parse(text) : undefined;
+  const isJson = response.headers.get('Content-Type')?.includes('json') ?? false;
+  const data: unknown = text && isJson ? JSON.parse(text) : undefined;
 
   if (!response.ok) {
     throw new ApiError(response.status, (data as ProblemDetails | undefined) ?? null);

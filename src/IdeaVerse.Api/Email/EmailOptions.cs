@@ -16,7 +16,7 @@ public sealed class EmailOptions
   /// Gets or sets the sender, as <c>Name &lt;address&gt;</c> or a bare address.
   /// </summary>
   [Required]
-  public string From { get; set; } = "IdeaVerse <reminders@ideaverse.local>";
+  public string From { get; set; } = "IdeaVerse <no-reply@ideaverse.local>";
 
   /// <summary>
   /// Gets or sets the SMTP server host. When empty, emails are written to the log instead of sent.

@@ -8,6 +8,7 @@ interface Auth {
   account: Account | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  /** Creates an account; the user must confirm their email before signing in. */
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -43,7 +44,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (email: string, password: string) => {
     await request('POST', '/api/v1/auth/register', { email, password });
-    await login(email, password);
   };
 
   const logout = async () => {
