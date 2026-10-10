@@ -83,10 +83,35 @@ a {
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 700;
   font-size: 1.15rem;
   color: var(--text);
   text-decoration: none;
+}
+
+.logo {
+  display: block;
+  flex: none;
+  border-radius: 8px;
+}
+
+.auth-logo {
+  align-self: center;
+  border-radius: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .logo {
+    padding: 2px;
+    background: #ffffff;
+  }
+
+  .auth-logo {
+    padding: 6px;
+  }
 }
 
 .account {

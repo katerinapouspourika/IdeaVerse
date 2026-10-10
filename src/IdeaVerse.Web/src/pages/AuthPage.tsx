@@ -95,6 +95,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
 
   return (
     <section className="card auth">
+      <img src="/logo.png" alt="" className="logo auth-logo" width="72" height="72" />
       <h1>{text.title}</h1>
       <p className="muted">Plan ideas, line up what they need, and never lose track of a date.</p>
       <form onSubmit={(event) => void submit(event)} className="stack">
