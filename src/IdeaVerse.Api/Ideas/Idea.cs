@@ -2,6 +2,7 @@ namespace Pouspourika.IdeaVerse.Api.Ideas;
 
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Data;
+using Pouspourika.IdeaVerse.Api.Members;
 
 /// <summary>
 /// An idea scheduled for implementation on a target date.
@@ -62,6 +63,11 @@ public sealed class Idea
   /// Gets the things the idea needs before it can be implemented.
   /// </summary>
   public ICollection<Component> Components { get; init; } = [];
+
+  /// <summary>
+  /// Gets the users, other than the owner, who help implement the idea.
+  /// </summary>
+  public ICollection<IdeaMember> Members { get; init; } = [];
 
   /// <summary>
   /// Gets when the idea was created.

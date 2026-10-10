@@ -20,7 +20,7 @@ internal static class IdeaEndpoints
   private const string GetIdeaRouteName = "GetIdea";
 
   /// <summary>
-  /// Maps the idea endpoints. All require a signed-in user and only see that user's ideas.
+  /// Maps the idea endpoints. All require a signed-in user and only see ideas that user owns or is a member of.
   /// </summary>
   /// <param name="endpoints">The route builder.</param>
   /// <returns>The same route builder.</returns>
@@ -139,15 +139,19 @@ internal static class IdeaEndpoints
   /// <param name="user">The signed-in user.</param>
   /// <param name="service">The idea service.</param>
   /// <param name="cancellationToken">Token to cancel the request.</param>
-  /// <returns>204, or 404.</returns>
-  private static async Task<Results<NoContent, NotFound>> DeleteAsync(
+  /// <returns>204, 404, or 403 when a team member tries to delete the idea.</returns>
+  private static async Task<Results<NoContent, NotFound, ProblemHttpResult>> DeleteAsync(
     Guid id,
     ClaimsPrincipal user,
     IdeaService service,
     CancellationToken cancellationToken)
-    => await service.DeleteAsync(user.GetUserId(), id, cancellationToken).ConfigureAwait(false)
-      ? TypedResults.NoContent()
-      : TypedResults.NotFound();
+    => await service.DeleteAsync(user.GetUserId(), id, cancellationToken).ConfigureAwait(false) switch
+    {
+      IdeaChangeOutcome.Changed => TypedResults.NoContent(),
+      IdeaChangeOutcome.NotFound => TypedResults.NotFound(),
+      IdeaChangeOutcome.Forbidden => TypedResults.Problem(detail: "Only the idea's owner can delete it.", statusCode: StatusCodes.Status403Forbidden),
+      IdeaChangeOutcome.Invalid or IdeaChangeOutcome.Conflict or _ => throw new UnreachableException("Deleting an idea is never invalid or conflicting."),
+    };
 
   /// <summary>
   /// Maps an <see cref="IdeaChangeResult"/> to its HTTP response.
@@ -164,6 +168,7 @@ internal static class IdeaEndpoints
         [JsonNamingPolicy.CamelCase.ConvertName(result.Field!)] = [result.Message!],
       }),
       IdeaChangeOutcome.Conflict => TypedResults.Problem(detail: result.Message, statusCode: StatusCodes.Status409Conflict),
+      IdeaChangeOutcome.Forbidden => TypedResults.Problem(detail: result.Message, statusCode: StatusCodes.Status403Forbidden),
       _ => throw new UnreachableException($"Unhandled outcome {result.Outcome}."),
     };
 }

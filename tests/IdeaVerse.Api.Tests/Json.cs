@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Ideas;
+using Pouspourika.IdeaVerse.Api.Members;
 
 internal static class Json
 {
@@ -25,6 +26,12 @@ internal static class Json
   public static async Task<ComponentResponse[]> ReadComponentsAsync(this HttpResponseMessage response)
     => (await response.Content.ReadFromJsonAsync<ComponentResponse[]>(Options))!;
 
+  public static async Task<MemberResponse> ReadMemberAsync(this HttpResponseMessage response)
+    => (await response.Content.ReadFromJsonAsync<MemberResponse>(Options))!;
+
+  public static async Task<MemberResponse[]> ReadMembersAsync(this HttpResponseMessage response)
+    => (await response.Content.ReadFromJsonAsync<MemberResponse[]>(Options))!;
+
   public static async Task<Dictionary<string, string[]>> ReadValidationErrorsAsync(this HttpResponseMessage response)
   {
     using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
@@ -39,4 +46,7 @@ internal static class Json
 
   public static Task<HttpResponseMessage> UpdateComponentAsync(this HttpClient client, Guid ideaId, Guid componentId, UpdateComponentRequest request)
     => client.PutAsJsonAsync($"/api/v1/ideas/{ideaId}/components/{componentId}", request, Options);
+
+  public static Task<HttpResponseMessage> AddMemberAsync(this HttpClient client, Guid ideaId, string email)
+    => client.PostAsJsonAsync($"/api/v1/ideas/{ideaId}/members", new AddMemberRequest(email), Options);
 }

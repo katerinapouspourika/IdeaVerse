@@ -24,4 +24,9 @@ public enum IdeaChangeOutcome
   /// The idea's state does not allow the change.
   /// </summary>
   Conflict,
+
+  /// <summary>
+  /// The user can access the idea but their role does not allow the change.
+  /// </summary>
+  Forbidden,
 }
