@@ -112,20 +112,20 @@ internal static class AiEndpoints
   /// <param name="options">AI settings, for the limit message.</param>
   /// <returns>The HTTP result.</returns>
   private static Results<Ok<T>, NotFound, ProblemHttpResult> ToHttpResult<T>(AiResult<T> result, AiOptions options)
-    => result.Outcome switch
+    => result switch
     {
-      AiOutcome.Answered => TypedResults.Ok(result.Value!),
-      AiOutcome.NotFound => TypedResults.NotFound(),
-      AiOutcome.Forbidden => TypedResults.Problem(
+      { Outcome: AiOutcome.Answered, Value: { } value } => TypedResults.Ok(value),
+      { Outcome: AiOutcome.NotFound } => TypedResults.NotFound(),
+      { Outcome: AiOutcome.Forbidden } => TypedResults.Problem(
         detail: "Only the idea's team and the workspace's admins can use AI help on it.",
         statusCode: StatusCodes.Status403Forbidden),
-      AiOutcome.Unavailable => TypedResults.Problem(
+      { Outcome: AiOutcome.Unavailable } => TypedResults.Problem(
         detail: "AI help isn't set up on this server.",
         statusCode: StatusCodes.Status503ServiceUnavailable),
-      AiOutcome.LimitReached => TypedResults.Problem(
+      { Outcome: AiOutcome.LimitReached } => TypedResults.Problem(
         detail: $"Your workspace has used its {options.DailyLimitPerWorkspace} AI requests for today. More are available after midnight UTC.",
         statusCode: StatusCodes.Status429TooManyRequests),
-      AiOutcome.Failed => TypedResults.Problem(
+      { Outcome: AiOutcome.Failed } => TypedResults.Problem(
         detail: "AI help couldn't answer just now. Please try again in a moment.",
         statusCode: StatusCodes.Status502BadGateway),
       _ => throw new UnreachableException($"Unhandled outcome {result.Outcome}."),

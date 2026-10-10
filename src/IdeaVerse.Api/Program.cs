@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
 
+using Anthropic;
+
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -53,6 +55,7 @@ builder.Services.AddEmail();
 builder.Services.AddOptions<AppOptions>().BindConfiguration(AppOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
 builder.Services.AddOptions<ReminderOptions>().BindConfiguration(ReminderOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
 builder.Services.AddScoped<ReminderService>();
+builder.Services.AddSingleton<IAnthropicClient>(_ => AiOptions.CreateClient(builder.Configuration));
 builder.Services.AddIdeationAgents().BindConfiguration(IdeationOptions.SectionName);
 builder.Services.AddOptions<AiOptions>().BindConfiguration(AiOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
 builder.Services.AddScoped<AiService>();

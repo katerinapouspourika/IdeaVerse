@@ -36,6 +36,13 @@ public class AiEndpointsTests
     ] }
     """;
 
+  private const string CritiquesReversed = """
+    { "critiques": [
+      { "idea_title": "Guest expert series", "strengths": ["Credible"], "weaknesses": ["Booking guests"], "score": 8 },
+      { "idea_title": "Webinar bingo", "strengths": ["Fun"], "weaknesses": ["Gimmicky"], "score": 4 }
+    ] }
+    """;
+
   private static readonly DateOnly Today = IdeaVerseApiFactory.Today;
 
   [Test]
@@ -142,6 +149,38 @@ public class AiEndpointsTests
     await Assert.That(ideas.Select(i => (i.Title, i.Score))).IsEquivalentTo([("Guest expert series", 8), ("Webinar bingo", 4)], CollectionOrdering.Matching);
     await Assert.That(ideas[0].TargetAudience).IsEqualTo("Leads");
     await Assert.That(factory.Model.Prompts[0].User).Contains("Grow sign-ups for our spring webinars");
+    await Assert.That((await StatusAsync(client, await client.WorkspaceIdAsync())).Used).IsEqualTo(1);
+  }
+
+  [Test]
+  public async Task Brainstorm_CritiquesInAnotherOrder_PairsThemByTitle()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    factory.Model.Answer("GenerateIdeas", GeneratedIdeas);
+    factory.Model.Answer("CritiqueIdeas", CritiquesReversed);
+
+    using var response = await client.PostAsJsonAsync($"/api/v1/workspaces/{await client.WorkspaceIdAsync()}/ai/brainstorm", new BrainstormRequest("Webinars"), Json.Options);
+    var ideas = (await response.Content.ReadFromJsonAsync<BrainstormedIdea[]>(Json.Options))!;
+
+    await Assert.That(ideas.Select(i => (i.Title, i.Score, i.Strengths[0]))).IsEquivalentTo(
+      [("Guest expert series", 8, "Credible"), ("Webinar bingo", 4, "Fun")],
+      CollectionOrdering.Matching);
+  }
+
+  [Test]
+  [Arguments(BrainstormRequest.BriefMaxLength, HttpStatusCode.OK)]
+  [Arguments(BrainstormRequest.BriefMaxLength + 1, HttpStatusCode.BadRequest)]
+  public async Task Brainstorm_BriefAtAndPastMaxLength_AcceptsOnlyUpToTheLimit(int length, HttpStatusCode expected)
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    factory.Model.Answer("GenerateIdeas", GeneratedIdeas);
+    factory.Model.Answer("CritiqueIdeas", Critiques);
+
+    using var response = await client.PostAsJsonAsync($"/api/v1/workspaces/{await client.WorkspaceIdAsync()}/ai/brainstorm", new BrainstormRequest(new string('a', length)), Json.Options);
+
+    await Assert.That(response.StatusCode).IsEqualTo(expected);
   }
 
   [Test]
@@ -230,6 +269,93 @@ public class AiEndpointsTests
 
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
     await Assert.That(factory.Model.Prompts).IsEmpty();
+  }
+
+  [Test]
+  public async Task Status_WorkspaceUserIsNotIn_ReturnsNotFound()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var other = await factory.CreateSignedInClientAsync("other@example.com");
+
+    using var response = await other.GetAsync($"/api/v1/workspaces/{await owner.WorkspaceIdAsync()}/ai");
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+  }
+
+  [Test]
+  public async Task Improve_TurnedOffInSettings_ReportsDisabledAndCallsNoModel()
+  {
+    await using var factory = new IdeaVerseApiFactory(settings: new Dictionary<string, string?> { ["Ai:Enabled"] = "false" });
+    using var client = await factory.CreateSignedInClientAsync();
+    var idea = await (await client.CreateIdeaAsync("Launch", Today.AddDays(30))).ReadIdeaAsync();
+
+    using var response = await client.PostAsync($"/api/v1/ideas/{idea.Id}/ai/improve", content: null);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
+    await Assert.That((await StatusAsync(client, idea.WorkspaceId)).Enabled).IsFalse();
+    await Assert.That(factory.Model.Prompts).IsEmpty();
+  }
+
+  [Test]
+  public async Task Improve_ByViewer_ReturnsForbidden()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var viewer = await factory.CreateSignedInClientAsync("viewer@example.com");
+    await factory.JoinAsync(owner, viewer, "viewer@example.com");
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+
+    using var response = await viewer.PostAsync($"/api/v1/ideas/{idea.Id}/ai/improve", content: null);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+    await Assert.That(factory.Model.Prompts).IsEmpty();
+  }
+
+  [Test]
+  public async Task SuggestComponents_IdeaInAnotherWorkspace_ReturnsNotFound()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var other = await factory.CreateSignedInClientAsync("other@example.com");
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+
+    using var response = await other.PostAsync($"/api/v1/ideas/{idea.Id}/ai/components", content: null);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+  }
+
+  [Test]
+  public async Task Improve_ModelWritesTooMuch_CutsItToWhatAnIdeaAccepts()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    var idea = await (await client.CreateIdeaAsync("Launch", Today.AddDays(30))).ReadIdeaAsync();
+    var tooLong = $$"""{ "strengths": [], "weaknesses": [], "title": "{{new string('t', 300)}}", "description": "{{new string('d', 5000)}}" }""";
+    factory.Model.Answer("ImproveIdea", tooLong);
+
+    var improvement = await (await client.PostAsync($"/api/v1/ideas/{idea.Id}/ai/improve", content: null)).Content.ReadFromJsonAsync<IdeaImprovement>(Json.Options);
+    using var save = await client.PutAsJsonAsync(
+      $"/api/v1/ideas/{idea.Id}",
+      new Ideas.UpdateIdeaRequest(improvement!.Title, improvement.Description, idea.TargetDate, idea.Status),
+      Json.Options);
+
+    await Assert.That(improvement.Title.Length).IsEqualTo(Ideas.Idea.TitleMaxLength);
+    await Assert.That(improvement.Description.Length).IsEqualTo(Ideas.Idea.DescriptionMaxLength);
+    await Assert.That(save.StatusCode).IsEqualTo(HttpStatusCode.OK);
+  }
+
+  [Test]
+  public async Task SuggestComponents_ModelRepeatsATitle_ReturnsItOnce()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    var idea = await (await client.CreateIdeaAsync("Launch", Today.AddDays(30))).ReadIdeaAsync();
+    factory.Model.Answer("SuggestComponents", """{ "suggestions": [ { "title": "Video editor", "notes": "One" }, { "title": " video EDITOR ", "notes": "Two" } ] }""");
+
+    var suggestions = await (await client.PostAsync($"/api/v1/ideas/{idea.Id}/ai/components", content: null)).Content.ReadFromJsonAsync<ComponentSuggestion[]>(Json.Options);
+
+    await Assert.That(suggestions!.Select(s => s.Title)).IsEquivalentTo(["Video editor"]);
   }
 
   private static async Task<AiStatusResponse> StatusAsync(HttpClient client, Guid workspaceId)

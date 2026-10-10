@@ -14,7 +14,8 @@ using Pouspourika.IdeaVerse.Api.Workspaces;
 /// </summary>
 /// <remarks>
 /// Suggesting components and improving an idea need the right to edit it; brainstorming needs only to be in the workspace.
-/// Each request counts once against the allowance, however many model calls it makes, and a failed one is not counted.
+/// Each request counts once against the allowance, however many model calls it makes. One the AI fails to answer is not counted;
+/// one the caller abandons still is, since the model may already have run. What the AI writes is cut to the lengths the app accepts.
 /// </remarks>
 /// <param name="context">The database context.</param>
 /// <param name="suggester">Suggests components.</param>
@@ -37,9 +38,14 @@ public sealed partial class AiService(
   ILogger<AiService> logger)
 {
   /// <summary>
+  /// The most existing components sent to the model when suggesting more.
+  /// </summary>
+  private const int MaxExistingComponents = 100;
+
+  /// <summary>
   /// Gets a value indicating whether AI help is turned on and has an API key.
   /// </summary>
-  private bool IsAvailable => options.Value.Enabled && !string.IsNullOrWhiteSpace(configuration[AiOptions.ApiKeySetting]);
+  private bool IsAvailable => options.Value.Enabled && AiOptions.HasApiKey(configuration);
 
   /// <summary>
   /// Gets the current UTC day, which the allowance counts.
@@ -80,7 +86,12 @@ public sealed partial class AiService(
   {
     var idea = await context.EditableIdeas(userId)
       .Where(i => i.Id == ideaId)
-      .Select(i => new { i.WorkspaceId, Brief = new IdeaBrief(i.Title, i.Description, i.TargetDate), Existing = i.Components.Select(c => c.Title).ToList() })
+      .Select(i => new
+      {
+        i.WorkspaceId,
+        Brief = new IdeaBrief(i.Title, i.Description, i.TargetDate),
+        Existing = i.Components.OrderBy(c => c.Position).Select(c => c.Title).Take(MaxExistingComponents).ToList(),
+      })
       .FirstOrDefaultAsync(cancellationToken)
       .ConfigureAwait(false);
     if (idea is null)
@@ -88,7 +99,7 @@ public sealed partial class AiService(
       return new(await DeniedAsync(userId, ideaId, cancellationToken).ConfigureAwait(false));
     }
 
-    return await RunAsync(idea.WorkspaceId, token => suggester.SuggestAsync(idea.Brief, idea.Existing, token), cancellationToken).ConfigureAwait(false);
+    return await RunAsync(idea.WorkspaceId, token => SuggestAsync(idea.Brief, idea.Existing, token), cancellationToken).ConfigureAwait(false);
   }
 
   /// <summary>
@@ -110,7 +121,7 @@ public sealed partial class AiService(
       return new(await DeniedAsync(userId, ideaId, cancellationToken).ConfigureAwait(false));
     }
 
-    return await RunAsync(idea.WorkspaceId, token => improver.ImproveAsync(idea.Brief, token), cancellationToken).ConfigureAwait(false);
+    return await RunAsync(idea.WorkspaceId, token => ImproveAsync(idea.Brief, token), cancellationToken).ConfigureAwait(false);
   }
 
   /// <summary>
@@ -131,23 +142,45 @@ public sealed partial class AiService(
     }
 
     var brief = new IdeationRequest(request.Brief.Trim(), ["Ideas a marketing team could plan, run, and measure"]);
-    return await RunAsync(
-        workspaceId,
-        async token =>
-        {
-          var ideas = await generator.GenerateAsync(brief, token).ConfigureAwait(false);
-          var critiques = await critic.CritiqueAsync(brief, ideas, token).ConfigureAwait(false);
-          IReadOnlyList<BrainstormedIdea> ranked =
-          [
-            .. ideas
-              .Zip(critiques, (idea, critique) => new BrainstormedIdea(
-                idea.Title, idea.Summary, idea.TargetAudience, idea.Differentiator, critique.Score, critique.Strengths, critique.Weaknesses))
-              .OrderByDescending(i => i.Score),
-          ];
-          return ranked;
-        },
-        cancellationToken)
-      .ConfigureAwait(false);
+    return await RunAsync(workspaceId, token => RankAsync(brief, token), cancellationToken).ConfigureAwait(false);
+  }
+
+  /// <summary>
+  /// Cuts text to a maximum length, trimming surrounding whitespace.
+  /// </summary>
+  /// <param name="text">The text.</param>
+  /// <param name="maxLength">The maximum length.</param>
+  /// <returns>The trimmed text, at most <paramref name="maxLength"/> characters long.</returns>
+  private static string Fit(string text, int maxLength)
+  {
+    var trimmed = text.Trim();
+    return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength].TrimEnd();
+  }
+
+  /// <summary>
+  /// Pairs each brainstormed idea with its critique by title, falling back to position when the critic renamed one.
+  /// </summary>
+  /// <param name="ideas">The generated ideas.</param>
+  /// <param name="critiques">The critiques, one per idea.</param>
+  /// <returns>The scored ideas, best first.</returns>
+  private static IReadOnlyList<BrainstormedIdea> Rank(IReadOnlyList<Agents.Models.Idea> ideas, IReadOnlyList<IdeaCritique> critiques)
+  {
+    var byTitle = critiques
+      .GroupBy(c => c.IdeaTitle.Trim(), StringComparer.OrdinalIgnoreCase)
+      .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+    var scored = ideas.Select((idea, index) =>
+    {
+      var critique = byTitle.GetValueOrDefault(idea.Title.Trim()) ?? critiques[index];
+      return new BrainstormedIdea(
+        Fit(idea.Title, Ideas.Idea.TitleMaxLength),
+        idea.Summary,
+        idea.TargetAudience,
+        idea.Differentiator,
+        critique.Score,
+        critique.Strengths,
+        critique.Weaknesses);
+    });
+    return [.. scored.OrderByDescending(i => i.Score)];
   }
 
   /// <summary>
@@ -160,7 +193,52 @@ public sealed partial class AiService(
   private static partial void LogFailed(ILogger logger, Exception exception, Guid workspaceId);
 
   /// <summary>
-  /// Runs an agent within the workspace's allowance, giving the request back when it fails.
+  /// Asks for component suggestions, cut to the lengths a component accepts and without repeated titles.
+  /// </summary>
+  /// <param name="idea">The idea.</param>
+  /// <param name="existing">Titles of the components the idea has.</param>
+  /// <param name="cancellationToken">Token to cancel the request.</param>
+  /// <returns>The suggestions.</returns>
+  private async Task<IReadOnlyList<ComponentSuggestion>> SuggestAsync(IdeaBrief idea, IReadOnlyList<string> existing, CancellationToken cancellationToken)
+  {
+    var suggestions = await suggester.SuggestAsync(idea, existing, cancellationToken).ConfigureAwait(false);
+    var fitted = suggestions
+      .Select(s => new ComponentSuggestion(Fit(s.Title, Components.Component.TitleMaxLength), Fit(s.Notes, Components.Component.NotesMaxLength)))
+      .DistinctBy(s => s.Title, StringComparer.OrdinalIgnoreCase);
+    return [.. fitted];
+  }
+
+  /// <summary>
+  /// Asks for a critique and rewrite, cut to the lengths an idea accepts so the user can save it as is.
+  /// </summary>
+  /// <param name="idea">The idea.</param>
+  /// <param name="cancellationToken">Token to cancel the request.</param>
+  /// <returns>The critique and rewrite.</returns>
+  private async Task<IdeaImprovement> ImproveAsync(IdeaBrief idea, CancellationToken cancellationToken)
+  {
+    var improvement = await improver.ImproveAsync(idea, cancellationToken).ConfigureAwait(false);
+    return improvement with
+    {
+      Title = Fit(improvement.Title, Ideas.Idea.TitleMaxLength),
+      Description = Fit(improvement.Description, Ideas.Idea.DescriptionMaxLength),
+    };
+  }
+
+  /// <summary>
+  /// Brainstorms ideas for a brief and has the critic score them.
+  /// </summary>
+  /// <param name="brief">The brief.</param>
+  /// <param name="cancellationToken">Token to cancel the request.</param>
+  /// <returns>The scored ideas, best first.</returns>
+  private async Task<IReadOnlyList<BrainstormedIdea>> RankAsync(IdeationRequest brief, CancellationToken cancellationToken)
+  {
+    var ideas = await generator.GenerateAsync(brief, cancellationToken).ConfigureAwait(false);
+    var critiques = await critic.CritiqueAsync(brief, ideas, cancellationToken).ConfigureAwait(false);
+    return Rank(ideas, critiques);
+  }
+
+  /// <summary>
+  /// Runs an agent within the workspace's allowance, giving the request back when the AI fails to answer.
   /// </summary>
   /// <typeparam name="T">The type of the agent's answer.</typeparam>
   /// <param name="workspaceId">The workspace making the request.</param>
@@ -189,11 +267,6 @@ public sealed partial class AiService(
       LogFailed(logger, ex, workspaceId);
       await ReleaseAsync(workspaceId, day).ConfigureAwait(false);
       return new(AiOutcome.Failed);
-    }
-    catch (OperationCanceledException)
-    {
-      await ReleaseAsync(workspaceId, day).ConfigureAwait(false);
-      throw;
     }
   }
 
@@ -231,11 +304,28 @@ public sealed partial class AiService(
       }
       catch (DbUpdateException)
       {
-        context.ChangeTracker.Clear();
+        if (!await RowExistsAfterFailedInsertAsync(workspaceId, day, cancellationToken).ConfigureAwait(false))
+        {
+          throw;
+        }
       }
     }
 
     return false;
+  }
+
+  /// <summary>
+  /// After a failed insert of the day's row, tells whether another request inserted it first, so counting can be retried.
+  /// Any other failure, such as a lost connection or a deleted workspace, is left to propagate.
+  /// </summary>
+  /// <param name="workspaceId">The workspace identifier.</param>
+  /// <param name="day">The UTC day.</param>
+  /// <param name="cancellationToken">Token to cancel the query.</param>
+  /// <returns><see langword="true"/> when the row now exists.</returns>
+  private async Task<bool> RowExistsAfterFailedInsertAsync(Guid workspaceId, DateOnly day, CancellationToken cancellationToken)
+  {
+    context.ChangeTracker.Clear();
+    return await context.AiUsage.AnyAsync(u => u.WorkspaceId == workspaceId && u.Day == day, cancellationToken).ConfigureAwait(false);
   }
 
   /// <summary>
