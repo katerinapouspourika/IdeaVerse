@@ -33,7 +33,10 @@ export function fakeApi(routes: Record<string, Handler | { status: number; body?
   return calls;
 }
 
-export const signedIn = { 'GET /api/v1/auth/manage/info': { status: 200, body: { email: 'kat@example.com' } } };
+export const signedIn = {
+  'GET /api/v1/auth/manage/info': { status: 200, body: { email: 'kat@example.com' } },
+  'GET /api/v1/notifications': { status: 200, body: { items: [], unreadCount: 0 } },
+};
 
 export const signedOut = { 'GET /api/v1/auth/manage/info': { status: 401 } };
 

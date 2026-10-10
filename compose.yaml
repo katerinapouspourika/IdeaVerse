@@ -1,6 +1,7 @@
-# Local stack: PostgreSQL plus the API, which also serves the web app.
+# Local stack: PostgreSQL, the API (which also serves the web app), and Mailpit to catch emails.
 #   docker compose up --build
-# Open http://localhost:8080. The API applies database migrations on startup.
+# Open http://localhost:8080 for the app and http://localhost:8025 for the emails it sends.
+# The API applies database migrations on startup.
 
 services:
   db:
@@ -19,6 +20,12 @@ services:
       timeout: 5s
       retries: 10
 
+  mail:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
   api:
     build:
       context: .
@@ -31,6 +38,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mail:
+        condition: service_started
     ports:
       - "8080:8080"
     environment:
@@ -38,6 +47,9 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__IdeaVerse: Host=db;Port=5432;Database=ideaverse;Username=ideaverse;Password=ideaverse
       Database__MigrateOnStartup: "true"
+      Email__SmtpHost: mail
+      Email__SmtpPort: "1025"
+      Reminders__AppUrl: http://localhost:8080
 
 volumes:
   db-data:

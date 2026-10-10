@@ -7,7 +7,7 @@ The IdeaVerse web app: plan ideas with a target date, list the components each n
 Start the database and the API, then the web dev server:
 
 ```bash
-docker compose up -d db
+docker compose up -d db mail
 dotnet run --project src/IdeaVerse.Api -- --environment Development --urls http://localhost:5080
 cd src/IdeaVerse.Web
 npm ci
@@ -20,6 +20,7 @@ Open `http://localhost:5173`. The dev server forwards `/api` to the API, so the 
 
 - **Accounts** — sign up, sign in, and sign out with the API's cookie login. Signed-out visitors are sent to the login page and returned to where they were going.
 - **Ideas list** — soonest target date first, with status filters, overdue and due-this-week summaries, component progress, and who the idea is shared with.
+- **Reminders** — a bell in the header shows how many reminders are unread, checked every minute. The reminders page lists them newest first, opens the idea (marking the reminder read), and marks them all read. Reminder emails go to Mailpit locally, at `http://localhost:8025`.
 - **Idea page** — edit details and status, postpone to a later date, check off components, and manage the team. Owner-only actions (deleting, adding or removing members) are hidden from members, who can leave instead.
 
 ## Configuration

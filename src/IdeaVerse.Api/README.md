@@ -1,6 +1,6 @@
 # IdeaVerse.Api
 
-Web API for planning ideas: each idea has a target implementation date, a status, an owner, a team, and the components it needs.
+Web API for planning ideas: each idea has a target implementation date, a status, an owner, a team, and the components it needs, and its team is reminded as the date approaches.
 
 ## Getting Started
 
@@ -13,7 +13,7 @@ docker compose up --build
 The API listens on `http://localhost:8080`. To run it from source instead, start only the database and run the project; it applies migrations on startup in Development:
 
 ```bash
-docker compose up -d db
+docker compose up -d db mail
 dotnet run --project src/IdeaVerse.Api -- --environment Development --urls http://localhost:5080
 ```
 
@@ -58,17 +58,39 @@ Validation errors return `400` with RFC 9457 problem details whose `errors` are 
 | `POST` | `/api/v1/ideas/{ideaId}/members` | Owner only: add the account registered with `email`. Unknown emails return 400; existing members return 409. |
 | `DELETE` | `/api/v1/ideas/{ideaId}/members/{userId}` | Owner removes a member, or a member leaves. The owner cannot be removed (409). |
 
+- **Reminders** — a background job (`ReminderWorker`) runs at startup and then every `Reminders:Interval`. For every idea that is not done, each person on its team gets one reminder per stage: **coming up** (two to seven days before), **tomorrow**, **today**, and once when it becomes **overdue**. Reminders are stored per idea, person, stage, and target date, so reruns never repeat one and postponing starts a fresh set. Each reminder is shown in the app and emailed; a failed email is retried on later runs for `Reminders:EmailRetryWindow`.
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/v1/notifications` | The 50 most recent reminders (newest, then most urgent, first) and the unread count. |
+| `POST` | `/api/v1/notifications/{id}/read` | Mark one reminder read. |
+| `POST` | `/api/v1/notifications/read-all` | Mark all reminders read. |
+
+Reminders about ideas the user can no longer access (they left or were removed) are hidden.
+
 ## Configuration
 
 | Key | Default | Description |
 | --- | --- | --- |
 | `ConnectionStrings:IdeaVerse` | local `ideaverse` database in Development | PostgreSQL connection string. |
 | `Database:MigrateOnStartup` | `true` in Development, otherwise `false` | Applies pending EF Core migrations at startup. Other environments use the Docker `migrations` target. |
+| `Reminders:Enabled` | `true` | Runs the reminder background job. |
+| `Reminders:Interval` | `01:00:00` (one minute in Development) | How often the job runs. |
+| `Reminders:AppUrl` | `http://localhost:8080` | Web app address used in email links. |
+| `Reminders:EmailRetryWindow` | `2.00:00:00` | How long a failed reminder email keeps being retried. |
+| `Email:From` | `IdeaVerse <reminders@ideaverse.local>` | Sender of reminder emails. |
+| `Email:SmtpHost` | empty (`localhost` in Development) | SMTP server. When empty, emails are logged instead of sent. |
+| `Email:SmtpPort` | `587` (`1025` in Development) | SMTP port. |
+| `Email:RequireTls` | `false` | Require STARTTLS; otherwise TLS is used when the server offers it. |
+| `Email:Username`, `Email:Password` | empty | SMTP credentials, if the server needs them. Keep the password in user secrets or an environment variable, never in `appsettings.json`. |
 
 ## Caveats
 
 > [!NOTE]
-> Dates are compared in UTC: "today" and `isOverdue` follow the UTC calendar day.
+> Dates are compared in UTC: "today", `isOverdue`, and reminder stages follow the UTC calendar day, and the first reminders of a day go out at the job's first run after midnight UTC.
+
+> [!NOTE]
+> The reminder job assumes a single API instance. A second instance would not duplicate reminders (a unique index prevents it) but could log a failed save and send an email twice.
 
 > [!NOTE]
 > Team members must already have an account. Adding an unknown email returns an error, which tells the owner whether that email is registered; invitations by email will replace this when email sending exists.
