@@ -5,6 +5,7 @@ import { RequireAuth } from './components/RequireAuth';
 import { AuthPage } from './pages/AuthPage';
 import { IdeaPage } from './pages/IdeaPage';
 import { IdeasPage } from './pages/IdeasPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 
 export const routes = [
   {
@@ -17,6 +18,7 @@ export const routes = [
         children: [
           { path: '/', element: <IdeasPage /> },
           { path: '/ideas/:id', element: <IdeaPage /> },
+          { path: '/notifications', element: <NotificationsPage /> },
         ],
       },
       { path: '*', element: <Navigate to="/" replace /> },

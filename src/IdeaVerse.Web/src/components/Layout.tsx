@@ -1,6 +1,7 @@
 import { Link, Outlet, useNavigate } from 'react-router';
 
 import { useAuth } from '../auth/AuthContext';
+import { NotificationBell } from './NotificationBell';
 
 export function Layout() {
   const { account, logout } = useAuth();
@@ -19,6 +20,7 @@ export function Layout() {
         </Link>
         {account && (
           <div className="account">
+            <NotificationBell />
             <span className="muted">{account.email}</span>
             <button type="button" className="button ghost" onClick={() => void signOut()}>
               Sign out

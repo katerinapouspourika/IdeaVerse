@@ -8,6 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Data;
 
+using TUnit.Assertions.Enums;
+
 public class ComponentEndpointsTests
 {
   private static readonly DateOnly Today = IdeaVerseApiFactory.Today;
@@ -99,8 +101,8 @@ public class ComponentEndpointsTests
     using var response = await client.GetAsync($"/api/v1/ideas/{idea.Id}/components");
     var components = await response.ReadComponentsAsync();
 
-    await Assert.That(components.Select(c => c.Title)).IsEquivalentTo(["Budget", "Designer", "Venue"]);
-    await Assert.That(components.Select(c => c.Position)).IsEquivalentTo([0, 1, 2]);
+    await Assert.That(components.Select(c => c.Title)).IsEquivalentTo(["Budget", "Designer", "Venue"], CollectionOrdering.Matching);
+    await Assert.That(components.Select(c => c.Position)).IsEquivalentTo([0, 1, 2], CollectionOrdering.Matching);
   }
 
   [Test]

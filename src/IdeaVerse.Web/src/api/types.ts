@@ -57,6 +57,24 @@ export interface Member {
   addedAt: string;
 }
 
+export type ReminderKind = 'ComingUp' | 'Tomorrow' | 'Today' | 'Overdue';
+
+export interface Notification {
+  id: string;
+  ideaId: string;
+  ideaTitle: string;
+  kind: ReminderKind;
+  targetDate: string;
+  message: string;
+  createdAt: string;
+  readAt: string | null;
+}
+
+export interface Notifications {
+  items: Notification[];
+  unreadCount: number;
+}
+
 export interface Account {
   email: string;
 }

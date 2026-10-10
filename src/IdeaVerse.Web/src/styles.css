@@ -424,6 +424,80 @@ textarea:focus-visible,
   text-overflow: ellipsis;
 }
 
+.bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  color: var(--text);
+}
+
+.bell:hover {
+  background: var(--accent-soft);
+}
+
+.bell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.bell-count {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: var(--surface);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.notification-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notification {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notification.unread {
+  border-left: 4px solid var(--accent);
+}
+
+.notification-message {
+  margin: 0;
+}
+
+.notification.unread .notification-message {
+  font-weight: 600;
+}
+
+.badge.kind-tomorrow,
+.badge.kind-today {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.badge.kind-overdue {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 @media (max-width: 480px) {
   .account .muted {
     display: none;

@@ -13,6 +13,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Time.Testing;
 
 using Pouspourika.IdeaVerse.Api.Data;
+using Pouspourika.IdeaVerse.Api.Email;
+using Pouspourika.IdeaVerse.Api.Notifications;
 
 /// <summary>
 /// Hosts the API in memory against a private in-memory SQLite database and a controllable clock.
@@ -28,6 +30,8 @@ internal sealed class IdeaVerseApiFactory(string? webRoot = null) : WebApplicati
   private readonly SqliteConnection connection = new("DataSource=:memory:");
 
   public static DateOnly Today { get; } = DateOnly.FromDateTime(DateTime.UtcNow);
+
+  public FakeMailSender Mail { get; } = new();
 
   public FakeTimeProvider Time { get; } = new(new DateTimeOffset(Today, new TimeOnly(9, 0), TimeSpan.Zero));
 
@@ -45,10 +49,18 @@ internal sealed class IdeaVerseApiFactory(string? webRoot = null) : WebApplicati
     return client;
   }
 
+  public async Task<ReminderRunResult> RunRemindersAsync()
+  {
+    await using var scope = Services.CreateAsyncScope();
+    return await scope.ServiceProvider.GetRequiredService<ReminderService>().RunAsync(CancellationToken.None);
+  }
+
   protected override void ConfigureWebHost(IWebHostBuilder builder)
   {
     connection.Open();
     builder.UseEnvironment("Testing");
+    builder.UseSetting("Reminders:Enabled", "false");
+    builder.UseSetting("Reminders:AppUrl", "https://app.example.com");
     if (webRoot is not null)
     {
       builder.UseWebRoot(webRoot);
@@ -61,6 +73,9 @@ internal sealed class IdeaVerseApiFactory(string? webRoot = null) : WebApplicati
       services.AddDbContext<IdeaVerseDbContext>(o => o.UseSqlite(connection));
 
       services.AddDataProtection().UseEphemeralDataProtectionProvider();
+
+      services.RemoveAll<IMailSender>();
+      services.AddSingleton<IMailSender>(Mail);
 
       services.RemoveAll<TimeProvider>();
       services.AddSingleton<TimeProvider>(Time);

@@ -13,7 +13,7 @@ IdeaVerse uses Claude-powered agents to generate, critique, and refine ideas. Th
 - `tests/IdeaVerse.Agents.Tests/` — TUnit + NSubstitute tests. Agents talk to the model through `IStructuredModelClient`, so tests never call the API.
 - `samples/IdeaVerse.Agents.Sample/` — console app that runs the pipeline end to end (needs `ANTHROPIC_API_KEY`).
 
-`compose.yaml` runs PostgreSQL and the API, which serves the web app, locally (`docker compose up --build`).
+`compose.yaml` runs PostgreSQL, the API (which serves the web app and runs the hourly reminder job), and Mailpit, which catches the emails it sends (`docker compose up --build`; emails at `http://localhost:8025`).
 
 ## Build & test
 
@@ -69,6 +69,8 @@ Commit messages follow `.github/copilot-commit-message-instructions.md`.
 - Schema changes need an EF Core migration (`ef-migration` skill; `dotnet tool restore` provides `dotnet ef`). Migrations must apply on PostgreSQL; the SQLite test database is created from the model and does not exercise them.
 - `src/IdeaVerse.Web/src/api/types.ts` mirrors the API contracts by hand; any change to a request or response record must update it in the same change.
 - Web tests render the whole app (`renderApp`) against `fakeApi`, a table of `"METHOD /path"` handlers. Query by role and label, as a user would.
+- Reminder tests drive `ReminderService` directly through `IdeaVerseApiFactory.RunRemindersAsync`, with the background worker disabled, `FakeMailSender` capturing email, and the fake clock advanced between runs.
+- TUnit's collection `IsEquivalentTo` ignores order by default; pass `CollectionOrdering.Matching` whenever a test asserts an order.
 - API tests keep the fake clock on today's real date, because the test client drops login cookies already expired by the real clock.
 
 - In `src/IdeaVerse.Agents/`, check that stop reasons are handled before content is read, that output schemas match their C# records (snake_case, `additionalProperties: false`, every property required), and that no API key is hard-coded.

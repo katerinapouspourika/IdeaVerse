@@ -5,8 +5,10 @@ using Microsoft.EntityFrameworkCore;
 using Pouspourika.IdeaVerse.Api.Auth;
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Data;
+using Pouspourika.IdeaVerse.Api.Email;
 using Pouspourika.IdeaVerse.Api.Ideas;
 using Pouspourika.IdeaVerse.Api.Members;
+using Pouspourika.IdeaVerse.Api.Notifications;
 using Pouspourika.IdeaVerse.Api.Web;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,6 +32,12 @@ builder.Services.ConfigureApplicationCookie(o =>
 builder.Services.AddScoped<IdeaService>();
 builder.Services.AddScoped<ComponentService>();
 builder.Services.AddScoped<MemberService>();
+builder.Services.AddScoped<NotificationService>();
+
+builder.Services.AddEmail();
+builder.Services.AddOptions<ReminderOptions>().BindConfiguration(ReminderOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
+builder.Services.AddScoped<ReminderService>();
+builder.Services.AddHostedService<ReminderWorker>();
 
 var app = builder.Build();
 
@@ -49,6 +57,7 @@ app.MapAuthEndpoints();
 app.MapIdeaEndpoints();
 app.MapComponentEndpoints();
 app.MapMemberEndpoints();
+app.MapNotificationEndpoints();
 app.MapWebAppFallback();
 
 await app.MigrateDatabaseIfEnabledAsync();

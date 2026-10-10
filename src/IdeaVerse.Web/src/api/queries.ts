@@ -1,14 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { request } from './client';
-import type { Component, ComponentInput, ComponentUpdate, Idea, IdeaInput, IdeaStatus, IdeaUpdate, Member } from './types';
+import type { Component, ComponentInput, ComponentUpdate, Idea, IdeaInput, IdeaStatus, IdeaUpdate, Member, Notifications } from './types';
 
 export const keys = {
   ideas: (status?: IdeaStatus) => ['ideas', status ?? 'all'] as const,
   idea: (id: string) => ['idea', id] as const,
   components: (ideaId: string) => ['idea', ideaId, 'components'] as const,
   members: (ideaId: string) => ['idea', ideaId, 'members'] as const,
+  notifications: ['notifications'] as const,
 };
+
+/** How often the app checks for new reminders while open. */
+export const notificationPollMs = 60_000;
 
 export function useIdeas(status?: IdeaStatus) {
   return useQuery({
@@ -124,5 +128,29 @@ export function useRemoveMember(ideaId: string) {
   return useMutation({
     mutationFn: (userId: string) => request<void>('DELETE', `/api/v1/ideas/${ideaId}/members/${userId}`),
     onSuccess: () => invalidate(ideaId),
+  });
+}
+
+export function useNotifications() {
+  return useQuery({
+    queryKey: keys.notifications,
+    queryFn: () => request<Notifications>('GET', '/api/v1/notifications'),
+    refetchInterval: notificationPollMs,
+  });
+}
+
+export function useMarkNotificationRead() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => request<void>('POST', `/api/v1/notifications/${id}/read`),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.notifications }),
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => request<void>('POST', '/api/v1/notifications/read-all'),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.notifications }),
   });
 }
