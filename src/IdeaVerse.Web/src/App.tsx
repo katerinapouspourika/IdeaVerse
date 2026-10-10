@@ -14,8 +14,9 @@ export const routes = [
   {
     element: <Layout />,
     children: [
-      { path: '/login', element: <AuthPage mode="login" /> },
-      { path: '/register', element: <AuthPage mode="register" /> },
+      // Distinct keys give each card its own state, so switching between them starts with empty fields.
+      { path: '/login', element: <AuthPage key="login" mode="login" /> },
+      { path: '/register', element: <AuthPage key="register" mode="register" /> },
       { path: '/confirm-email', element: <ConfirmEmailPage /> },
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },

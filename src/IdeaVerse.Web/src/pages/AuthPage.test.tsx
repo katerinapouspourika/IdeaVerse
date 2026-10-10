@@ -62,4 +62,20 @@ describe('AuthPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Passwords must have at least one digit.');
   });
+
+  it('starts the sign-up card empty after typing on the sign-in card', async () => {
+    fakeApi({ ...signedOut, 'POST /api/v1/auth/login?useCookies=true': { status: 401, body: { title: 'Unauthorized' } } });
+    renderApp('/login');
+
+    await userEvent.type(await screen.findByLabelText('Email'), 'kat@example.com');
+    await userEvent.type(screen.getByLabelText('Password'), 'nope');
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await screen.findByRole('alert');
+    await userEvent.click(screen.getByRole('link', { name: 'Create an account' }));
+
+    expect(await screen.findByRole('heading', { name: 'Create your account' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Email')).toHaveValue('');
+    expect(screen.getByLabelText('Password')).toHaveValue('');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });
