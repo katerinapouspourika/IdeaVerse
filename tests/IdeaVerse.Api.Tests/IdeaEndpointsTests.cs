@@ -73,7 +73,7 @@ public class IdeaEndpointsTests
   }
 
   [Test]
-  public async Task Viewer_ChangesIdea_ReturnsForbiddenAndKeepsIt()
+  public async Task Change_ByViewer_ReturnsForbiddenAndKeepsIdea()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
@@ -99,7 +99,7 @@ public class IdeaEndpointsTests
   }
 
   [Test]
-  public async Task WorkspaceAdmin_NotOnTeam_EditsAndDeletesIdea()
+  public async Task UpdateAndDelete_ByWorkspaceAdminNotOnTeam_Succeed()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();

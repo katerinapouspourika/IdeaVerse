@@ -181,7 +181,7 @@ public class MemberEndpointsTests
   }
 
   [Test]
-  public async Task Member_ListsWorkspaceIdeas_SeesTeamIdeaAsMemberAndOthersAsViewer()
+  public async Task List_AsTeamMember_ShowsTeamIdeaAsMemberAndOthersAsViewer()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
@@ -205,7 +205,7 @@ public class MemberEndpointsTests
   }
 
   [Test]
-  public async Task Member_UpdatesAndPostponesIdea_Succeeds()
+  public async Task UpdateAndPostpone_ByTeamMember_Succeed()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
@@ -225,7 +225,7 @@ public class MemberEndpointsTests
   }
 
   [Test]
-  public async Task Member_ManagesComponents_Succeeds()
+  public async Task ChangeComponents_ByTeamMember_Succeed()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
@@ -243,7 +243,7 @@ public class MemberEndpointsTests
   }
 
   [Test]
-  public async Task Member_DeletesIdea_ReturnsForbiddenAndKeepsIt()
+  public async Task DeleteIdea_ByTeamMember_ReturnsForbiddenAndKeepsIt()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
@@ -311,6 +311,23 @@ public class MemberEndpointsTests
     using var response = await member.DeleteAsync($"/api/v1/ideas/{idea.Id}/members/{other.UserId}");
 
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+  }
+
+  [Test]
+  public async Task Remove_ByWorkspaceAdminNotOnIdea_RemovesMember()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var admin = await factory.CreateSignedInClientAsync("admin@example.com");
+    using var member = await factory.CreateSignedInClientAsync(MemberEmail);
+    await factory.JoinAsync(owner, admin, "admin@example.com", WorkspaceRole.Admin);
+    await factory.JoinAsync(owner, member, MemberEmail);
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    var added = await (await owner.AddMemberAsync(idea.Id, MemberEmail)).ReadMemberAsync();
+
+    using var response = await admin.DeleteAsync($"/api/v1/ideas/{idea.Id}/members/{added.UserId}");
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
   }
 
   [Test]

@@ -114,6 +114,9 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
   /// <summary>
   /// Makes someone in the workspace an admin or a member.
   /// </summary>
+  /// <remarks>
+  /// Making an admin a member revokes the invitations they sent, so they cannot bring anyone in, themselves included, after losing the right to.
+  /// </remarks>
   /// <param name="userId">The signed-in user's identifier; must be an owner or admin.</param>
   /// <param name="workspaceId">The workspace identifier.</param>
   /// <param name="memberUserId">The identifier of the person whose role changes.</param>
@@ -155,6 +158,11 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
     }
 
     member.Role = request.Role;
+    if (request.Role == WorkspaceRole.Member)
+    {
+      await RevokeInvitationsSentByAsync(workspaceId, memberUserId, cancellationToken).ConfigureAwait(false);
+    }
+
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     return new WorkspaceChangeResult(ChangeOutcome.Changed, Member: new WorkspaceMemberResponse(member.UserId, member.User!.Email!, member.Role, member.JoinedAt));
   }
@@ -164,6 +172,7 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
   /// </summary>
   /// <remarks>
   /// Ideas they own stay in the workspace, where its owner and admins can still manage them.
+  /// The invitations they sent are revoked, so they cannot rejoin through one.
   /// </remarks>
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="workspaceId">The workspace identifier.</param>
@@ -205,9 +214,22 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
         .Where(m => m.WorkspaceId == workspaceId && m.UserId == memberUserId)
         .ExecuteDeleteAsync(cancellationToken)
         .ConfigureAwait(false);
+      await RevokeInvitationsSentByAsync(workspaceId, memberUserId, cancellationToken).ConfigureAwait(false);
       await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 
     return new WorkspaceChangeResult(ChangeOutcome.Changed);
   }
+
+  /// <summary>
+  /// Revokes the workspace's open invitations sent by someone who can no longer invite.
+  /// </summary>
+  /// <param name="workspaceId">The workspace identifier.</param>
+  /// <param name="inviterId">The identifier of who sent the invitations.</param>
+  /// <param name="cancellationToken">Token to cancel the operation.</param>
+  /// <returns>How many invitations were revoked.</returns>
+  private Task<int> RevokeInvitationsSentByAsync(Guid workspaceId, string inviterId, CancellationToken cancellationToken)
+    => context.Invitations
+      .Where(i => i.WorkspaceId == workspaceId && i.InvitedById == inviterId)
+      .ExecuteDeleteAsync(cancellationToken);
 }

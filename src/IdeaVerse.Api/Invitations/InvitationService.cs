@@ -172,27 +172,49 @@ public sealed class InvitationService(
   /// <param name="invitationId">The invitation identifier.</param>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
   /// <returns>The joined workspace, or <see langword="null"/> when the user has no such open invitation.</returns>
+  /// <remarks>
+  /// The invitation is deleted before the membership is added, in one transaction, so accepting it twice at once joins only once.
+  /// Someone already in the workspace keeps their role.
+  /// </remarks>
   public async Task<WorkspaceResponse?> AcceptAsync(string userId, Guid invitationId, CancellationToken cancellationToken)
   {
-    var invitation = await Received(userId).FirstOrDefaultAsync(i => i.Id == invitationId, cancellationToken).ConfigureAwait(false);
+    var invitation = await Received(userId)
+      .AsNoTracking()
+      .Where(i => i.Id == invitationId)
+      .Select(i => new { i.WorkspaceId, i.Role })
+      .FirstOrDefaultAsync(cancellationToken)
+      .ConfigureAwait(false);
     if (invitation is null)
     {
       return null;
     }
 
-    if (!await context.WorkspaceMembers.AnyAsync(m => m.WorkspaceId == invitation.WorkspaceId && m.UserId == userId, cancellationToken).ConfigureAwait(false))
+    var transaction = await context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+    await using (transaction.ConfigureAwait(false))
     {
-      context.WorkspaceMembers.Add(new WorkspaceMember
+      var deleted = await context.Invitations
+        .Where(i => i.Id == invitationId)
+        .ExecuteDeleteAsync(cancellationToken)
+        .ConfigureAwait(false);
+      if (deleted == 0)
       {
-        WorkspaceId = invitation.WorkspaceId,
-        UserId = userId,
-        Role = invitation.Role,
-        JoinedAt = timeProvider.GetUtcNow(),
-      });
-    }
+        return null;
+      }
 
-    context.Invitations.Remove(invitation);
-    await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+      if (!await context.WorkspaceMembers.AnyAsync(m => m.WorkspaceId == invitation.WorkspaceId && m.UserId == userId, cancellationToken).ConfigureAwait(false))
+      {
+        context.WorkspaceMembers.Add(new WorkspaceMember
+        {
+          WorkspaceId = invitation.WorkspaceId,
+          UserId = userId,
+          Role = invitation.Role,
+          JoinedAt = timeProvider.GetUtcNow(),
+        });
+        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+      }
+
+      await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+    }
 
     return await context.WorkspaceMembers
       .Where(m => m.WorkspaceId == invitation.WorkspaceId && m.UserId == userId)

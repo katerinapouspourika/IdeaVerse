@@ -2,6 +2,8 @@ namespace Pouspourika.IdeaVerse.Api.Tests;
 
 using System.Net;
 
+using Pouspourika.IdeaVerse.Api.Ideas;
+using Pouspourika.IdeaVerse.Api.Invitations;
 using Pouspourika.IdeaVerse.Api.Workspaces;
 
 using TUnit.Assertions.Enums;
@@ -287,6 +289,80 @@ public class WorkspaceEndpointsTests
     using var response = await owner.DeleteAsync($"/api/v1/workspaces/{await owner.WorkspaceIdAsync()}/members/{Guid.NewGuid()}");
 
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+  }
+
+  [Test]
+  public async Task ChangeRole_ByAdmin_DemotesAnotherAdmin()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var admin = await factory.CreateSignedInClientAsync("admin@example.com");
+    using var other = await factory.CreateSignedInClientAsync("other@example.com");
+    await factory.JoinAsync(owner, admin, "admin@example.com", WorkspaceRole.Admin);
+    await factory.JoinAsync(owner, other, "other@example.com", WorkspaceRole.Admin);
+    var workspaceId = await owner.WorkspaceIdAsync();
+    var otherId = await UserIdAsync(owner, workspaceId, "other@example.com");
+
+    using var response = await admin.PutAsJsonAsync($"/api/v1/workspaces/{workspaceId}/members/{otherId}", new ChangeRoleRequest(WorkspaceRole.Member), Json.Options);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+    await Assert.That((await ListMembersAsync(owner, workspaceId)).Single(m => m.Email == "other@example.com").Role).IsEqualTo(WorkspaceRole.Member);
+  }
+
+  [Test]
+  public async Task ChangeRole_AdminToMember_RevokesTheInvitationsTheySent()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var admin = await factory.CreateSignedInClientAsync("admin@example.com");
+    using var alt = await factory.CreateSignedInClientAsync("admin.alt@example.com", withWorkspace: false);
+    await factory.JoinAsync(owner, admin, "admin@example.com", WorkspaceRole.Admin);
+    var workspaceId = await owner.WorkspaceIdAsync();
+    (await admin.PostAsJsonAsync($"/api/v1/workspaces/{workspaceId}/invitations", new InviteRequest("admin.alt@example.com", WorkspaceRole.Admin), Json.Options)).Dispose();
+    var adminId = await UserIdAsync(owner, workspaceId, "admin@example.com");
+
+    (await owner.PutAsJsonAsync($"/api/v1/workspaces/{workspaceId}/members/{adminId}", new ChangeRoleRequest(WorkspaceRole.Member), Json.Options)).Dispose();
+    var received = await alt.GetFromJsonAsync<ReceivedInvitationResponse[]>("/api/v1/invitations", Json.Options);
+
+    await Assert.That(received!).IsEmpty();
+  }
+
+  [Test]
+  public async Task RemoveMember_AdminWithOpenInvitations_RevokesThem()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var admin = await factory.CreateSignedInClientAsync("admin@example.com");
+    await factory.JoinAsync(owner, admin, "admin@example.com", WorkspaceRole.Admin);
+    var workspaceId = await owner.WorkspaceIdAsync();
+    (await admin.PostAsJsonAsync($"/api/v1/workspaces/{workspaceId}/invitations", new InviteRequest("friend@example.com"), Json.Options)).Dispose();
+    (await owner.PostAsJsonAsync($"/api/v1/workspaces/{workspaceId}/invitations", new InviteRequest("colleague@example.com"), Json.Options)).Dispose();
+    var adminId = await UserIdAsync(owner, workspaceId, "admin@example.com");
+
+    (await owner.DeleteAsync($"/api/v1/workspaces/{workspaceId}/members/{adminId}")).Dispose();
+    var open = await owner.GetFromJsonAsync<InvitationResponse[]>($"/api/v1/workspaces/{workspaceId}/invitations", Json.Options);
+
+    await Assert.That(open!.Select(i => i.Email)).IsEquivalentTo(["colleague@example.com"]);
+  }
+
+  [Test]
+  public async Task RemoveMember_IdeaOwner_LosesAccessWhileIdeaStaysInWorkspace()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var member = await factory.CreateSignedInClientAsync("member@example.com");
+    await factory.JoinAsync(owner, member, "member@example.com");
+    var workspaceId = await owner.WorkspaceIdAsync();
+    var idea = await (await member.PostAsJsonAsync($"/api/v1/workspaces/{workspaceId}/ideas", new CreateIdeaRequest("Member's idea", null, Today.AddDays(5)), Json.Options)).ReadIdeaAsync();
+    var memberId = await UserIdAsync(owner, workspaceId, "member@example.com");
+
+    (await owner.DeleteAsync($"/api/v1/workspaces/{workspaceId}/members/{memberId}")).Dispose();
+    using var asFormerMember = await member.GetAsync($"/api/v1/ideas/{idea.Id}");
+    var asOwner = await (await owner.GetAsync($"/api/v1/ideas/{idea.Id}")).ReadIdeaAsync();
+
+    await Assert.That(asFormerMember.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+    await Assert.That(asOwner.OwnerEmail).IsEqualTo("member@example.com");
+    await Assert.That(asOwner.CanManage).IsTrue();
   }
 
   private static async Task<WorkspaceResponse[]> ListAsync(HttpClient client)

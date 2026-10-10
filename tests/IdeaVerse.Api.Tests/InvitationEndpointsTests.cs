@@ -2,6 +2,10 @@ namespace Pouspourika.IdeaVerse.Api.Tests;
 
 using System.Net;
 
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
+
+using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Invitations;
 using Pouspourika.IdeaVerse.Api.Workspaces;
 
@@ -143,7 +147,7 @@ public class InvitationEndpointsTests
   }
 
   [Test]
-  public async Task Received_AccountCreatedAfterInvitation_SeesIt()
+  public async Task ListReceived_AccountCreatedAfterInvitation_IncludesIt()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
@@ -160,7 +164,7 @@ public class InvitationEndpointsTests
   }
 
   [Test]
-  public async Task Received_SomeoneElsesInvitation_IsNotListed()
+  public async Task ListReceived_SomeoneElsesInvitation_IsNotListed()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
@@ -253,6 +257,91 @@ public class InvitationEndpointsTests
 
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
     await Assert.That(await ReceivedAsync(invitee)).IsEmpty();
+  }
+
+  [Test]
+  public async Task Invite_ByAdmin_InvitesAnotherAdmin()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var admin = await factory.CreateSignedInClientAsync("admin@example.com");
+    await factory.JoinAsync(owner, admin, "admin@example.com", WorkspaceRole.Admin);
+
+    using var response = await InviteAsync(admin, await owner.WorkspaceIdAsync(), InviteeEmail, WorkspaceRole.Admin);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Created);
+  }
+
+  [Test]
+  public async Task Accept_UnconfirmedEmail_ReturnsNotFound()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var invitee = await factory.CreateSignedInClientAsync(InviteeEmail, withWorkspace: false);
+    var workspaceId = await owner.WorkspaceIdAsync();
+    (await InviteAsync(owner, workspaceId, InviteeEmail)).Dispose();
+    var invitation = (await ListAsync(owner, workspaceId)).Single();
+    await using (var scope = factory.Services.CreateAsyncScope())
+    {
+      var users = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+      var account = await users.FindByEmailAsync(InviteeEmail);
+      account!.EmailConfirmed = false;
+      await users.UpdateAsync(account);
+    }
+
+    using var response = await invitee.PostAsync($"/api/v1/invitations/{invitation.Id}/accept", content: null);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+    await Assert.That(await ReceivedAsync(invitee)).IsEmpty();
+  }
+
+  [Test]
+  public async Task Decline_SomeoneElsesInvitation_ReturnsNotFoundAndKeepsIt()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var other = await factory.CreateSignedInClientAsync("other@example.com");
+    var workspaceId = await owner.WorkspaceIdAsync();
+    (await InviteAsync(owner, workspaceId, InviteeEmail)).Dispose();
+    var invitation = (await ListAsync(owner, workspaceId)).Single();
+
+    using var response = await other.DeleteAsync($"/api/v1/invitations/{invitation.Id}");
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+    await Assert.That(await ListAsync(owner, workspaceId)).Count().IsEqualTo(1);
+  }
+
+  [Test]
+  public async Task Revoke_ByMember_ReturnsForbiddenAndKeepsIt()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var member = await factory.CreateSignedInClientAsync("member@example.com");
+    await factory.JoinAsync(owner, member, "member@example.com");
+    var workspaceId = await owner.WorkspaceIdAsync();
+    (await InviteAsync(owner, workspaceId, InviteeEmail)).Dispose();
+    var invitation = (await ListAsync(owner, workspaceId)).Single();
+
+    using var response = await member.DeleteAsync($"/api/v1/workspaces/{workspaceId}/invitations/{invitation.Id}");
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+    await Assert.That(await ListAsync(owner, workspaceId)).Count().IsEqualTo(1);
+  }
+
+  [Test]
+  public async Task Revoke_InvitationOfAnotherWorkspace_ReturnsNotFoundAndKeepsIt()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var other = await factory.CreateSignedInClientAsync("other@example.com");
+    var workspaceId = await owner.WorkspaceIdAsync();
+    (await InviteAsync(owner, workspaceId, InviteeEmail)).Dispose();
+    var invitation = (await ListAsync(owner, workspaceId)).Single();
+
+    using var response = await other.DeleteAsync($"/api/v1/workspaces/{await other.WorkspaceIdAsync()}/invitations/{invitation.Id}");
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+    await Assert.That(await ListAsync(owner, workspaceId)).Count().IsEqualTo(1);
   }
 
   private static Task<HttpResponseMessage> InviteAsync(HttpClient client, Guid workspaceId, string email, WorkspaceRole role = WorkspaceRole.Member)

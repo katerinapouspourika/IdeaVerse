@@ -228,7 +228,7 @@ public class ComponentEndpointsTests
   }
 
   [Test]
-  public async Task Viewer_ListsComponentsButCannotChangeThem()
+  public async Task Change_ByViewer_ReturnsForbiddenWhileListWorks()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();

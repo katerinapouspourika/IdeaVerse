@@ -39,7 +39,7 @@ The API also serves the web app (`src/IdeaVerse.Web`) from `wwwroot` when one is
 | `PUT` | `/api/v1/workspaces/{id}/members/{userId}` | Owner or admin: make someone `Admin` or `Member`. The owner's role cannot change (409). |
 | `DELETE` | `/api/v1/workspaces/{id}/members/{userId}` | Owner or admin removes someone, or anyone leaves. Takes them off the teams of its ideas; ideas they own stay. The owner cannot leave (409). |
 
-- **Invitations** — owners and admins invite people by email, whether or not they have an account yet. The email links to the web app's `/invitations` page. An invitation belongs to the email address: whoever signs in with that confirmed address sees it, so someone new signs up first and finds it waiting. Invitations last seven days; inviting the same address again renews and resends it. Accepting, declining, or revoking deletes it.
+- **Invitations** — owners and admins invite people by email, whether or not they have an account yet. The email links to the web app's `/invitations` page. An invitation belongs to the email address: whoever signs in with that confirmed address sees it, so someone new signs up first and finds it waiting. Invitations last seven days; inviting the same address again renews and resends it. Accepting, declining, or revoking deletes it, and so does removing the admin who sent it or making them a member.
 
 | Method | Route | Purpose |
 | --- | --- | --- |
@@ -121,7 +121,7 @@ Reminders about ideas the user is no longer on the team of, or whose workspace t
 > Accepting an invitation relies on the account's email being confirmed. With `Auth:RequireConfirmedEmail` turned off, unconfirmed accounts cannot accept invitations.
 
 > [!NOTE]
-> The `AddsWorkspaces` migration gives every existing account a workspace of its own, moves its ideas there, and adds the people on their teams as members, so nobody loses sight of an idea.
+> The `AddsWorkspaces` migration gives every existing account a workspace of its own, moves its ideas there, and adds the people on their teams as members, so nobody loses sight of an idea. Because everyone in a workspace sees all of its ideas, those team members also start seeing the owner's other ideas.
 
 > [!IMPORTANT]
 > Cookie encryption keys are not yet persisted. Before deploying more than one instance, or a container that restarts, configure ASP.NET Core Data Protection to store keys outside the container, or users will be signed out.

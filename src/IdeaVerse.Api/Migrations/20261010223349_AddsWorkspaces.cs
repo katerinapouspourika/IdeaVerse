@@ -97,7 +97,7 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
             migrationBuilder.Sql(
                 """
                 INSERT INTO "Workspaces" ("Id", "Name", "CreatedAt")
-                SELECT u."Id"::uuid, left(coalesce(split_part(u."Email", '@', 1) || '''s workspace', 'My workspace'), 100), now()
+                SELECT u."Id"::uuid, left(coalesce(nullif(split_part(u."Email", '@', 1), '') || '''s workspace', 'My workspace'), 100), now()
                 FROM "AspNetUsers" u;
 
                 INSERT INTO "WorkspaceMembers" ("WorkspaceId", "UserId", "Role", "JoinedAt")

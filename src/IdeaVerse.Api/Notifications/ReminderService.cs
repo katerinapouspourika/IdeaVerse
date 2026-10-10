@@ -122,6 +122,7 @@ public sealed partial class ReminderService(
   /// </summary>
   /// <remarks>
   /// A failed email is logged and left for the next run; one failure does not stop the rest.
+  /// Reminders for people no longer on the idea's team or in its workspace are not emailed.
   /// </remarks>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
   /// <returns>How many emails were sent.</returns>
@@ -134,6 +135,8 @@ public sealed partial class ReminderService(
 
     var pending = await context.Notifications
       .Where(n => n.EmailedAt == null && n.CreatedAt >= oldest)
+      .Where(n => context.WorkspaceMembers.Any(w => w.WorkspaceId == n.Idea!.WorkspaceId && w.UserId == n.UserId))
+      .Where(n => n.Idea!.OwnerId == n.UserId || n.Idea.Members.Any(m => m.UserId == n.UserId))
       .Select(n => new { Notification = n, n.User!.Email, IdeaTitle = n.Idea!.Title })
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
