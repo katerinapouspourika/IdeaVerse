@@ -1,7 +1,9 @@
 using System.Text.Json.Serialization;
 
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
+using Pouspourika.IdeaVerse.Api;
 using Pouspourika.IdeaVerse.Api.Auth;
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Data;
@@ -21,8 +23,13 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddDbContext<IdeaVerseDbContext>(o => o.UseNpgsql(builder.Configuration.GetConnectionString("IdeaVerse")));
 builder.Services.AddAuthorization();
 builder.Services
-  .AddIdentityApiEndpoints<User>(o => o.User.RequireUniqueEmail = true)
+  .AddIdentityApiEndpoints<User>(o =>
+  {
+    o.User.RequireUniqueEmail = true;
+    o.SignIn.RequireConfirmedEmail = builder.Configuration.GetValue("Auth:RequireConfirmedEmail", defaultValue: true);
+  })
   .AddEntityFrameworkStores<IdeaVerseDbContext>();
+builder.Services.AddTransient<IEmailSender<User>, IdentityEmailSender>();
 builder.Services.ConfigureApplicationCookie(o =>
 {
   o.Cookie.Name = "IdeaVerse.Auth";
@@ -35,6 +42,7 @@ builder.Services.AddScoped<MemberService>();
 builder.Services.AddScoped<NotificationService>();
 
 builder.Services.AddEmail();
+builder.Services.AddOptions<AppOptions>().BindConfiguration(AppOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
 builder.Services.AddOptions<ReminderOptions>().BindConfiguration(ReminderOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
 builder.Services.AddScoped<ReminderService>();
 builder.Services.AddHostedService<ReminderWorker>();

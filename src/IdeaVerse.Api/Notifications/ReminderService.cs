@@ -13,12 +13,14 @@ using Pouspourika.IdeaVerse.Api.Ideas;
 /// <param name="context">The database context.</param>
 /// <param name="mailSender">Sends reminder emails.</param>
 /// <param name="options">Reminder settings.</param>
+/// <param name="app">Application settings, for links back to the web app.</param>
 /// <param name="timeProvider">Clock deciding today's date.</param>
 /// <param name="logger">Logger for delivery problems.</param>
 public sealed partial class ReminderService(
   IdeaVerseDbContext context,
   IMailSender mailSender,
   IOptions<ReminderOptions> options,
+  IOptions<AppOptions> app,
   TimeProvider timeProvider,
   ILogger<ReminderService> logger)
 {
@@ -136,7 +138,7 @@ public sealed partial class ReminderService(
     {
       var notification = item.Notification;
       var message = ReminderSchedule.Message(notification.Kind, item.IdeaTitle, notification.TargetDate, today);
-      var link = $"{settings.AppUrl.ToString().TrimEnd('/')}/ideas/{notification.IdeaId}";
+      var link = app.Value.Link($"/ideas/{notification.IdeaId}");
       var mail = new MailMessage(
         item.Email!,
         Subject(notification.Kind, item.IdeaTitle),

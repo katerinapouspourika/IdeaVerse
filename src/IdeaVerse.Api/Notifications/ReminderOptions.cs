@@ -24,12 +24,6 @@ public sealed class ReminderOptions
   public TimeSpan Interval { get; set; } = TimeSpan.FromHours(1);
 
   /// <summary>
-  /// Gets or sets the web app's address, used for links in reminder emails.
-  /// </summary>
-  [Required]
-  public Uri AppUrl { get; set; } = new("http://localhost:8080");
-
-  /// <summary>
   /// Gets or sets how long a failed reminder email keeps being retried.
   /// </summary>
   [Range(typeof(TimeSpan), "00:00:00", "7.00:00:00")]

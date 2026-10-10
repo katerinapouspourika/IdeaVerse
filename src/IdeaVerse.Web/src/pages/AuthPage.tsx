@@ -4,6 +4,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
+import { ResendConfirmation } from '../components/ResendConfirmation';
 
 type Mode = 'login' | 'register';
 
@@ -12,10 +13,22 @@ const copy: Record<Mode, { title: string; action: string; switchText: string; sw
   register: { title: 'Create your account', action: 'Create account', switchText: 'Already have an account?', switchLink: 'Sign in', switchTo: '/login' },
 };
 
+/** Identity's login failure detail for an account whose email is not confirmed yet. */
+const notConfirmed = 'NotAllowed';
+
+/** Identity's login failure detail for an account locked after too many wrong passwords. */
+const lockedOut = 'LockedOut';
+
 /** Turns an Identity error response into one readable message. */
 function describe(error: unknown, mode: Mode): string {
   if (error instanceof ApiError) {
     if (mode === 'login' && error.status === 401) {
+      if (error.message === notConfirmed) {
+        return 'Please confirm your email first. We sent you a link when you signed up.';
+      }
+      if (error.message === lockedOut) {
+        return 'Too many attempts. Please wait a few minutes, or reset your password.';
+      }
       return 'That email and password do not match.';
     }
     const messages = Object.values(error.fieldErrors).flat();
@@ -33,6 +46,8 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
+  const [registered, setRegistered] = useState(false);
   const [pending, setPending] = useState(false);
   const text = copy[mode];
 
@@ -40,16 +55,39 @@ export function AuthPage({ mode }: { mode: Mode }) {
     return <Navigate to="/" replace />;
   }
 
+  if (registered) {
+    return (
+      <section className="card auth">
+        <h1>Check your inbox</h1>
+        <p>
+          We sent a confirmation link to <strong>{email}</strong>. Open it to activate your account, then sign in.
+        </p>
+        <p className="muted small">Nothing there? Check your spam folder, or send it again.</p>
+        <ResendConfirmation email={email} />
+        <p className="muted small">
+          Confirmed already? <Link to="/login">Sign in</Link>
+        </p>
+      </section>
+    );
+  }
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setPending(true);
     setError(null);
+    setNeedsConfirmation(false);
     try {
-      await (mode === 'login' ? login(email, password) : register(email, password));
+      if (mode === 'register') {
+        await register(email, password);
+        setRegistered(true);
+        return;
+      }
+      await login(email, password);
       const from = (location.state as { from?: string } | null)?.from ?? '/';
       await navigate(from, { replace: true });
     } catch (caught) {
       setError(describe(caught, mode));
+      setNeedsConfirmation(caught instanceof ApiError && caught.status === 401 && caught.message === notConfirmed);
     } finally {
       setPending(false);
     }
@@ -85,6 +123,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
             {error}
           </p>
         )}
+        {needsConfirmation && <ResendConfirmation email={email} />}
         <button type="submit" className="button primary" disabled={pending}>
           {pending ? 'Please wait…' : text.action}
         </button>
@@ -92,6 +131,11 @@ export function AuthPage({ mode }: { mode: Mode }) {
       <p className="muted small">
         {text.switchText} <Link to={text.switchTo}>{text.switchLink}</Link>
       </p>
+      {mode === 'login' && (
+        <p className="muted small">
+          <Link to="/forgot-password">Forgot your password?</Link>
+        </p>
+      )}
     </section>
   );
 }

@@ -19,6 +19,8 @@ Open `http://localhost:5173`. The dev server forwards `/api` to the API, so the 
 ## Features
 
 - **Accounts** — sign up, sign in, and sign out with the API's cookie login. Signed-out visitors are sent to the login page and returned to where they were going.
+  - New accounts confirm their email first: sign-up shows "Check your inbox", the emailed link opens `/confirm-email`, and signing in before confirming explains why and offers to resend the link.
+  - "Forgot your password?" on the sign-in page emails a link to `/reset-password`, where the user chooses a new one. Locally, these emails arrive in Mailpit at `http://localhost:8025`.
 - **Ideas list** — soonest target date first, with status filters, overdue and due-this-week summaries, component progress, and who the idea is shared with.
 - **Reminders** — a bell in the header shows how many reminders are unread, checked every minute. The reminders page lists them newest first, opens the idea (marking the reminder read), and marks them all read. Reminder emails go to Mailpit locally, at `http://localhost:8025`.
 - **Idea page** — edit details and status, postpone to a later date, check off components, and manage the team. Owner-only actions (deleting, adding or removing members) are hidden from members, who can leave instead.

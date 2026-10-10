@@ -20,10 +20,9 @@ public class AuthTests
   {
     await using var factory = new IdeaVerseApiFactory();
     var client = factory.CreateClient();
-    var credentials = new { email = "owner@example.com", password = IdeaVerseApiFactory.Password };
-    using var register = await client.PostAsJsonAsync("/api/v1/auth/register", credentials);
+    await factory.RegisterAndConfirmAsync(client, "owner@example.com");
 
-    using var login = await client.PostAsJsonAsync("/api/v1/auth/login?useCookies=true", credentials);
+    using var login = await client.PostAsJsonAsync("/api/v1/auth/login?useCookies=true", new { email = "owner@example.com", password = IdeaVerseApiFactory.Password });
 
     var cookie = login.Headers.GetValues("Set-Cookie").Single(c => c.StartsWith("IdeaVerse.Auth=", StringComparison.Ordinal));
     await Assert.That(cookie).Contains("httponly", StringComparison.OrdinalIgnoreCase);

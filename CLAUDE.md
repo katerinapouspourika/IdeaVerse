@@ -69,6 +69,7 @@ Commit messages follow `.github/copilot-commit-message-instructions.md`.
 - Schema changes need an EF Core migration (`ef-migration` skill; `dotnet tool restore` provides `dotnet ef`). Migrations must apply on PostgreSQL; the SQLite test database is created from the model and does not exercise them.
 - `src/IdeaVerse.Web/src/api/types.ts` mirrors the API contracts by hand; any change to a request or response record must update it in the same change.
 - Web tests render the whole app (`renderApp`) against `fakeApi`, a table of `"METHOD /path"` handlers. Query by role and label, as a user would.
+- Accounts must confirm their email before signing in. `IdeaVerseApiFactory.CreateSignedInClientAsync` registers, confirms through the link in the captured confirmation email (removing that email from `FakeMailSender`), then logs in; use `RegisterAndConfirmAsync` when a test needs the steps separately.
 - Reminder tests drive `ReminderService` directly through `IdeaVerseApiFactory.RunRemindersAsync`, with the background worker disabled, `FakeMailSender` capturing email, and the fake clock advanced between runs.
 - TUnit's collection `IsEquivalentTo` ignores order by default; pass `CollectionOrdering.Matching` whenever a test asserts an order.
 - API tests keep the fake clock on today's real date, because the test client drops login cookies already expired by the real clock.
