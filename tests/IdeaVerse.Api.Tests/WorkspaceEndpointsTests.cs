@@ -365,6 +365,106 @@ public class WorkspaceEndpointsTests
     await Assert.That(asOwner.CanManage).IsTrue();
   }
 
+  [Test]
+  public async Task Delete_ByOwner_RemovesWorkspaceWithItsIdeas()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var member = await factory.CreateSignedInClientAsync("member@example.com");
+    await factory.JoinAsync(owner, member, "member@example.com");
+    var workspaceId = await owner.WorkspaceIdAsync();
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    (await owner.CreateComponentAsync(idea.Id, "Budget")).Dispose();
+
+    using var delete = await owner.DeleteAsync($"/api/v1/workspaces/{workspaceId}");
+    using var asMember = await member.GetAsync($"/api/v1/ideas/{idea.Id}");
+
+    await Assert.That(delete.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
+    await Assert.That(asMember.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+    await Assert.That((await ListAsync(owner)).Select(w => w.Id)).DoesNotContain(workspaceId);
+    await Assert.That((await ListAsync(member)).Select(w => w.Id)).DoesNotContain(workspaceId);
+  }
+
+  [Test]
+  public async Task Delete_ByAdmin_ReturnsForbidden()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var admin = await factory.CreateSignedInClientAsync("admin@example.com");
+    await factory.JoinAsync(owner, admin, "admin@example.com", WorkspaceRole.Admin);
+
+    using var response = await admin.DeleteAsync($"/api/v1/workspaces/{await owner.WorkspaceIdAsync()}");
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+  }
+
+  [Test]
+  public async Task Delete_ByOutsider_ReturnsNotFound()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var outsider = await factory.CreateSignedInClientAsync("outsider@example.com");
+
+    using var response = await outsider.DeleteAsync($"/api/v1/workspaces/{await owner.WorkspaceIdAsync()}");
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+  }
+
+  [Test]
+  public async Task TransferOwnership_ToMember_MakesThemOwnerAndKeepsPreviousOwnerAsAdmin()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var member = await factory.CreateSignedInClientAsync("member@example.com");
+    await factory.JoinAsync(owner, member, "member@example.com");
+    var workspaceId = await owner.WorkspaceIdAsync();
+    var memberId = await UserIdAsync(owner, workspaceId, "member@example.com");
+
+    using var response = await owner.PostAsJsonAsync($"/api/v1/workspaces/{workspaceId}/transfer", new TransferOwnershipRequest(memberId), Json.Options);
+    var asPreviousOwner = await response.Content.ReadFromJsonAsync<WorkspaceResponse>(Json.Options);
+    var people = await ListMembersAsync(owner, workspaceId);
+    var ownerId = people.Single(m => m.Email == "owner@example.com").UserId;
+    using var leave = await owner.DeleteAsync($"/api/v1/workspaces/{workspaceId}/members/{ownerId}");
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+    await Assert.That(asPreviousOwner!.Role).IsEqualTo(WorkspaceRole.Admin);
+    await Assert.That(people.Select(m => (m.Email, m.Role))).IsEquivalentTo(
+      [("member@example.com", WorkspaceRole.Owner), ("owner@example.com", WorkspaceRole.Admin)],
+      CollectionOrdering.Matching);
+    await Assert.That(leave.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
+  }
+
+  [Test]
+  public async Task TransferOwnership_ByAdmin_ReturnsForbidden()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var admin = await factory.CreateSignedInClientAsync("admin@example.com");
+    await factory.JoinAsync(owner, admin, "admin@example.com", WorkspaceRole.Admin);
+    var workspaceId = await owner.WorkspaceIdAsync();
+    var adminId = await UserIdAsync(owner, workspaceId, "admin@example.com");
+
+    using var response = await admin.PostAsJsonAsync($"/api/v1/workspaces/{workspaceId}/transfer", new TransferOwnershipRequest(adminId), Json.Options);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+  }
+
+  [Test]
+  public async Task TransferOwnership_ToSomeoneOutsideOrThemselves_ReturnsValidationProblem()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    var workspaceId = await owner.WorkspaceIdAsync();
+    var ownerId = await UserIdAsync(owner, workspaceId, "owner@example.com");
+
+    using var outside = await owner.PostAsJsonAsync($"/api/v1/workspaces/{workspaceId}/transfer", new TransferOwnershipRequest(Guid.NewGuid().ToString()), Json.Options);
+    using var self = await owner.PostAsJsonAsync($"/api/v1/workspaces/{workspaceId}/transfer", new TransferOwnershipRequest(ownerId), Json.Options);
+
+    await Assert.That(outside.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+    await Assert.That((await outside.ReadValidationErrorsAsync()).Keys).Contains("userId");
+    await Assert.That(self.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+  }
+
   private static async Task<WorkspaceResponse[]> ListAsync(HttpClient client)
     => (await client.GetFromJsonAsync<WorkspaceResponse[]>("/api/v1/workspaces", Json.Options))!;
 

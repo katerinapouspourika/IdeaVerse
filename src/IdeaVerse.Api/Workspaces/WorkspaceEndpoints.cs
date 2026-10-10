@@ -26,6 +26,8 @@ internal static class WorkspaceEndpoints
     group.MapGet("/", ListAsync);
     group.MapPost("/", CreateAsync).WithValidation<WorkspaceNameRequest>();
     group.MapPut("/{workspaceId:guid}", RenameAsync).WithValidation<WorkspaceNameRequest>();
+    group.MapDelete("/{workspaceId:guid}", DeleteAsync);
+    group.MapPost("/{workspaceId:guid}/transfer", TransferOwnershipAsync).WithValidation<TransferOwnershipRequest>();
     group.MapGet("/{workspaceId:guid}/members", ListMembersAsync);
     group.MapPut("/{workspaceId:guid}/members/{memberUserId}", ChangeRoleAsync);
     group.MapDelete("/{workspaceId:guid}/members/{memberUserId}", RemoveMemberAsync);
@@ -84,6 +86,44 @@ internal static class WorkspaceEndpoints
     CancellationToken cancellationToken)
   {
     var result = await service.RenameAsync(user.GetUserId(), workspaceId, request, cancellationToken).ConfigureAwait(false);
+    return ToHttpResult(result, r => TypedResults.Ok(r.Workspace!));
+  }
+
+  /// <summary>
+  /// Deletes a workspace and everything in it.
+  /// </summary>
+  /// <param name="workspaceId">The workspace identifier.</param>
+  /// <param name="user">The signed-in user.</param>
+  /// <param name="service">The workspace service.</param>
+  /// <param name="cancellationToken">Token to cancel the request.</param>
+  /// <returns>204, 404, or 403 for anyone but the owner.</returns>
+  private static async Task<Results<NoContent, NotFound, ValidationProblem, ProblemHttpResult>> DeleteAsync(
+    Guid workspaceId,
+    ClaimsPrincipal user,
+    WorkspaceService service,
+    CancellationToken cancellationToken)
+  {
+    var result = await service.DeleteAsync(user.GetUserId(), workspaceId, cancellationToken).ConfigureAwait(false);
+    return ToHttpResult(result, _ => TypedResults.NoContent());
+  }
+
+  /// <summary>
+  /// Hands the workspace to someone else in it.
+  /// </summary>
+  /// <param name="workspaceId">The workspace identifier.</param>
+  /// <param name="request">The validated request.</param>
+  /// <param name="user">The signed-in user.</param>
+  /// <param name="service">The workspace service.</param>
+  /// <param name="cancellationToken">Token to cancel the request.</param>
+  /// <returns>The workspace as the previous owner now sees it, 404, 403 for anyone but the owner, or 400 for someone outside the workspace.</returns>
+  private static async Task<Results<Ok<WorkspaceResponse>, NotFound, ValidationProblem, ProblemHttpResult>> TransferOwnershipAsync(
+    Guid workspaceId,
+    TransferOwnershipRequest request,
+    ClaimsPrincipal user,
+    WorkspaceService service,
+    CancellationToken cancellationToken)
+  {
+    var result = await service.TransferOwnershipAsync(user.GetUserId(), workspaceId, request, cancellationToken).ConfigureAwait(false);
     return ToHttpResult(result, r => TypedResults.Ok(r.Workspace!));
   }
 

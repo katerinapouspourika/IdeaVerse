@@ -105,4 +105,51 @@ describe('PeoplePage', () => {
 
     await waitFor(() => expect(calls.some((c) => c.method === 'DELETE' && c.path === '/api/v1/workspaces/ws-1/members/u-me')).toBe(true));
   });
+
+  it('lets the owner hand the workspace to someone else', async () => {
+    const calls = fakeApi({
+      ...peopleRoutes('Owner', [kat, mia]),
+      'POST /api/v1/workspaces/ws-1/transfer': { status: 200, body: aWorkspace({ role: 'Admin' }) },
+    });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderApp('/people');
+
+    const form = await screen.findByRole('form', { name: 'Transfer ownership' });
+    await userEvent.selectOptions(await within(form).findByLabelText('New owner'), 'mia@example.com');
+    await userEvent.click(within(form).getByRole('button', { name: 'Transfer ownership' }));
+
+    await waitFor(() => expect(calls.find((c) => c.path.endsWith('/transfer'))?.body).toEqual({ userId: 'u-mia' }));
+  });
+
+  it('deletes the workspace only after its name is typed', async () => {
+    let deleted = false;
+    const calls = fakeApi({
+      ...peopleRoutes('Owner', [kat]),
+      'GET /api/v1/workspaces': () => ({ status: 200, body: deleted ? [] : [aWorkspace()] }),
+      'DELETE /api/v1/workspaces/ws-1': () => {
+        deleted = true;
+        return { status: 204 };
+      },
+    });
+    const router = renderApp('/people');
+
+    const form = await screen.findByRole('form', { name: 'Delete workspace' });
+    const button = within(form).getByRole('button', { name: 'Delete workspace' });
+    await userEvent.type(within(form).getByLabelText('Type “Acme Marketing” to confirm'), 'Acme');
+    expect(button).toBeDisabled();
+    await userEvent.type(within(form).getByLabelText('Type “Acme Marketing” to confirm'), ' Marketing');
+    await userEvent.click(button);
+
+    expect(await screen.findByRole('heading', { name: 'Welcome to IdeaVerse' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/');
+    expect(calls.some((c) => c.method === 'DELETE' && c.path === '/api/v1/workspaces/ws-1')).toBe(true);
+  });
+
+  it('hides the danger zone from everyone but the owner', async () => {
+    fakeApi(peopleRoutes('Member', [kat, mia]));
+    renderApp('/people');
+
+    await screen.findByRole('heading', { name: 'People in Acme Marketing' });
+    expect(screen.queryByRole('region', { name: 'Danger zone' })).not.toBeInTheDocument();
+  });
 });
