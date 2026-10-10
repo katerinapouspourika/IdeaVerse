@@ -9,9 +9,11 @@ using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Email;
 using Pouspourika.IdeaVerse.Api.Ideas;
+using Pouspourika.IdeaVerse.Api.Invitations;
 using Pouspourika.IdeaVerse.Api.Members;
 using Pouspourika.IdeaVerse.Api.Notifications;
 using Pouspourika.IdeaVerse.Api.Web;
+using Pouspourika.IdeaVerse.Api.Workspaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,6 +38,8 @@ builder.Services.ConfigureApplicationCookie(o =>
   o.Cookie.SameSite = SameSiteMode.Strict;
 });
 
+builder.Services.AddScoped<WorkspaceService>();
+builder.Services.AddScoped<InvitationService>();
 builder.Services.AddScoped<IdeaService>();
 builder.Services.AddScoped<ComponentService>();
 builder.Services.AddScoped<MemberService>();
@@ -62,6 +66,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapAuthEndpoints();
+app.MapWorkspaceEndpoints();
+app.MapInvitationEndpoints();
 app.MapIdeaEndpoints();
 app.MapComponentEndpoints();
 app.MapMemberEndpoints();

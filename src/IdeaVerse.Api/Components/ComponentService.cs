@@ -6,10 +6,11 @@ using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Ideas;
 
 /// <summary>
-/// Manages the components of ideas the user can access.
+/// Manages the components of ideas in the user's workspaces.
 /// </summary>
 /// <remarks>
-/// A component is reachable only through an idea from <see cref="IdeaAccess.AccessibleIdeas"/>, so an inaccessible idea and its components behave as missing.
+/// Components are read through <see cref="IdeaAccess.VisibleIdeas"/> and changed through <see cref="IdeaAccess.EditableIdeas"/>,
+/// so an idea outside the user's workspaces and its components behave as missing, and changing those of an idea the user is not on the team of is forbidden.
 /// </remarks>
 /// <param name="context">The database context.</param>
 /// <param name="timeProvider">Clock used for timestamps.</param>
@@ -21,10 +22,10 @@ public sealed class ComponentService(IdeaVerseDbContext context, TimeProvider ti
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="ideaId">The idea identifier.</param>
   /// <param name="cancellationToken">Token to cancel the query.</param>
-  /// <returns>The components, or <see langword="null"/> when the user cannot access the idea.</returns>
+  /// <returns>The components, or <see langword="null"/> when the user cannot see the idea.</returns>
   public async Task<IReadOnlyList<Component>?> ListAsync(string userId, Guid ideaId, CancellationToken cancellationToken)
   {
-    if (!await CanAccessAsync(userId, ideaId, cancellationToken).ConfigureAwait(false))
+    if (!await context.VisibleIdeas(userId).AnyAsync(i => i.Id == ideaId, cancellationToken).ConfigureAwait(false))
     {
       return null;
     }
@@ -44,14 +45,14 @@ public sealed class ComponentService(IdeaVerseDbContext context, TimeProvider ti
   /// <param name="ideaId">The idea identifier.</param>
   /// <param name="request">The validated request.</param>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
-  /// <returns>The created component, or <see langword="null"/> when the user cannot access the idea.</returns>
-  public async Task<Component?> CreateAsync(string userId, Guid ideaId, CreateComponentRequest request, CancellationToken cancellationToken)
+  /// <returns>The outcome, carrying the created component.</returns>
+  public async Task<ComponentChangeResult> CreateAsync(string userId, Guid ideaId, CreateComponentRequest request, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(request);
 
-    if (!await CanAccessAsync(userId, ideaId, cancellationToken).ConfigureAwait(false))
+    if (!await context.EditableIdeas(userId).AnyAsync(i => i.Id == ideaId, cancellationToken).ConfigureAwait(false))
     {
-      return null;
+      return await DeniedAsync(userId, ideaId, cancellationToken).ConfigureAwait(false);
     }
 
     var lastPosition = await context.Components
@@ -70,7 +71,7 @@ public sealed class ComponentService(IdeaVerseDbContext context, TimeProvider ti
 
     context.Components.Add(component);
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-    return component;
+    return new ComponentChangeResult(ChangeOutcome.Changed, component);
   }
 
   /// <summary>
@@ -81,17 +82,17 @@ public sealed class ComponentService(IdeaVerseDbContext context, TimeProvider ti
   /// <param name="componentId">The component identifier.</param>
   /// <param name="request">The validated request.</param>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
-  /// <returns>The updated component, or <see langword="null"/> when it does not exist under an idea the user can access.</returns>
-  public async Task<Component?> UpdateAsync(string userId, Guid ideaId, Guid componentId, UpdateComponentRequest request, CancellationToken cancellationToken)
+  /// <returns>The outcome, carrying the updated component.</returns>
+  public async Task<ComponentChangeResult> UpdateAsync(string userId, Guid ideaId, Guid componentId, UpdateComponentRequest request, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(request);
 
-    var component = await Accessible(userId, ideaId)
+    var component = await Editable(userId, ideaId)
       .FirstOrDefaultAsync(c => c.Id == componentId, cancellationToken)
       .ConfigureAwait(false);
     if (component is null)
     {
-      return null;
+      return await DeniedAsync(userId, ideaId, cancellationToken).ConfigureAwait(false);
     }
 
     if (request.IsDone != component.IsDone)
@@ -103,7 +104,7 @@ public sealed class ComponentService(IdeaVerseDbContext context, TimeProvider ti
     component.Notes = Normalize(request.Notes);
     component.IsDone = request.IsDone;
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-    return component;
+    return new ComponentChangeResult(ChangeOutcome.Changed, component);
   }
 
   /// <summary>
@@ -113,14 +114,14 @@ public sealed class ComponentService(IdeaVerseDbContext context, TimeProvider ti
   /// <param name="ideaId">The idea identifier.</param>
   /// <param name="componentId">The component identifier.</param>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
-  /// <returns><see langword="true"/> when the component existed under an idea the user can access and was deleted.</returns>
-  public async Task<bool> DeleteAsync(string userId, Guid ideaId, Guid componentId, CancellationToken cancellationToken)
+  /// <returns>The outcome.</returns>
+  public async Task<ComponentChangeResult> DeleteAsync(string userId, Guid ideaId, Guid componentId, CancellationToken cancellationToken)
   {
-    var deleted = await Accessible(userId, ideaId)
+    var deleted = await Editable(userId, ideaId)
       .Where(c => c.Id == componentId)
       .ExecuteDeleteAsync(cancellationToken)
       .ConfigureAwait(false);
-    return deleted > 0;
+    return deleted > 0 ? new ComponentChangeResult(ChangeOutcome.Changed) : await DeniedAsync(userId, ideaId, cancellationToken).ConfigureAwait(false);
   }
 
   /// <summary>
@@ -132,23 +133,33 @@ public sealed class ComponentService(IdeaVerseDbContext context, TimeProvider ti
     => string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
 
   /// <summary>
-  /// Returns whether the user can access the idea.
+  /// Explains why a change found nothing to change: the idea is visible but not editable, or the idea or component is missing.
   /// </summary>
+  /// <remarks>
+  /// A missing component under an editable idea is reported as missing, because <see cref="IdeaAccess.DenialAsync"/> only forbids ideas the user cannot edit.
+  /// </remarks>
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="ideaId">The idea identifier.</param>
   /// <param name="cancellationToken">Token to cancel the query.</param>
-  /// <returns><see langword="true"/> when the idea exists and is accessible.</returns>
-  private Task<bool> CanAccessAsync(string userId, Guid ideaId, CancellationToken cancellationToken)
-    => context.AccessibleIdeas(userId).AnyAsync(i => i.Id == ideaId, cancellationToken);
+  /// <returns>The outcome to report.</returns>
+  private async Task<ComponentChangeResult> DeniedAsync(string userId, Guid ideaId, CancellationToken cancellationToken)
+  {
+    if (await context.EditableIdeas(userId).AnyAsync(i => i.Id == ideaId, cancellationToken).ConfigureAwait(false))
+    {
+      return new ComponentChangeResult(ChangeOutcome.NotFound);
+    }
+
+    return new ComponentChangeResult(await context.DenialAsync(userId, ideaId, cancellationToken).ConfigureAwait(false));
+  }
 
   /// <summary>
-  /// Queries the components of <paramref name="ideaId"/>, provided the user can access that idea.
+  /// Queries the components of <paramref name="ideaId"/>, provided the user can edit that idea.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="ideaId">The idea identifier.</param>
-  /// <returns>The accessible components of the idea.</returns>
-  private IQueryable<Component> Accessible(string userId, Guid ideaId)
-    => context.AccessibleIdeas(userId)
+  /// <returns>The editable components of the idea.</returns>
+  private IQueryable<Component> Editable(string userId, Guid ideaId)
+    => context.EditableIdeas(userId)
       .Where(i => i.Id == ideaId)
       .SelectMany(i => i.Components);
 }

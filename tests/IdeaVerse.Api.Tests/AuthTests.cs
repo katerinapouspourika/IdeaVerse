@@ -5,12 +5,12 @@ using System.Net;
 public class AuthTests
 {
   [Test]
-  public async Task Ideas_Anonymous_ReturnsUnauthorized()
+  public async Task Workspaces_Anonymous_ReturnsUnauthorized()
   {
     await using var factory = new IdeaVerseApiFactory();
     var client = factory.CreateClient();
 
-    using var response = await client.GetAsync("/api/v1/ideas");
+    using var response = await client.GetAsync("/api/v1/workspaces");
 
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
   }
@@ -59,7 +59,7 @@ public class AuthTests
     using var client = await factory.CreateSignedInClientAsync();
 
     using var logout = await client.PostAsync("/api/v1/auth/logout", content: null);
-    using var response = await client.GetAsync("/api/v1/ideas");
+    using var response = await client.GetAsync("/api/v1/workspaces");
 
     await Assert.That(logout.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);

@@ -7,7 +7,10 @@ import { ConfirmEmailPage } from './pages/ConfirmEmailPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { IdeaPage } from './pages/IdeaPage';
 import { IdeasPage } from './pages/IdeasPage';
+import { InvitationsPage } from './pages/InvitationsPage';
+import { NewWorkspacePage } from './pages/NewWorkspacePage';
 import { NotificationsPage } from './pages/NotificationsPage';
+import { PeoplePage } from './pages/PeoplePage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 
 export const routes = [
@@ -26,6 +29,9 @@ export const routes = [
           { path: '/', element: <IdeasPage /> },
           { path: '/ideas/:id', element: <IdeaPage /> },
           { path: '/notifications', element: <NotificationsPage /> },
+          { path: '/people', element: <PeoplePage /> },
+          { path: '/invitations', element: <InvitationsPage /> },
+          { path: '/workspaces/new', element: <NewWorkspacePage /> },
         ],
       },
       { path: '*', element: <Navigate to="/" replace /> },

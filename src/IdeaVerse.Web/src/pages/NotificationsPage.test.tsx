@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { Notification } from '../api/types';
-import { anIdea, fakeApi, signedIn } from '../test/fakeApi';
+import { anIdea, fakeApi, ideasRoute, signedIn } from '../test/fakeApi';
 import { renderApp } from '../test/render';
 
 const tomorrow: Notification = {
@@ -31,7 +31,7 @@ function routes(items: Notification[], unreadCount: number) {
 
 describe('Reminders', () => {
   it('shows the unread count on the header bell', async () => {
-    fakeApi({ ...routes([tomorrow, comingUp], 1), 'GET /api/v1/ideas': { status: 200, body: [] } });
+    fakeApi({ ...routes([tomorrow, comingUp], 1), [ideasRoute]: { status: 200, body: [] } });
 
     renderApp('/');
 

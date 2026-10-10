@@ -14,7 +14,9 @@ using Microsoft.Extensions.Time.Testing;
 
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Email;
+using Pouspourika.IdeaVerse.Api.Invitations;
 using Pouspourika.IdeaVerse.Api.Notifications;
+using Pouspourika.IdeaVerse.Api.Workspaces;
 
 /// <summary>
 /// Hosts the API in memory against a private in-memory SQLite database and a controllable clock.
@@ -37,7 +39,8 @@ internal sealed class IdeaVerseApiFactory(string? webRoot = null) : WebApplicati
 
   public FakeTimeProvider Time { get; } = new(new DateTimeOffset(Today, new TimeOnly(9, 0), TimeSpan.Zero));
 
-  public async Task<HttpClient> CreateSignedInClientAsync(string email = "owner@example.com")
+  // Signs in a new account that owns a workspace named after its email, as after signing up and creating a workspace.
+  public async Task<HttpClient> CreateSignedInClientAsync(string email = "owner@example.com", bool withWorkspace = true)
   {
     var client = CreateClient();
     await RegisterAndConfirmAsync(client, email);
@@ -45,7 +48,27 @@ internal sealed class IdeaVerseApiFactory(string? webRoot = null) : WebApplicati
     using var login = await client.PostAsJsonAsync("/api/v1/auth/login?useCookies=true", new { email, password = Password });
     login.EnsureSuccessStatusCode();
 
+    if (withWorkspace)
+    {
+      using var workspace = await client.PostAsJsonAsync("/api/v1/workspaces", new WorkspaceNameRequest(email), Json.Options);
+      workspace.EnsureSuccessStatusCode();
+    }
+
     return client;
+  }
+
+  // Brings the joiner into the inviter's workspace through an emailed invitation they accept, and removes that email.
+  public async Task JoinAsync(HttpClient inviter, HttpClient joiner, string joinerEmail, WorkspaceRole role = WorkspaceRole.Member)
+  {
+    var workspace = await inviter.WorkspaceAsync();
+    using var invite = await inviter.PostAsJsonAsync($"/api/v1/workspaces/{workspace.Id}/invitations", new InviteRequest(joinerEmail, role), Json.Options);
+    invite.EnsureSuccessStatusCode();
+    Mail.Take(joinerEmail, InvitationService.Subject(workspace.Name));
+
+    var invitations = await joiner.GetFromJsonAsync<ReceivedInvitationResponse[]>("/api/v1/invitations", Json.Options);
+    var invitation = invitations!.Single(i => i.WorkspaceId == workspace.Id);
+    using var accept = await joiner.PostAsync($"/api/v1/invitations/{invitation.Id}/accept", content: null);
+    accept.EnsureSuccessStatusCode();
   }
 
   // Confirms through the email link, as a user would, and removes that email so tests only see the email they cause.

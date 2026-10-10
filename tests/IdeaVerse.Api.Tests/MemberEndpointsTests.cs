@@ -4,6 +4,7 @@ using System.Net;
 
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Ideas;
+using Pouspourika.IdeaVerse.Api.Workspaces;
 
 using TUnit.Assertions.Enums;
 
@@ -14,11 +15,12 @@ public class MemberEndpointsTests
   private static readonly DateOnly Today = IdeaVerseApiFactory.Today;
 
   [Test]
-  public async Task Add_RegisteredEmail_ReturnsCreatedMember()
+  public async Task Add_EmailOfSomeoneInWorkspace_ReturnsCreatedMember()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
     using var member = await factory.CreateSignedInClientAsync(MemberEmail);
+    await factory.JoinAsync(owner, member, MemberEmail);
     var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
 
     using var response = await owner.AddMemberAsync(idea.Id, "  MEMBER@example.com ");
@@ -41,6 +43,36 @@ public class MemberEndpointsTests
 
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
     await Assert.That((await response.ReadValidationErrorsAsync()).Keys).Contains("email");
+  }
+
+  [Test]
+  public async Task Add_RegisteredEmailOutsideWorkspace_ReturnsValidationProblem()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var outsider = await factory.CreateSignedInClientAsync("outsider@example.com");
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+
+    using var response = await owner.AddMemberAsync(idea.Id, "outsider@example.com");
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+    await Assert.That((await response.ReadValidationErrorsAsync())["email"].Single()).Contains("Invite them to the workspace first");
+  }
+
+  [Test]
+  public async Task Add_ByWorkspaceAdminNotOnIdea_ReturnsCreated()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var admin = await factory.CreateSignedInClientAsync("admin@example.com");
+    using var member = await factory.CreateSignedInClientAsync(MemberEmail);
+    await factory.JoinAsync(owner, admin, "admin@example.com", WorkspaceRole.Admin);
+    await factory.JoinAsync(owner, member, MemberEmail);
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+
+    using var response = await admin.AddMemberAsync(idea.Id, MemberEmail);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Created);
   }
 
   [Test]
@@ -76,6 +108,7 @@ public class MemberEndpointsTests
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
     using var member = await factory.CreateSignedInClientAsync(MemberEmail);
+    await factory.JoinAsync(owner, member, MemberEmail);
     var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
     (await owner.AddMemberAsync(idea.Id, MemberEmail)).Dispose();
 
@@ -90,7 +123,9 @@ public class MemberEndpointsTests
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
     using var member = await factory.CreateSignedInClientAsync(MemberEmail);
+    await factory.JoinAsync(owner, member, MemberEmail);
     using var third = await factory.CreateSignedInClientAsync("third@example.com");
+    await factory.JoinAsync(owner, third, "third@example.com");
     var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
     (await owner.AddMemberAsync(idea.Id, MemberEmail)).Dispose();
 
@@ -119,6 +154,8 @@ public class MemberEndpointsTests
     using var owner = await factory.CreateSignedInClientAsync();
     using var zed = await factory.CreateSignedInClientAsync("zed@example.com");
     using var amy = await factory.CreateSignedInClientAsync("amy@example.com");
+    await factory.JoinAsync(owner, zed, "zed@example.com");
+    await factory.JoinAsync(owner, amy, "amy@example.com");
     var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
     (await owner.AddMemberAsync(idea.Id, "zed@example.com")).Dispose();
     (await owner.AddMemberAsync(idea.Id, "amy@example.com")).Dispose();
@@ -144,32 +181,36 @@ public class MemberEndpointsTests
   }
 
   [Test]
-  public async Task Member_ListsIdeas_SeesSharedIdeaWithMemberRole()
+  public async Task List_AsTeamMember_ShowsTeamIdeaAsMemberAndOthersAsViewer()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
     using var member = await factory.CreateSignedInClientAsync(MemberEmail);
+    await factory.JoinAsync(owner, member, MemberEmail);
     var shared = await (await owner.CreateIdeaAsync("Shared", Today.AddDays(5))).ReadIdeaAsync();
     (await owner.CreateIdeaAsync("Owner only", Today.AddDays(6))).Dispose();
-    (await member.CreateIdeaAsync("Member's own", Today.AddDays(7))).Dispose();
+    (await member.CreateIdeaAsync("In member's own workspace", Today.AddDays(7))).Dispose();
     (await owner.AddMemberAsync(shared.Id, MemberEmail)).Dispose();
 
-    using var memberList = await member.GetAsync("/api/v1/ideas");
+    using var memberList = await member.ListIdeasAsync(await owner.WorkspaceIdAsync());
     using var ownerView = await owner.GetAsync($"/api/v1/ideas/{shared.Id}");
     var ideas = await memberList.ReadIdeasAsync();
     var asOwner = await ownerView.ReadIdeaAsync();
 
-    await Assert.That(ideas.Select(i => (i.Title, i.Role))).IsEquivalentTo([("Shared", IdeaRole.Member), ("Member's own", IdeaRole.Owner)], CollectionOrdering.Matching);
+    await Assert.That(ideas.Select(i => (i.Title, i.Role, i.CanEdit))).IsEquivalentTo(
+      [("Shared", IdeaRole.Member, true), ("Owner only", IdeaRole.Viewer, false)],
+      CollectionOrdering.Matching);
     await Assert.That(asOwner.Role).IsEqualTo(IdeaRole.Owner);
     await Assert.That(asOwner.MemberCount).IsEqualTo(1);
   }
 
   [Test]
-  public async Task Member_UpdatesAndPostponesIdea_Succeeds()
+  public async Task UpdateAndPostpone_ByTeamMember_Succeed()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
     using var member = await factory.CreateSignedInClientAsync(MemberEmail);
+    await factory.JoinAsync(owner, member, MemberEmail);
     var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
     (await owner.AddMemberAsync(idea.Id, MemberEmail)).Dispose();
 
@@ -184,11 +225,12 @@ public class MemberEndpointsTests
   }
 
   [Test]
-  public async Task Member_ManagesComponents_Succeeds()
+  public async Task ChangeComponents_ByTeamMember_Succeed()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
     using var member = await factory.CreateSignedInClientAsync(MemberEmail);
+    await factory.JoinAsync(owner, member, MemberEmail);
     var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
     (await owner.AddMemberAsync(idea.Id, MemberEmail)).Dispose();
 
@@ -201,11 +243,12 @@ public class MemberEndpointsTests
   }
 
   [Test]
-  public async Task Member_DeletesIdea_ReturnsForbiddenAndKeepsIt()
+  public async Task DeleteIdea_ByTeamMember_ReturnsForbiddenAndKeepsIt()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
     using var member = await factory.CreateSignedInClientAsync(MemberEmail);
+    await factory.JoinAsync(owner, member, MemberEmail);
     var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
     (await owner.AddMemberAsync(idea.Id, MemberEmail)).Dispose();
 
@@ -217,19 +260,22 @@ public class MemberEndpointsTests
   }
 
   [Test]
-  public async Task Remove_ByOwner_RevokesMembersAccess()
+  public async Task Remove_ByOwner_TakesMemberOffTeamButLeavesIdeaVisible()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
     using var member = await factory.CreateSignedInClientAsync(MemberEmail);
+    await factory.JoinAsync(owner, member, MemberEmail);
     var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
     var added = await (await owner.AddMemberAsync(idea.Id, MemberEmail)).ReadMemberAsync();
 
     using var remove = await owner.DeleteAsync($"/api/v1/ideas/{idea.Id}/members/{added.UserId}");
     using var get = await member.GetAsync($"/api/v1/ideas/{idea.Id}");
+    var asMember = await get.ReadIdeaAsync();
 
     await Assert.That(remove.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
-    await Assert.That(get.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+    await Assert.That(asMember.Role).IsEqualTo(IdeaRole.Viewer);
+    await Assert.That(asMember.CanEdit).IsFalse();
   }
 
   [Test]
@@ -238,14 +284,15 @@ public class MemberEndpointsTests
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
     using var member = await factory.CreateSignedInClientAsync(MemberEmail);
+    await factory.JoinAsync(owner, member, MemberEmail);
     var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
     var added = await (await owner.AddMemberAsync(idea.Id, MemberEmail)).ReadMemberAsync();
 
     using var leave = await member.DeleteAsync($"/api/v1/ideas/{idea.Id}/members/{added.UserId}");
-    using var list = await member.GetAsync("/api/v1/ideas");
+    using var team = await owner.GetAsync($"/api/v1/ideas/{idea.Id}/members");
 
     await Assert.That(leave.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
-    await Assert.That(await list.ReadIdeasAsync()).IsEmpty();
+    await Assert.That((await team.ReadMembersAsync()).Select(m => m.Email)).IsEquivalentTo(["owner@example.com"]);
   }
 
   [Test]
@@ -254,7 +301,9 @@ public class MemberEndpointsTests
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
     using var member = await factory.CreateSignedInClientAsync(MemberEmail);
+    await factory.JoinAsync(owner, member, MemberEmail);
     using var third = await factory.CreateSignedInClientAsync("third@example.com");
+    await factory.JoinAsync(owner, third, "third@example.com");
     var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
     (await owner.AddMemberAsync(idea.Id, MemberEmail)).Dispose();
     var other = await (await owner.AddMemberAsync(idea.Id, "third@example.com")).ReadMemberAsync();
@@ -262,6 +311,23 @@ public class MemberEndpointsTests
     using var response = await member.DeleteAsync($"/api/v1/ideas/{idea.Id}/members/{other.UserId}");
 
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+  }
+
+  [Test]
+  public async Task Remove_ByWorkspaceAdminNotOnIdea_RemovesMember()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var admin = await factory.CreateSignedInClientAsync("admin@example.com");
+    using var member = await factory.CreateSignedInClientAsync(MemberEmail);
+    await factory.JoinAsync(owner, admin, "admin@example.com", WorkspaceRole.Admin);
+    await factory.JoinAsync(owner, member, MemberEmail);
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    var added = await (await owner.AddMemberAsync(idea.Id, MemberEmail)).ReadMemberAsync();
+
+    using var response = await admin.DeleteAsync($"/api/v1/ideas/{idea.Id}/members/{added.UserId}");
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
   }
 
   [Test]

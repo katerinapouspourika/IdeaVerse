@@ -9,7 +9,7 @@ using Pouspourika.IdeaVerse.Api.Ideas;
 /// Reads and marks the signed-in user's reminders.
 /// </summary>
 /// <remarks>
-/// Only reminders about ideas the user can still access are visible, so leaving or being removed from an idea hides its reminders.
+/// Only reminders about ideas the user still owns or is on the team of, in a workspace they are still in, are listed, so leaving or being removed from either hides the idea's reminders.
 /// </remarks>
 /// <param name="context">The database context.</param>
 /// <param name="timeProvider">Clock for read times and message wording.</param>
@@ -81,10 +81,10 @@ public sealed class NotificationService(IdeaVerseDbContext context, TimeProvider
   }
 
   /// <summary>
-  /// Queries the user's reminders about ideas they can still access.
+  /// Queries the user's reminders about ideas they are still responsible for.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <returns>The visible reminders.</returns>
   private IQueryable<Notification> Visible(string userId)
-    => context.Notifications.Where(n => n.UserId == userId && context.AccessibleIdeas(userId).Any(i => i.Id == n.IdeaId));
+    => context.Notifications.Where(n => n.UserId == userId && context.VisibleIdeas(userId).Any(i => i.Id == n.IdeaId && (i.OwnerId == userId || i.Members.Any(m => m.UserId == userId))));
 }

@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-import type { Idea } from '../api/types';
+import type { Idea, Workspace } from '../api/types';
 
 type Handler = (body: unknown) => { status: number; body?: unknown };
 
@@ -33,9 +33,19 @@ export function fakeApi(routes: Record<string, Handler | { status: number; body?
   return calls;
 }
 
+export function aWorkspace(overrides: Partial<Workspace> = {}): Workspace {
+  return { id: 'ws-1', name: 'Acme Marketing', role: 'Owner', memberCount: 1, createdAt: '2026-10-01T09:00:00Z', ...overrides };
+}
+
+/** The route listing the ideas of the default workspace. */
+export const ideasRoute = 'GET /api/v1/workspaces/ws-1/ideas';
+
+/** A signed-in user who owns one workspace, with no reminders or invitations. */
 export const signedIn = {
   'GET /api/v1/auth/manage/info': { status: 200, body: { email: 'kat@example.com' } },
   'GET /api/v1/notifications': { status: 200, body: { items: [], unreadCount: 0 } },
+  'GET /api/v1/workspaces': { status: 200, body: [aWorkspace()] },
+  'GET /api/v1/invitations': { status: 200, body: [] },
 };
 
 export const signedOut = { 'GET /api/v1/auth/manage/info': { status: 401 } };
@@ -43,6 +53,7 @@ export const signedOut = { 'GET /api/v1/auth/manage/info': { status: 401 } };
 export function anIdea(overrides: Partial<Idea> = {}): Idea {
   return {
     id: 'idea-1',
+    workspaceId: 'ws-1',
     title: 'Black Friday teaser',
     description: 'TikTok series',
     targetDate: '2099-11-27',
@@ -50,6 +61,9 @@ export function anIdea(overrides: Partial<Idea> = {}): Idea {
     postponeCount: 0,
     isOverdue: false,
     role: 'Owner',
+    canEdit: true,
+    canManage: true,
+    ownerEmail: 'kat@example.com',
     memberCount: 0,
     componentCount: 0,
     completedComponentCount: 0,

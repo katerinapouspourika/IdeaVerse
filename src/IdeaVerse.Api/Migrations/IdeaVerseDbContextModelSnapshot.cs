@@ -291,11 +291,62 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OwnerId", "TargetDate");
 
+                    b.HasIndex("WorkspaceId", "TargetDate");
+
                     b.ToTable("Ideas");
+                });
+
+            modelBuilder.Entity("Pouspourika.IdeaVerse.Api.Invitations.Invitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InvitedById")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvitedById");
+
+                    b.HasIndex("NormalizedEmail");
+
+                    b.HasIndex("WorkspaceId", "NormalizedEmail")
+                        .IsUnique();
+
+                    b.ToTable("Invitations");
                 });
 
             modelBuilder.Entity("Pouspourika.IdeaVerse.Api.Members.IdeaMember", b =>
@@ -354,6 +405,48 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Notifications");
+                });
+
+            modelBuilder.Entity("Pouspourika.IdeaVerse.Api.Workspaces.Workspace", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Workspaces");
+                });
+
+            modelBuilder.Entity("Pouspourika.IdeaVerse.Api.Workspaces.WorkspaceMember", b =>
+                {
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("JoinedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("WorkspaceId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("WorkspaceMembers");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -426,7 +519,34 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Pouspourika.IdeaVerse.Api.Workspaces.Workspace", "Workspace")
+                        .WithMany("Ideas")
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Owner");
+
+                    b.Navigation("Workspace");
+                });
+
+            modelBuilder.Entity("Pouspourika.IdeaVerse.Api.Invitations.Invitation", b =>
+                {
+                    b.HasOne("Pouspourika.IdeaVerse.Api.Data.User", "InvitedBy")
+                        .WithMany()
+                        .HasForeignKey("InvitedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Pouspourika.IdeaVerse.Api.Workspaces.Workspace", "Workspace")
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("InvitedBy");
+
+                    b.Navigation("Workspace");
                 });
 
             modelBuilder.Entity("Pouspourika.IdeaVerse.Api.Members.IdeaMember", b =>
@@ -467,9 +587,35 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Pouspourika.IdeaVerse.Api.Workspaces.WorkspaceMember", b =>
+                {
+                    b.HasOne("Pouspourika.IdeaVerse.Api.Data.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Pouspourika.IdeaVerse.Api.Workspaces.Workspace", "Workspace")
+                        .WithMany("Members")
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+
+                    b.Navigation("Workspace");
+                });
+
             modelBuilder.Entity("Pouspourika.IdeaVerse.Api.Ideas.Idea", b =>
                 {
                     b.Navigation("Components");
+
+                    b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("Pouspourika.IdeaVerse.Api.Workspaces.Workspace", b =>
+                {
+                    b.Navigation("Ideas");
 
                     b.Navigation("Members");
                 });

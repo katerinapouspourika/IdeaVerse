@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router';
 
-import { useAddMember, useMembers, useRemoveMember } from '../api/queries';
+import { useAddMember, useMembers, useRemoveMember, useWorkspaceMembers } from '../api/queries';
 import type { Idea, Member } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
@@ -11,14 +10,14 @@ export function TeamSection({ idea }: { idea: Idea }) {
   const members = useMembers(idea.id);
   const remove = useRemoveMember(idea.id);
   const { account } = useAuth();
-  const navigate = useNavigate();
-  const isOwner = idea.role === 'Owner';
 
   const removeMember = (member: Member) => {
     const leaving = member.email === account?.email;
-    const question = leaving ? `Leave “${idea.title}”? You will lose access to it.` : `Remove ${member.email} from this idea?`;
+    const question = leaving
+      ? `Leave the team of “${idea.title}”? You will still see it, but no longer get its reminders.`
+      : `Remove ${member.email} from this idea’s team?`;
     if (window.confirm(question)) {
-      remove.mutate(member.userId, { onSuccess: () => (leaving ? void navigate('/') : undefined) });
+      remove.mutate(member.userId);
     }
   };
 
@@ -30,7 +29,7 @@ export function TeamSection({ idea }: { idea: Idea }) {
         <ul className="team">
           {members.data.map((member) => {
             const isMe = member.email === account?.email;
-            const canRemove = member.role === 'Member' && (isOwner || isMe);
+            const canRemove = member.role === 'Member' && (idea.canManage || isMe);
             return (
               <li key={member.userId}>
                 <span>
@@ -51,31 +50,49 @@ export function TeamSection({ idea }: { idea: Idea }) {
         </ul>
       )}
       <ErrorMessage error={members.error ?? remove.error} />
-      {isOwner ? <AddMemberForm ideaId={idea.id} /> : <p className="muted small">Only the owner can add or remove team members.</p>}
+      {idea.canManage ? (
+        <AddMemberForm idea={idea} team={members.data ?? []} />
+      ) : (
+        <p className="muted small">Only the idea’s owner and the workspace’s admins can add or remove team members.</p>
+      )}
     </section>
   );
 }
 
-function AddMemberForm({ ideaId }: { ideaId: string }) {
-  const add = useAddMember(ideaId);
+/** Adds someone from the idea's workspace who is not on the team yet. */
+function AddMemberForm({ idea, team }: { idea: Idea; team: Member[] }) {
+  const add = useAddMember(idea.id);
+  const people = useWorkspaceMembers(idea.workspaceId);
   const [email, setEmail] = useState('');
+  const candidates = (people.data ?? []).filter((person) => !team.some((member) => member.userId === person.userId));
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     add.mutate(email, { onSuccess: () => setEmail('') });
   };
 
+  if (people.data && candidates.length === 0) {
+    return <p className="muted small">Everyone in the workspace is on this team. Invite more people from the People page.</p>;
+  }
+
   return (
     <form className="row wrap end" onSubmit={submit} aria-label="Add team member">
-      <Field label="Add a teammate by email" error={fieldError(add.error, 'email')} className="grow">
+      <Field label="Add someone from the workspace" error={fieldError(add.error, 'email')} className="grow">
         {(props) => (
-          <input {...props} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" />
+          <select {...props} required value={email} onChange={(e) => setEmail(e.target.value)}>
+            <option value="">Choose a person…</option>
+            {candidates.map((person) => (
+              <option key={person.userId} value={person.email}>
+                {person.email}
+              </option>
+            ))}
+          </select>
         )}
       </Field>
-      <button type="submit" className="button" disabled={add.isPending}>
+      <button type="submit" className="button" disabled={add.isPending || !email}>
         Add
       </button>
-      <ErrorMessage error={add.error} />
+      <ErrorMessage error={add.error ?? people.error} />
     </form>
   );
 }

@@ -1,6 +1,6 @@
 # IdeaVerse.Web
 
-The IdeaVerse web app: plan ideas with a target date, list the components each needs, and share them with your team.
+The IdeaVerse web app: plan ideas with a target date, list the components each needs, and share them with your company or team in a workspace.
 
 ## Getting Started
 
@@ -21,9 +21,12 @@ Open `http://localhost:5173`. The dev server forwards `/api` to the API, so the 
 - **Accounts** — sign up, sign in, and sign out with the API's cookie login. Signed-out visitors are sent to the login page and returned to where they were going.
   - New accounts confirm their email first: sign-up shows "Check your inbox", the emailed link opens `/confirm-email`, and signing in before confirming explains why and offers to resend the link.
   - "Forgot your password?" on the sign-in page emails a link to `/reset-password`, where the user chooses a new one. Locally, these emails arrive in Mailpit at `http://localhost:8025`.
-- **Ideas list** — soonest target date first, with status filters, overdue and due-this-week summaries, component progress, and who the idea is shared with.
+- **Workspaces** — the header's workspace menu switches between the user's workspaces (the choice is remembered in the browser) or starts a new one at `/workspaces/new`. Someone in no workspace yet sees a welcome page to join one they were invited to or create their own.
+- **People** — `/people` lists the current workspace's people and roles. Owners and admins invite people by email, change roles, remove people, revoke open invitations, and rename the workspace; anyone but the owner can leave.
+- **Invitations** — `/invitations`, where invitation emails link, lists the user's open invitations to join or decline. Joining opens the workspace.
+- **Ideas list** — the current workspace's ideas, soonest target date first, with status filters, overdue and due-this-week summaries, component progress, and whose idea it is.
 - **Reminders** — a bell in the header shows how many reminders are unread, checked every minute. The reminders page lists them newest first, opens the idea (marking the reminder read), and marks them all read. Reminder emails go to Mailpit locally, at `http://localhost:8025`.
-- **Idea page** — edit details and status, postpone to a later date, check off components, and manage the team. Owner-only actions (deleting, adding or removing members) are hidden from members, who can leave instead.
+- **Idea page** — edit details and status, postpone to a later date, check off components, and manage the team, which is chosen from the workspace's people. People outside the idea's team see it read-only; deleting and managing the team are for the idea's owner and the workspace's admins, and team members can leave instead. Opening an idea from another workspace switches the header to that workspace.
 
 ## Configuration
 

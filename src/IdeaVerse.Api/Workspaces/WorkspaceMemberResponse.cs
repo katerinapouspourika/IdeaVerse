@@ -1,0 +1,10 @@
+namespace Pouspourika.IdeaVerse.Api.Workspaces;
+
+/// <summary>
+/// A person in a workspace, as returned by the API.
+/// </summary>
+/// <param name="UserId">The user identifier.</param>
+/// <param name="Email">The user's email address.</param>
+/// <param name="Role">The user's role in the workspace.</param>
+/// <param name="JoinedAt">When the user joined.</param>
+public sealed record WorkspaceMemberResponse(string UserId, string Email, WorkspaceRole Role, DateTimeOffset JoinedAt);

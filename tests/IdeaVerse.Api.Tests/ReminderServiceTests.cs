@@ -14,6 +14,7 @@ public class ReminderServiceTests
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
     using var member = await factory.CreateSignedInClientAsync("member@example.com");
+    await factory.JoinAsync(owner, member, "member@example.com");
     var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
     (await owner.AddMemberAsync(idea.Id, "member@example.com")).Dispose();
 
@@ -25,6 +26,45 @@ public class ReminderServiceTests
     await Assert.That(factory.Mail.Sent.Select(m => m.To)).IsEquivalentTo(["owner@example.com", "member@example.com"]);
     await Assert.That(factory.Mail.Sent.Select(m => m.Subject).Distinct()).IsEquivalentTo(["Coming up: Launch"]);
     await Assert.That(second).IsEqualTo(new Notifications.ReminderRunResult(0, 0));
+  }
+
+  [Test]
+  public async Task RunAsync_MemberLeftWorkspace_RemindsOwnerOnly()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var member = await factory.CreateSignedInClientAsync("member@example.com");
+    await factory.JoinAsync(owner, member, "member@example.com");
+    var workspaceId = await owner.WorkspaceIdAsync();
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    var added = await (await owner.AddMemberAsync(idea.Id, "member@example.com")).ReadMemberAsync();
+    (await member.DeleteAsync($"/api/v1/workspaces/{workspaceId}/members/{added.UserId}")).Dispose();
+
+    var result = await factory.RunRemindersAsync();
+
+    await Assert.That(result.Raised).IsEqualTo(1);
+    await Assert.That(factory.Mail.Sent.Select(m => m.To)).IsEquivalentTo(["owner@example.com"]);
+  }
+
+  [Test]
+  public async Task RunAsync_EmailFailedThenMemberLeftWorkspace_DoesNotRetryTheirEmail()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var member = await factory.CreateSignedInClientAsync("member@example.com");
+    await factory.JoinAsync(owner, member, "member@example.com");
+    var workspaceId = await owner.WorkspaceIdAsync();
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    var added = await (await owner.AddMemberAsync(idea.Id, "member@example.com")).ReadMemberAsync();
+    factory.Mail.Fail = true;
+    await factory.RunRemindersAsync();
+    factory.Mail.Fail = false;
+    (await member.DeleteAsync($"/api/v1/workspaces/{workspaceId}/members/{added.UserId}")).Dispose();
+
+    var retry = await factory.RunRemindersAsync();
+
+    await Assert.That(retry.Emailed).IsEqualTo(1);
+    await Assert.That(factory.Mail.Sent.Select(m => m.To)).IsEquivalentTo(["owner@example.com"]);
   }
 
   [Test]

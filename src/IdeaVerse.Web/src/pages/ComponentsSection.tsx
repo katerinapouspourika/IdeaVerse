@@ -5,7 +5,8 @@ import type { Component } from '../api/types';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 
-export function ComponentsSection({ ideaId }: { ideaId: string }) {
+/** The idea's checklist; without `canEdit` it is read-only. */
+export function ComponentsSection({ ideaId, canEdit }: { ideaId: string; canEdit: boolean }) {
   const components = useComponents(ideaId);
   const update = useUpdateComponent(ideaId);
   const remove = useDeleteComponent(ideaId);
@@ -22,6 +23,7 @@ export function ComponentsSection({ ideaId }: { ideaId: string }) {
             <ComponentItem
               key={component.id}
               component={component}
+              canEdit={canEdit}
               onToggle={(isDone, onSettled) =>
                 update.mutate({ id: component.id, title: component.title, notes: component.notes, isDone }, { onSettled })
               }
@@ -31,19 +33,20 @@ export function ComponentsSection({ ideaId }: { ideaId: string }) {
         </ul>
       )}
       <ErrorMessage error={components.error ?? update.error ?? remove.error} />
-      <AddComponentForm ideaId={ideaId} />
+      {canEdit && <AddComponentForm ideaId={ideaId} />}
     </section>
   );
 }
 
 interface ComponentItemProps {
   component: Component;
+  canEdit: boolean;
   onToggle: (isDone: boolean, onSettled: () => void) => void;
   onRemove: () => void;
 }
 
 /** A checklist row whose checkbox responds the moment it is clicked, before the API confirms the change. */
-function ComponentItem({ component, onToggle, onRemove }: ComponentItemProps) {
+function ComponentItem({ component, canEdit, onToggle, onRemove }: ComponentItemProps) {
   const [pending, setPending] = useState<boolean | null>(null);
   const checked = pending ?? component.isDone;
 
@@ -55,15 +58,17 @@ function ComponentItem({ component, onToggle, onRemove }: ComponentItemProps) {
   return (
     <li className={checked ? 'done' : undefined}>
       <label className="check">
-        <input type="checkbox" checked={checked} onChange={toggle} />
+        <input type="checkbox" checked={checked} onChange={toggle} disabled={!canEdit} />
         <span>
           <span className="check-title">{component.title}</span>
           {component.notes && <span className="muted small block">{component.notes}</span>}
         </span>
       </label>
-      <button type="button" className="button ghost small" aria-label={`Remove ${component.title}`} onClick={onRemove}>
-        Remove
-      </button>
+      {canEdit && (
+        <button type="button" className="button ghost small" aria-label={`Remove ${component.title}`} onClick={onRemove}>
+          Remove
+        </button>
+      )}
     </li>
   );
 }

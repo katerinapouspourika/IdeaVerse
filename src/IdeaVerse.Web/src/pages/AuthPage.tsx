@@ -50,9 +50,10 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const [registered, setRegistered] = useState(false);
   const [pending, setPending] = useState(false);
   const text = copy[mode];
+  const from = (location.state as { from?: string } | null)?.from ?? '/';
 
   if (account) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={from} replace />;
   }
 
   if (registered) {
@@ -83,7 +84,6 @@ export function AuthPage({ mode }: { mode: Mode }) {
         return;
       }
       await login(email, password);
-      const from = (location.state as { from?: string } | null)?.from ?? '/';
       await navigate(from, { replace: true });
     } catch (caught) {
       setError(describe(caught, mode));
