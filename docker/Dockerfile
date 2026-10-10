@@ -177,11 +177,16 @@ COPY --link --from=publish --chown=root:root /app/publish .
 COPY --link --from=web-build --chown=root:root /web-dist/ ./wwwroot/
 COPY --link --from=openapi-lint --chown=root:root /openapi/ /app/openapi/
 COPY --link --from=pyroscope-agent --chown=root:root /opt/pyroscope/ /pyroscope/
-RUN if [ "${RUNTIME_BASE}" = "self-contained" ]; then \
-  chmod +x ${PUBLISHED_PROJECT}; \
-  printf '#!/bin/sh\nexec /app/%s "$@"\n' "${PUBLISHED_PROJECT}" > /app/entrypoint.sh; \
+# The assembly name can differ from the project name (Directory.Build.props adds a prefix),
+# so take it from the published runtimeconfig instead of assuming PUBLISHED_PROJECT.
+RUN RUNTIME_CONFIG=$(ls /app/*.runtimeconfig.json 2>/dev/null | head -n 1) && \
+  if [ -z "${RUNTIME_CONFIG}" ]; then echo "No *.runtimeconfig.json in /app; is ${PUBLISHED_PROJECT} an executable project?" >&2; exit 1; fi && \
+  APP_NAME=$(basename "${RUNTIME_CONFIG}" .runtimeconfig.json) && \
+  if [ "${RUNTIME_BASE}" = "self-contained" ]; then \
+  chmod +x "/app/${APP_NAME}"; \
+  printf '#!/bin/sh\nexec /app/%s "$@"\n' "${APP_NAME}" > /app/entrypoint.sh; \
   else \
-  printf '#!/bin/sh\nexec dotnet /app/%s.dll "$@"\n' "${PUBLISHED_PROJECT}" > /app/entrypoint.sh; \
+  printf '#!/bin/sh\nexec dotnet /app/%s.dll "$@"\n' "${APP_NAME}" > /app/entrypoint.sh; \
   fi && chmod +x /app/entrypoint.sh
 
 USER $APP_UID
