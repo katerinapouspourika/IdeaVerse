@@ -50,17 +50,21 @@ public sealed partial class AnthropicStructuredModelClient(
     try
     {
       response = await client.Beta.Messages.Create(BuildParams(prompt, settings), cancellationToken).ConfigureAwait(false);
+      activity?.SetTag("gen_ai.response.model", response.Model.Raw());
+      activity?.SetTag("gen_ai.usage.input_tokens", response.Usage.InputTokens);
+      activity?.SetTag("gen_ai.usage.output_tokens", response.Usage.OutputTokens);
+      LogCompleted(logger, prompt.Operation, response.Usage.InputTokens, response.Usage.OutputTokens);
     }
-    catch (AnthropicApiException ex)
+    catch (AnthropicException ex)
     {
       activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
       throw new IdeationException($"Claude request for '{prompt.Operation}' failed: {ex.Message}", ex);
     }
-
-    activity?.SetTag("gen_ai.response.model", response.Model.Raw());
-    activity?.SetTag("gen_ai.usage.input_tokens", response.Usage.InputTokens);
-    activity?.SetTag("gen_ai.usage.output_tokens", response.Usage.OutputTokens);
-    LogCompleted(logger, prompt.Operation, response.Usage.InputTokens, response.Usage.OutputTokens);
+    catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+    {
+      activity?.SetStatus(ActivityStatusCode.Error, "Timed out");
+      throw new IdeationException($"Claude request for '{prompt.Operation}' timed out.", ex);
+    }
 
     return Deserialize<T>(prompt.Operation, response);
   }

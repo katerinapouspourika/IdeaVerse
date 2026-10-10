@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 
+import { ImproveIdea } from '../ai/ImproveIdea';
 import { ApiError } from '../api/client';
 import { addDays, describeDue, formatDate, todayIso } from '../api/dates';
 import { useDeleteIdea, useIdea, usePostponeIdea, useUpdateIdea } from '../api/queries';
@@ -71,11 +72,14 @@ function IdeaDetail({ idea }: { idea: Idea }) {
           {idea.description && <p className="description">{idea.description}</p>}
           <Progress done={idea.completedComponentCount} total={idea.componentCount} />
           {idea.canEdit ? (
-            <div className="row">
-              <button type="button" className="button" onClick={() => setEditing(true)}>
-                Edit details
-              </button>
-            </div>
+            <>
+              <div className="row">
+                <button type="button" className="button" onClick={() => setEditing(true)}>
+                  Edit details
+                </button>
+              </div>
+              <ImproveIdea idea={idea} />
+            </>
           ) : (
             <p className="muted small">
               {idea.ownerEmail}’s idea. You can follow it here; only its team and the workspace’s admins can change it.
@@ -85,7 +89,7 @@ function IdeaDetail({ idea }: { idea: Idea }) {
       )}
 
       {idea.canEdit && idea.status !== 'Done' && <PostponeForm idea={idea} />}
-      <ComponentsSection ideaId={idea.id} canEdit={idea.canEdit} />
+      <ComponentsSection ideaId={idea.id} workspaceId={idea.workspaceId} canEdit={idea.canEdit} />
       <TeamSection idea={idea} />
       {idea.canManage && <DeleteIdea idea={idea} />}
     </div>

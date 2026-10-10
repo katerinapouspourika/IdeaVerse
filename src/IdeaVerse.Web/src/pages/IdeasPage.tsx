@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 
 import { daysUntil, describeDue, formatDate } from '../api/dates';
-import { useIdeas } from '../api/queries';
+import { BrainstormPanel, describeBrainstormed } from '../ai/BrainstormPanel';
+import { useAiStatus, useIdeas } from '../api/queries';
 import { statuses, statusLabels, type Idea, type IdeaStatus, type Workspace } from '../api/types';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { Progress } from '../components/Progress';
@@ -27,21 +28,44 @@ export function IdeasPage() {
 
 function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const [status, setStatus] = useState<IdeaStatus | undefined>();
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState<{ title: string; description: string } | null>(null);
+  const [brainstorming, setBrainstorming] = useState(false);
   const ideas = useIdeas(workspace.id, status);
+  const ai = useAiStatus(workspace.id);
 
   return (
     <div className="stack">
-      <div className="row spread">
+      <div className="row spread wrap">
         <h1>Ideas</h1>
         {!adding && (
-          <button type="button" className="button primary" onClick={() => setAdding(true)}>
-            New idea
-          </button>
+          <div className="row">
+            {ai.data?.enabled && !brainstorming && (
+              <button type="button" className="button ghost" onClick={() => setBrainstorming(true)}>
+                Brainstorm with AI
+              </button>
+            )}
+            <button type="button" className="button primary" onClick={() => setAdding({ title: '', description: '' })}>
+              New idea
+            </button>
+          </div>
         )}
       </div>
 
-      {adding && <NewIdeaForm workspaceId={workspace.id} onDone={() => setAdding(false)} />}
+      {adding && (
+        <NewIdeaForm
+          key={adding.title}
+          workspaceId={workspace.id}
+          initial={adding}
+          onDone={() => setAdding(null)}
+        />
+      )}
+      {brainstorming && (
+        <BrainstormPanel
+          workspaceId={workspace.id}
+          onPick={(idea) => setAdding({ title: idea.title, description: describeBrainstormed(idea) })}
+          onClose={() => setBrainstorming(false)}
+        />
+      )}
 
       <nav className="tabs" aria-label="Filter by status">
         <FilterTab label="All" active={status === undefined} onClick={() => setStatus(undefined)} />

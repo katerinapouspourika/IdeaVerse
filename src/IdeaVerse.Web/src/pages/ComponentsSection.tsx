@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react';
 
+import { SuggestComponents } from '../ai/SuggestComponents';
 import { useAddComponent, useComponents, useDeleteComponent, useUpdateComponent } from '../api/queries';
 import type { Component } from '../api/types';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 
 /** The idea's checklist; without `canEdit` it is read-only. */
-export function ComponentsSection({ ideaId, canEdit }: { ideaId: string; canEdit: boolean }) {
+export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: string; workspaceId: string; canEdit: boolean }) {
   const components = useComponents(ideaId);
   const update = useUpdateComponent(ideaId);
   const remove = useDeleteComponent(ideaId);
@@ -34,6 +35,7 @@ export function ComponentsSection({ ideaId, canEdit }: { ideaId: string; canEdit
       )}
       <ErrorMessage error={components.error ?? update.error ?? remove.error} />
       {canEdit && <AddComponentForm ideaId={ideaId} />}
+      {canEdit && <SuggestComponents ideaId={ideaId} workspaceId={workspaceId} />}
     </section>
   );
 }

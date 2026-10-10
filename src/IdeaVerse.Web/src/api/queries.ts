@@ -2,10 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { request } from './client';
 import type {
+  AiStatus,
+  BrainstormedIdea,
   Component,
+  ComponentSuggestion,
   ComponentInput,
   ComponentUpdate,
   Idea,
+  IdeaImprovement,
   IdeaInput,
   IdeaStatus,
   IdeaUpdate,
@@ -23,6 +27,7 @@ export const keys = {
   workspaceMembers: (workspaceId: string) => ['workspaces', workspaceId, 'members'] as const,
   invitations: (workspaceId: string) => ['workspaces', workspaceId, 'invitations'] as const,
   receivedInvitations: ['invitations'] as const,
+  ai: (workspaceId: string) => ['workspaces', workspaceId, 'ai'] as const,
   ideas: (workspaceId: string, status?: IdeaStatus) => ['ideas', workspaceId, status ?? 'all'] as const,
   idea: (id: string) => ['idea', id] as const,
   components: (ideaId: string) => ['idea', ideaId, 'components'] as const,
@@ -278,4 +283,31 @@ export function useMarkAllNotificationsRead() {
     mutationFn: () => request<void>('POST', '/api/v1/notifications/read-all'),
     onSuccess: () => void client.invalidateQueries({ queryKey: keys.notifications }),
   });
+}
+
+export function useAiStatus(workspaceId: string) {
+  return useQuery({ queryKey: keys.ai(workspaceId), queryFn: () => request<AiStatus>('GET', `/api/v1/workspaces/${workspaceId}/ai`) });
+}
+
+/** Runs an AI request, then refreshes the workspace's allowance whether or not it succeeded. */
+function useAiMutation<TInput, TResult>(workspaceId: string, run: (input: TInput) => Promise<TResult>) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: run,
+    onSettled: () => void client.invalidateQueries({ queryKey: keys.ai(workspaceId) }),
+  });
+}
+
+export function useSuggestComponents(ideaId: string, workspaceId: string) {
+  return useAiMutation(workspaceId, () => request<ComponentSuggestion[]>('POST', `/api/v1/ideas/${ideaId}/ai/components`));
+}
+
+export function useImproveIdea(ideaId: string, workspaceId: string) {
+  return useAiMutation(workspaceId, () => request<IdeaImprovement>('POST', `/api/v1/ideas/${ideaId}/ai/improve`));
+}
+
+export function useBrainstorm(workspaceId: string) {
+  return useAiMutation(workspaceId, (brief: string) =>
+    request<BrainstormedIdea[]>('POST', `/api/v1/workspaces/${workspaceId}/ai/brainstorm`, { brief }),
+  );
 }

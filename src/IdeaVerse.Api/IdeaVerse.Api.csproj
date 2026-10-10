@@ -16,4 +16,8 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\IdeaVerse.Agents\IdeaVerse.Agents.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -5,11 +5,18 @@ import { useCreateIdea } from '../api/queries';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 
-export function NewIdeaForm({ workspaceId, onDone }: { workspaceId: string; onDone: () => void }) {
+interface NewIdeaFormProps {
+  workspaceId: string;
+  /** Title and description to start from, such as a brainstormed idea's. */
+  initial?: { title: string; description: string };
+  onDone: () => void;
+}
+
+export function NewIdeaForm({ workspaceId, initial, onDone }: NewIdeaFormProps) {
   const create = useCreateIdea(workspaceId);
   const today = todayIso();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState(initial?.title ?? '');
+  const [description, setDescription] = useState(initial?.description ?? '');
   const [targetDate, setTargetDate] = useState(addDays(today, 14));
 
   const submit = (event: FormEvent) => {

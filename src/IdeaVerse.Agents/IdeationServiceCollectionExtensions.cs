@@ -32,6 +32,8 @@ public static class IdeationServiceCollectionExtensions
     services.TryAddSingleton<IdeaCriticAgent>();
     services.TryAddSingleton<IdeaRefinerAgent>();
     services.TryAddSingleton<IdeationPipeline>();
+    services.TryAddSingleton<ComponentSuggesterAgent>();
+    services.TryAddSingleton<IdeaImproverAgent>();
 
     return services
       .AddOptions<IdeationOptions>()

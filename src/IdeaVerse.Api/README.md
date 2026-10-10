@@ -83,6 +83,17 @@ Validation errors return `400` with RFC 9457 problem details whose `errors` are 
 | `POST` | `/api/v1/ideas/{ideaId}/members` | Add the person in the workspace with `email`. Emails of no one in the workspace return 400; existing members return 409. |
 | `DELETE` | `/api/v1/ideas/{ideaId}/members/{userId}` | Remove a member, or leave. The idea's owner cannot be removed (409). |
 
+- **AI help** — Claude-powered help from `src/IdeaVerse.Agents`, for people in the workspace. Each request counts once against the workspace's `Ai:DailyLimitPerWorkspace` for the UTC day; a request the AI fails to answer is not counted. Without `ANTHROPIC_API_KEY`, or with `Ai:Enabled` off, the requests return 503 and the status reports `enabled: false`, so the web app hides AI help.
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/v1/workspaces/{id}/ai` | Whether AI help is `enabled`, and how many requests the workspace `used` today out of its `limit`. |
+| `POST` | `/api/v1/workspaces/{id}/ai/brainstorm` | Brainstorm ideas for a `brief`, each scored 1–10 by a critic with strengths and weaknesses, best first. Nothing is saved. |
+| `POST` | `/api/v1/ideas/{id}/ai/components` | Suggest up to eight components the idea still needs. Needs the right to edit the idea. Nothing is saved. |
+| `POST` | `/api/v1/ideas/{id}/ai/improve` | Critique the idea and propose a sharper title and description. Needs the right to edit the idea. Nothing is changed until the user saves it. |
+
+A used-up allowance returns 429, and an AI failure returns 502.
+
 - **Reminders** — a background job (`ReminderWorker`) runs at startup and then every `Reminders:Interval`. For every idea that is not done, each person on its team (owner included) who is still in its workspace gets one reminder per stage, judged by their own local date and raised at the job's first run once their local time reaches `Reminders:SendAt`: **coming up** (two to seven days before), **tomorrow**, **today**, and once when it becomes **overdue**. Reminders are stored per idea, person, stage, and target date, so reruns never repeat one and postponing starts a fresh set. Each reminder is shown in the app and, unless the person turned emails off, emailed; kinds a person turned off are not raised for them. A failed email is retried on later runs for `Reminders:EmailRetryWindow`.
 
 | Method | Route | Purpose |
@@ -105,6 +116,10 @@ Reminders about ideas the user is no longer on the team of, or whose workspace t
 | `Reminders:Interval` | `01:00:00` (one minute in Development) | How often the job runs. |
 | `Reminders:SendAt` | `08:00` | Local time of day from which each person's reminders go out, in their own time zone. |
 | `Reminders:EmailRetryWindow` | `2.00:00:00` | How long a failed reminder email keeps being retried. |
+| `Ai:Enabled` | `true` | Offers AI help, provided `ANTHROPIC_API_KEY` is set. |
+| `Ai:DailyLimitPerWorkspace` | `50` | AI requests each workspace may make per UTC day. |
+| `ANTHROPIC_API_KEY` | empty | Claude API key for AI help. Keep it in user secrets or an environment variable, never in `appsettings.json`. |
+| `Ideation:*` | `Effort: medium`, `IdeaCount: 5` | Model settings for the agents; see `src/IdeaVerse.Agents/README.md`. |
 | `Email:From` | `IdeaVerse <no-reply@ideaverse.local>` | Sender of reminder and account emails. |
 | `Email:SmtpHost` | empty (`localhost` in Development) | SMTP server. When empty, emails are logged instead of sent. |
 | `Email:SmtpPort` | `587` (`1025` in Development) | SMTP port. |
