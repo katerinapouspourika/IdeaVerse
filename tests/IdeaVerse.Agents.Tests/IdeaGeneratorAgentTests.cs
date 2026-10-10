@@ -4,6 +4,8 @@ using NSubstitute;
 
 using Pouspourika.IdeaVerse.Agents.Infrastructure;
 
+using TUnit.Assertions.Enums;
+
 public class IdeaGeneratorAgentTests
 {
   private readonly IStructuredModelClient client = Substitute.For<IStructuredModelClient>();
@@ -18,7 +20,7 @@ public class IdeaGeneratorAgentTests
 
     var result = await agent.GenerateAsync(TestData.Request);
 
-    await Assert.That(result).IsEquivalentTo(ideas);
+    await Assert.That(result).IsEquivalentTo(ideas, CollectionOrdering.Matching);
   }
 
   [Test]

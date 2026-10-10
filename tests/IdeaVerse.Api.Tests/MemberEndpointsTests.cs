@@ -5,6 +5,8 @@ using System.Net;
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Ideas;
 
+using TUnit.Assertions.Enums;
+
 public class MemberEndpointsTests
 {
   private const string MemberEmail = "member@example.com";
@@ -124,8 +126,8 @@ public class MemberEndpointsTests
     using var response = await zed.GetAsync($"/api/v1/ideas/{idea.Id}/members");
     var team = await response.ReadMembersAsync();
 
-    await Assert.That(team.Select(m => m.Email)).IsEquivalentTo(["owner@example.com", "amy@example.com", "zed@example.com"]);
-    await Assert.That(team.Select(m => m.Role)).IsEquivalentTo([IdeaRole.Owner, IdeaRole.Member, IdeaRole.Member]);
+    await Assert.That(team.Select(m => m.Email)).IsEquivalentTo(["owner@example.com", "amy@example.com", "zed@example.com"], CollectionOrdering.Matching);
+    await Assert.That(team.Select(m => m.Role)).IsEquivalentTo([IdeaRole.Owner, IdeaRole.Member, IdeaRole.Member], CollectionOrdering.Matching);
   }
 
   [Test]
@@ -157,7 +159,7 @@ public class MemberEndpointsTests
     var ideas = await memberList.ReadIdeasAsync();
     var asOwner = await ownerView.ReadIdeaAsync();
 
-    await Assert.That(ideas.Select(i => (i.Title, i.Role))).IsEquivalentTo([("Shared", IdeaRole.Member), ("Member's own", IdeaRole.Owner)]);
+    await Assert.That(ideas.Select(i => (i.Title, i.Role))).IsEquivalentTo([("Shared", IdeaRole.Member), ("Member's own", IdeaRole.Owner)], CollectionOrdering.Matching);
     await Assert.That(asOwner.Role).IsEqualTo(IdeaRole.Owner);
     await Assert.That(asOwner.MemberCount).IsEqualTo(1);
   }

@@ -5,6 +5,8 @@ using NSubstitute;
 using Pouspourika.IdeaVerse.Agents.Infrastructure;
 using Pouspourika.IdeaVerse.Agents.Models;
 
+using TUnit.Assertions.Enums;
+
 public class IdeationPipelineTests
 {
   private readonly IStructuredModelClient client = Substitute.For<IStructuredModelClient>();
@@ -24,7 +26,7 @@ public class IdeationPipelineTests
   {
     var result = await CreatePipeline(ideasToRefine: 0).RunAsync(TestData.Request);
 
-    await Assert.That(result.Ideas.Select(i => i.Idea.Title)).IsEquivalentTo(["High", "Mid", "Low"]);
+    await Assert.That(result.Ideas.Select(i => i.Idea.Title)).IsEquivalentTo(["High", "Mid", "Low"], CollectionOrdering.Matching);
     await Assert.That(result.Ideas.All(i => i.Idea.Title == i.Critique.IdeaTitle)).IsTrue();
   }
 

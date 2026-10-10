@@ -5,6 +5,8 @@ using NSubstitute;
 using Pouspourika.IdeaVerse.Agents.Infrastructure;
 using Pouspourika.IdeaVerse.Agents.Models;
 
+using TUnit.Assertions.Enums;
+
 public class IdeaCriticAgentTests
 {
   private readonly IStructuredModelClient client = Substitute.For<IStructuredModelClient>();
@@ -18,7 +20,7 @@ public class IdeaCriticAgentTests
 
     var result = await critic.CritiqueAsync(TestData.Request, [TestData.Idea("A"), TestData.Idea("B")]);
 
-    await Assert.That(result).IsEquivalentTo(critiques);
+    await Assert.That(result).IsEquivalentTo(critiques, CollectionOrdering.Matching);
   }
 
   [Test]

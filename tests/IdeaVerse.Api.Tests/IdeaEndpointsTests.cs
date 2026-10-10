@@ -4,6 +4,8 @@ using System.Net;
 
 using Pouspourika.IdeaVerse.Api.Ideas;
 
+using TUnit.Assertions.Enums;
+
 public class IdeaEndpointsTests
 {
   private static readonly DateOnly Today = IdeaVerseApiFactory.Today;
@@ -88,7 +90,7 @@ public class IdeaEndpointsTests
     using var response = await owner.GetAsync("/api/v1/ideas");
     var ideas = await response.ReadIdeasAsync();
 
-    await Assert.That(ideas.Select(i => i.Title)).IsEquivalentTo(["Sooner", "Later"]);
+    await Assert.That(ideas.Select(i => i.Title)).IsEquivalentTo(["Sooner", "Later"], CollectionOrdering.Matching);
   }
 
   [Test]
