@@ -48,6 +48,12 @@ internal static class Json
   public static async Task<HttpResponseMessage> CreateIdeaAsync(this HttpClient client, string title, DateOnly targetDate, string? description = null)
     => await client.PostAsJsonAsync($"/api/v1/workspaces/{await client.WorkspaceIdAsync()}/ideas", new CreateIdeaRequest(title, description, targetDate), Options);
 
+  public static async Task SetTimeZoneAsync(this HttpClient client, string timeZone)
+  {
+    using var response = await client.PutAsJsonAsync("/api/v1/account", new Accounts.UpdateAccountRequest(timeZone), Options);
+    response.EnsureSuccessStatusCode();
+  }
+
   public static Task<HttpResponseMessage> ListIdeasAsync(this HttpClient client, Guid workspaceId, string query = "")
     => client.GetAsync($"/api/v1/workspaces/{workspaceId}/ideas{query}");
 

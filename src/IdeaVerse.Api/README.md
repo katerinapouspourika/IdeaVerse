@@ -26,6 +26,7 @@ The API also serves the web app (`src/IdeaVerse.Web`) from `wwwroot` when one is
 ## Features
 
 - **Accounts** — ASP.NET Core Identity under `/api/v1/auth`: `register`, `login`, `logout`, email confirmation, password reset, and account info. The web app signs in with `POST /api/v1/auth/login?useCookies=true`, which sets an HTTP-only, `SameSite=Strict` cookie named `IdeaVerse.Auth`.
+  - **Settings** — `GET /api/v1/account` returns the signed-in user's `email` and `timeZone`; `PUT /api/v1/account` sets `timeZone` to an IANA name such as `Europe/Athens` (Windows names and unknown zones return 400). A new account's `timeZone` is `null`, and UTC applies until it is set; the web app sets it from the browser.
   - **Email confirmation** — `register` emails a link to the web app's `/confirm-email` page, which calls `GET /api/v1/auth/confirmEmail`. Until then `login` returns 401 with `detail: "NotAllowed"`; `POST /api/v1/auth/resendConfirmationEmail` sends a new link. Accounts created before confirmation was required were marked confirmed by the `MarksExistingAccountsConfirmed` migration.
   - **Password reset** — `POST /api/v1/auth/forgotPassword` emails a link to the web app's `/reset-password` page, which calls `POST /api/v1/auth/resetPassword` with the code. Both endpoints answer the same whether or not the account exists. Reset links work once, for one day.
 - **Workspaces** — a company or team whose people share ideas, under `/api/v1/workspaces`. Each person has a role: the **Owner** created it, **Admins** manage its people, invitations, name, and every idea in it, and **Members** see every idea and create their own. A workspace someone is not in returns 404; an action their role forbids returns 403. A new account has no workspace until it creates one or accepts an invitation.
@@ -82,7 +83,7 @@ Validation errors return `400` with RFC 9457 problem details whose `errors` are 
 | `POST` | `/api/v1/ideas/{ideaId}/members` | Add the person in the workspace with `email`. Emails of no one in the workspace return 400; existing members return 409. |
 | `DELETE` | `/api/v1/ideas/{ideaId}/members/{userId}` | Remove a member, or leave. The idea's owner cannot be removed (409). |
 
-- **Reminders** — a background job (`ReminderWorker`) runs at startup and then every `Reminders:Interval`. For every idea that is not done, each person on its team (owner included) who is still in its workspace gets one reminder per stage: **coming up** (two to seven days before), **tomorrow**, **today**, and once when it becomes **overdue**. Reminders are stored per idea, person, stage, and target date, so reruns never repeat one and postponing starts a fresh set. Each reminder is shown in the app and emailed; a failed email is retried on later runs for `Reminders:EmailRetryWindow`.
+- **Reminders** — a background job (`ReminderWorker`) runs at startup and then every `Reminders:Interval`. For every idea that is not done, each person on its team (owner included) who is still in its workspace gets one reminder per stage, judged by their own local date and raised at the job's first run once their local time reaches `Reminders:SendAt`: **coming up** (two to seven days before), **tomorrow**, **today**, and once when it becomes **overdue**. Reminders are stored per idea, person, stage, and target date, so reruns never repeat one and postponing starts a fresh set. Each reminder is shown in the app and emailed; a failed email is retried on later runs for `Reminders:EmailRetryWindow`.
 
 | Method | Route | Purpose |
 | --- | --- | --- |
@@ -102,6 +103,7 @@ Reminders about ideas the user is no longer on the team of, or whose workspace t
 | `Database:MigrateOnStartup` | `true` in Development, otherwise `false` | Applies pending EF Core migrations at startup. Other environments use the Docker `migrations` target. |
 | `Reminders:Enabled` | `true` | Runs the reminder background job. |
 | `Reminders:Interval` | `01:00:00` (one minute in Development) | How often the job runs. |
+| `Reminders:SendAt` | `08:00` | Local time of day from which each person's reminders go out, in their own time zone. |
 | `Reminders:EmailRetryWindow` | `2.00:00:00` | How long a failed reminder email keeps being retried. |
 | `Email:From` | `IdeaVerse <no-reply@ideaverse.local>` | Sender of reminder and account emails. |
 | `Email:SmtpHost` | empty (`localhost` in Development) | SMTP server. When empty, emails are logged instead of sent. |
@@ -112,7 +114,7 @@ Reminders about ideas the user is no longer on the team of, or whose workspace t
 ## Caveats
 
 > [!NOTE]
-> Dates are compared in UTC: "today", `isOverdue`, and reminder stages follow the UTC calendar day, and the first reminders of a day go out at the job's first run after midnight UTC.
+> "Today" is each user's local date in their time zone: it decides `isOverdue`, whether a new or changed target date is in the past, and reminder stages and wording. Target dates themselves are plain dates with no time zone. The Docker image's `-extra` Alpine base includes the time zone database this needs.
 
 > [!NOTE]
 > The reminder job assumes a single API instance. A second instance would not duplicate reminders (a unique index prevents it) but could log a failed save and send an email twice.

@@ -85,16 +85,25 @@ internal static class IdeaEndpoints
   /// <param name="user">The signed-in user.</param>
   /// <param name="service">The idea service.</param>
   /// <param name="cancellationToken">Token to cancel the request.</param>
-  /// <returns>201 with the created idea, or 404 when the user is not in the workspace.</returns>
-  private static async Task<Results<CreatedAtRoute<IdeaResponse>, NotFound>> CreateAsync(
+  /// <returns>201 with the created idea, 404 when the user is not in the workspace, or a validation problem for a date before the user's today.</returns>
+  private static async Task<Results<CreatedAtRoute<IdeaResponse>, NotFound, ValidationProblem>> CreateAsync(
     Guid workspaceId,
     CreateIdeaRequest request,
     ClaimsPrincipal user,
     IdeaService service,
     CancellationToken cancellationToken)
   {
-    var idea = await service.CreateAsync(user.GetUserId(), workspaceId, request, cancellationToken).ConfigureAwait(false);
-    return idea is null ? TypedResults.NotFound() : TypedResults.CreatedAtRoute(idea, GetIdeaRouteName, new { id = idea.Id });
+    var result = await service.CreateAsync(user.GetUserId(), workspaceId, request, cancellationToken).ConfigureAwait(false);
+    return result.Outcome switch
+    {
+      ChangeOutcome.Changed => TypedResults.CreatedAtRoute(result.Idea!, GetIdeaRouteName, new { id = result.Idea!.Id }),
+      ChangeOutcome.NotFound => TypedResults.NotFound(),
+      ChangeOutcome.Invalid => TypedResults.ValidationProblem(new Dictionary<string, string[]>(StringComparer.Ordinal)
+      {
+        [JsonNamingPolicy.CamelCase.ConvertName(result.Field!)] = [result.Message!],
+      }),
+      ChangeOutcome.Conflict or ChangeOutcome.Forbidden or _ => throw new UnreachableException($"Unhandled outcome {result.Outcome}."),
+    };
   }
 
   /// <summary>

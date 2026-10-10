@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 using Pouspourika.IdeaVerse.Api;
+using Pouspourika.IdeaVerse.Api.Accounts;
 using Pouspourika.IdeaVerse.Api.Auth;
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Data;
@@ -38,6 +39,7 @@ builder.Services.ConfigureApplicationCookie(o =>
   o.Cookie.SameSite = SameSiteMode.Strict;
 });
 
+builder.Services.AddScoped<UserCalendar>();
 builder.Services.AddScoped<WorkspaceService>();
 builder.Services.AddScoped<InvitationService>();
 builder.Services.AddScoped<IdeaService>();
@@ -66,6 +68,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapAuthEndpoints();
+app.MapAccountEndpoints();
 app.MapWorkspaceEndpoints();
 app.MapInvitationEndpoints();
 app.MapIdeaEndpoints();

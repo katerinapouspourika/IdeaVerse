@@ -68,6 +68,42 @@ public class ReminderServiceTests
   }
 
   [Test]
+  public async Task RunAsync_BeforeEightInOwnersZone_WaitsUntilTheirMorning()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    await owner.SetTimeZoneAsync("America/Phoenix");
+    (await owner.CreateIdeaAsync("Launch", Today.AddDays(1))).Dispose();
+
+    factory.Time.Advance(TimeSpan.FromHours(5) + TimeSpan.FromMinutes(59));
+    var beforeEight = await factory.RunRemindersAsync();
+    factory.Time.Advance(TimeSpan.FromMinutes(1));
+    var atEight = await factory.RunRemindersAsync();
+
+    await Assert.That(beforeEight.Raised).IsEqualTo(0);
+    await Assert.That(atEight.Raised).IsEqualTo(1);
+    await Assert.That(factory.Mail.Sent.Single().Subject).IsEqualTo("Due tomorrow: Launch");
+  }
+
+  [Test]
+  public async Task RunAsync_TeamInDifferentZones_RemindsEachForTheirOwnDate()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var member = await factory.CreateSignedInClientAsync("member@example.com");
+    await factory.JoinAsync(owner, member, "member@example.com");
+    await member.SetTimeZoneAsync("Pacific/Kiritimati");
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(1))).ReadIdeaAsync();
+    (await owner.AddMemberAsync(idea.Id, "member@example.com")).Dispose();
+    factory.Time.Advance(TimeSpan.FromHours(9));
+
+    await factory.RunRemindersAsync();
+
+    await Assert.That(factory.Mail.Sent.Select(m => (m.To, m.Subject))).IsEquivalentTo(
+      [("owner@example.com", "Due tomorrow: Launch"), ("member@example.com", "Due today: Launch")]);
+  }
+
+  [Test]
   public async Task RunAsync_Email_LinksToTheIdea()
   {
     await using var factory = new IdeaVerseApiFactory();

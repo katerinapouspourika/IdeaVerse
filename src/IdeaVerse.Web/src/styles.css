@@ -555,3 +555,22 @@ textarea:focus-visible,
   margin: 0;
   color: var(--ok);
 }
+
+.account-link {
+  text-decoration: none;
+}
+
+.account-link:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

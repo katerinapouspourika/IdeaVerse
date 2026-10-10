@@ -2,6 +2,7 @@ namespace Pouspourika.IdeaVerse.Api.Ideas;
 
 using Microsoft.EntityFrameworkCore;
 
+using Pouspourika.IdeaVerse.Api.Accounts;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Workspaces;
 
@@ -10,21 +11,17 @@ using Pouspourika.IdeaVerse.Api.Workspaces;
 /// </summary>
 /// <remarks>
 /// Every operation goes through <see cref="IdeaAccess"/>, so an idea outside the user's workspaces behaves exactly like a missing one,
-/// and a visible idea the user may not change is forbidden.
+/// and a visible idea the user may not change is forbidden. "Today", for overdue flags and date rules, is the user's own local date.
 /// </remarks>
 /// <param name="context">The database context.</param>
-/// <param name="timeProvider">Clock used for timestamps and date rules.</param>
-public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timeProvider)
+/// <param name="calendar">Tells the user's local date.</param>
+/// <param name="timeProvider">Clock used for timestamps.</param>
+public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calendar, TimeProvider timeProvider)
 {
   /// <summary>
   /// Why a user who can see an idea may not change it.
   /// </summary>
   private const string NotOnTeamMessage = "Only the idea's team and the workspace's admins can change this idea.";
-
-  /// <summary>
-  /// Gets today's date in UTC.
-  /// </summary>
-  public DateOnly Today => timeProvider.Today();
 
   /// <summary>
   /// Lists a workspace's ideas, soonest target date first.
@@ -41,6 +38,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
       return null;
     }
 
+    var today = await calendar.TodayAsync(userId, cancellationToken).ConfigureAwait(false);
     var query = context.VisibleIdeas(userId).Where(i => i.WorkspaceId == workspaceId);
     if (status is { } filter)
     {
@@ -50,7 +48,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
     return await query
       .OrderBy(i => i.TargetDate)
       .ThenBy(i => i.Title)
-      .Select(IdeaResponse.Projection(context, Today, userId))
+      .Select(IdeaResponse.Projection(context, today, userId))
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
   }
@@ -62,11 +60,15 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
   /// <param name="id">The idea identifier.</param>
   /// <param name="cancellationToken">Token to cancel the query.</param>
   /// <returns>The idea, or <see langword="null"/> when the user cannot see such an idea.</returns>
-  public Task<IdeaResponse?> GetAsync(string userId, Guid id, CancellationToken cancellationToken)
-    => context.VisibleIdeas(userId)
+  public async Task<IdeaResponse?> GetAsync(string userId, Guid id, CancellationToken cancellationToken)
+  {
+    var today = await calendar.TodayAsync(userId, cancellationToken).ConfigureAwait(false);
+    return await context.VisibleIdeas(userId)
       .Where(i => i.Id == id)
-      .Select(IdeaResponse.Projection(context, Today, userId))
-      .FirstOrDefaultAsync(cancellationToken);
+      .Select(IdeaResponse.Projection(context, today, userId))
+      .FirstOrDefaultAsync(cancellationToken)
+      .ConfigureAwait(false);
+  }
 
   /// <summary>
   /// Creates an idea in the <see cref="IdeaStatus.Planned"/> status. Anyone in the workspace may create one.
@@ -75,14 +77,19 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
   /// <param name="workspaceId">The workspace identifier.</param>
   /// <param name="request">The validated request.</param>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
-  /// <returns>The created idea, or <see langword="null"/> when the user is not in the workspace.</returns>
-  public async Task<IdeaResponse?> CreateAsync(string userId, Guid workspaceId, CreateIdeaRequest request, CancellationToken cancellationToken)
+  /// <returns>The outcome, carrying the created idea: not found when the user is not in the workspace, invalid for a date before the user's today.</returns>
+  public async Task<IdeaChangeResult> CreateAsync(string userId, Guid workspaceId, CreateIdeaRequest request, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(request);
 
     if (await context.RoleInAsync(userId, workspaceId, cancellationToken).ConfigureAwait(false) is null)
     {
-      return null;
+      return IdeaChangeResult.NotFound();
+    }
+
+    if (request.TargetDate < await calendar.TodayAsync(userId, cancellationToken).ConfigureAwait(false))
+    {
+      return IdeaChangeResult.Invalid(TargetDateRules.MemberName, TargetDateRules.NotInPastMessage);
     }
 
     var now = timeProvider.GetUtcNow();
@@ -98,8 +105,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
     };
 
     context.Ideas.Add(idea);
-    await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-    return await ProjectAsync(userId, idea.Id, cancellationToken).ConfigureAwait(false);
+    return await SaveAsync(userId, idea, cancellationToken).ConfigureAwait(false);
   }
 
   /// <summary>
@@ -120,7 +126,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
       return IdeaChangeResult.Denied(await context.DenialAsync(userId, id, cancellationToken).ConfigureAwait(false), NotOnTeamMessage);
     }
 
-    if (request.TargetDate != idea.TargetDate && request.TargetDate < Today)
+    if (request.TargetDate != idea.TargetDate && request.TargetDate < await calendar.TodayAsync(userId, cancellationToken).ConfigureAwait(false))
     {
       return IdeaChangeResult.Invalid(TargetDateRules.MemberName, TargetDateRules.NotInPastMessage);
     }
@@ -160,6 +166,11 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
       return IdeaChangeResult.Invalid(TargetDateRules.MemberName, "The new target date must be later than the current one.");
     }
 
+    if (request.TargetDate < await calendar.TodayAsync(userId, cancellationToken).ConfigureAwait(false))
+    {
+      return IdeaChangeResult.Invalid(TargetDateRules.MemberName, TargetDateRules.NotInPastMessage);
+    }
+
     idea.TargetDate = request.TargetDate;
     idea.Status = IdeaStatus.Postponed;
     idea.PostponeCount++;
@@ -191,20 +202,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
     => string.IsNullOrWhiteSpace(description) ? null : description.Trim();
 
   /// <summary>
-  /// Reads an idea's response, including component counts, by identifier.
-  /// </summary>
-  /// <param name="userId">The signed-in user's identifier, for the response's role.</param>
-  /// <param name="id">The idea identifier; the caller has already checked access.</param>
-  /// <param name="cancellationToken">Token to cancel the query.</param>
-  /// <returns>The idea's response.</returns>
-  private Task<IdeaResponse> ProjectAsync(string userId, Guid id, CancellationToken cancellationToken)
-    => context.Ideas
-      .Where(i => i.Id == id)
-      .Select(IdeaResponse.Projection(context, Today, userId))
-      .SingleAsync(cancellationToken);
-
-  /// <summary>
-  /// Stamps <see cref="Idea.UpdatedAt"/> and saves a changed idea.
+  /// Stamps <see cref="Idea.UpdatedAt"/> and saves a new or changed idea.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier, for the response's role.</param>
   /// <param name="idea">The changed, tracked idea.</param>
@@ -214,6 +212,12 @@ public sealed class IdeaService(IdeaVerseDbContext context, TimeProvider timePro
   {
     idea.UpdatedAt = timeProvider.GetUtcNow();
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-    return IdeaChangeResult.Changed(await ProjectAsync(userId, idea.Id, cancellationToken).ConfigureAwait(false));
+    var today = await calendar.TodayAsync(userId, cancellationToken).ConfigureAwait(false);
+    var response = await context.Ideas
+      .Where(i => i.Id == idea.Id)
+      .Select(IdeaResponse.Projection(context, today, userId))
+      .SingleAsync(cancellationToken)
+      .ConfigureAwait(false);
+    return IdeaChangeResult.Changed(response);
   }
 }

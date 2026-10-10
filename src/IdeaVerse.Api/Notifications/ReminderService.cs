@@ -3,6 +3,7 @@ namespace Pouspourika.IdeaVerse.Api.Notifications;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
+using Pouspourika.IdeaVerse.Api.Accounts;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Email;
 using Pouspourika.IdeaVerse.Api.Ideas;
@@ -14,7 +15,7 @@ using Pouspourika.IdeaVerse.Api.Ideas;
 /// <param name="mailSender">Sends reminder emails.</param>
 /// <param name="options">Reminder settings.</param>
 /// <param name="app">Application settings, for links back to the web app.</param>
-/// <param name="timeProvider">Clock deciding today's date.</param>
+/// <param name="timeProvider">Clock deciding each person's local date and time.</param>
 /// <param name="logger">Logger for delivery problems.</param>
 public sealed partial class ReminderService(
   IdeaVerseDbContext context,
@@ -67,15 +68,16 @@ public sealed partial class ReminderService(
   /// Creates a notification for each team member, owner included, of each unfinished idea whose reminder stage has no notification yet.
   /// </summary>
   /// <remarks>
-  /// Only people still in the idea's workspace are reminded.
+  /// Only people still in the idea's workspace are reminded. Each person's stage follows their own local date, and is raised
+  /// only once their local time reaches <see cref="ReminderOptions.SendAt"/>, so reminders arrive in the morning.
   /// </remarks>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
   /// <returns>How many notifications were created.</returns>
   private async Task<int> RaiseDueRemindersAsync(CancellationToken cancellationToken)
   {
     var now = timeProvider.GetUtcNow();
-    var today = timeProvider.Today();
-    var horizon = today.AddDays(ReminderSchedule.WindowDays);
+    var sendAt = options.Value.SendAt;
+    var horizon = DateOnly.FromDateTime(now.UtcDateTime).AddDays(ReminderSchedule.WindowDays + 1);
 
     var ideas = await context.Ideas
       .AsNoTracking()
@@ -96,14 +98,23 @@ public sealed partial class ReminderService(
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
 
+    var recipientIds = ideas.SelectMany(i => i.MemberIds.Append(i.OwnerId)).Distinct(StringComparer.Ordinal).ToList();
+    var zones = await context.Users
+      .Where(u => recipientIds.Contains(u.Id))
+      .Select(u => new { u.Id, u.TimeZone })
+      .ToDictionaryAsync(u => u.Id, u => TimeZones.Find(u.TimeZone), StringComparer.Ordinal, cancellationToken)
+      .ConfigureAwait(false);
+
     var created = 0;
     foreach (var idea in ideas)
     {
-      var kind = ReminderSchedule.KindFor(idea.TargetDate, today)!.Value;
       var team = idea.MemberIds.Prepend(idea.OwnerId).Intersect(idea.WorkspaceUserIds, StringComparer.Ordinal);
       foreach (var userId in team)
       {
-        if (idea.Sent.Any(s => s.UserId == userId && s.Kind == kind))
+        var localNow = timeProvider.LocalNow(zones.GetValueOrDefault(userId, TimeZoneInfo.Utc));
+        if (TimeOnly.FromDateTime(localNow) < sendAt
+          || ReminderSchedule.KindFor(idea.TargetDate, DateOnly.FromDateTime(localNow)) is not { } kind
+          || idea.Sent.Any(s => s.UserId == userId && s.Kind == kind))
         {
           continue;
         }
@@ -130,14 +141,13 @@ public sealed partial class ReminderService(
   {
     var settings = options.Value;
     var now = timeProvider.GetUtcNow();
-    var today = timeProvider.Today();
     var oldest = now - settings.EmailRetryWindow;
 
     var pending = await context.Notifications
       .Where(n => n.EmailedAt == null && n.CreatedAt >= oldest)
       .Where(n => context.WorkspaceMembers.Any(w => w.WorkspaceId == n.Idea!.WorkspaceId && w.UserId == n.UserId))
       .Where(n => n.Idea!.OwnerId == n.UserId || n.Idea.Members.Any(m => m.UserId == n.UserId))
-      .Select(n => new { Notification = n, n.User!.Email, IdeaTitle = n.Idea!.Title })
+      .Select(n => new { Notification = n, n.User!.Email, n.User.TimeZone, IdeaTitle = n.Idea!.Title })
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
 
@@ -145,6 +155,7 @@ public sealed partial class ReminderService(
     foreach (var item in pending.Where(p => !string.IsNullOrEmpty(p.Email)))
     {
       var notification = item.Notification;
+      var today = timeProvider.TodayIn(TimeZones.Find(item.TimeZone));
       var message = ReminderSchedule.Message(notification.Kind, item.IdeaTitle, notification.TargetDate, today);
       var link = app.Value.Link($"/ideas/{notification.IdeaId}");
       var mail = new MailMessage(

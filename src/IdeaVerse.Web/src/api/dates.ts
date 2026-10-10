@@ -1,6 +1,20 @@
-/** Today's date in UTC as `YYYY-MM-DD`, matching how the API decides "today" and "overdue". */
-export function todayIso(now: Date = new Date()): string {
-  return now.toISOString().slice(0, 10);
+/** The browser's IANA time zone, such as `Europe/Athens`. */
+export function browserTimeZone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+}
+
+let currentTimeZone = browserTimeZone();
+
+/** Sets the time zone whose calendar decides "today"; the signed-in account's, matching the API. */
+export function setTimeZone(timeZone: string) {
+  currentTimeZone = timeZone;
+}
+
+/** Today's date in a time zone as `YYYY-MM-DD`; by default the account's, as the API decides "today" and "overdue". */
+export function todayIso(now: Date = new Date(), timeZone: string = currentTimeZone): string {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value;
+  return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
 /** Adds days to a `YYYY-MM-DD` date. */
@@ -11,14 +25,14 @@ export function addDays(isoDate: string, days: number): string {
 }
 
 /** Whole days from today until the date; negative when it has passed. */
-export function daysUntil(isoDate: string, now: Date = new Date()): number {
+export function daysUntil(isoDate: string, now: Date = new Date(), timeZone: string = currentTimeZone): number {
   const day = 24 * 60 * 60 * 1000;
-  return Math.round((Date.parse(`${isoDate}T00:00:00Z`) - Date.parse(`${todayIso(now)}T00:00:00Z`)) / day);
+  return Math.round((Date.parse(`${isoDate}T00:00:00Z`) - Date.parse(`${todayIso(now, timeZone)}T00:00:00Z`)) / day);
 }
 
 /** A friendly description such as "in 3 days", "today", or "5 days overdue". */
-export function describeDue(isoDate: string, now: Date = new Date()): string {
-  const days = daysUntil(isoDate, now);
+export function describeDue(isoDate: string, now: Date = new Date(), timeZone: string = currentTimeZone): string {
+  const days = daysUntil(isoDate, now, timeZone);
   if (days === 0) return 'today';
   if (days === 1) return 'tomorrow';
   if (days > 1) return `in ${days} days`;

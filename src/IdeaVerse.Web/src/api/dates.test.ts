@@ -1,10 +1,21 @@
-import { addDays, daysUntil, describeDue, todayIso } from './dates';
+import { addDays, daysUntil, describeDue, setTimeZone, todayIso } from './dates';
 
 describe('dates', () => {
   const now = new Date('2026-10-10T23:30:00Z');
 
-  it('uses the UTC calendar day for today', () => {
-    expect(todayIso(now)).toBe('2026-10-10');
+  beforeEach(() => setTimeZone('UTC'));
+
+  it('uses the calendar day of the given time zone for today', () => {
+    expect(todayIso(now, 'UTC')).toBe('2026-10-10');
+    expect(todayIso(now, 'Europe/Athens')).toBe('2026-10-11');
+    expect(todayIso(now, 'America/Phoenix')).toBe('2026-10-10');
+  });
+
+  it('describes due dates against the time zone that was set', () => {
+    setTimeZone('Europe/Athens');
+    expect(describeDue('2026-10-11', now)).toBe('today');
+    setTimeZone('UTC');
+    expect(describeDue('2026-10-11', now)).toBe('tomorrow');
   });
 
   it('adds days across month boundaries', () => {

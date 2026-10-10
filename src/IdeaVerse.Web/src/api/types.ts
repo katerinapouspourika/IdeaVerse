@@ -121,6 +121,8 @@ export interface Notifications {
 
 export interface Account {
   email: string;
+  /** IANA time zone deciding the user's "today" and when reminders arrive; `null` until chosen, when UTC applies. */
+  timeZone: string | null;
 }
 
 export const statusLabels: Record<IdeaStatus, string> = {
