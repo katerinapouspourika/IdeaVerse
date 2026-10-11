@@ -11,6 +11,9 @@ public sealed class WebAppTests : IDisposable
     File.WriteAllText(Path.Combine(webRoot.FullName, "index.html"), "<!doctype html><title>Home</title><div id=\"root\"></div>");
     File.WriteAllText(Path.Combine(webRoot.FullName, "how-it-works.html"), "<!doctype html><title>How it works</title><div id=\"root\"></div>");
     File.WriteAllText(Path.Combine(webRoot.FullName, "contact.html"), "<!doctype html><title>Contact us</title><div id=\"root\"></div>");
+    File.WriteAllText(Path.Combine(webRoot.FullName, "pricing.html"), "<!doctype html><title>Pricing</title><div id=\"root\"></div>");
+    File.WriteAllText(Path.Combine(webRoot.FullName, "privacy.html"), "<!doctype html><title>Privacy Policy</title><div id=\"root\"></div>");
+    File.WriteAllText(Path.Combine(webRoot.FullName, "terms.html"), "<!doctype html><title>Terms of Service</title><div id=\"root\"></div>");
     File.WriteAllText(Path.Combine(webRoot.FullName, "templates.html"), "<!doctype html><title>Templates</title><div id=\"root\"></div>");
     Directory.CreateDirectory(Path.Combine(webRoot.FullName, "templates"));
     File.WriteAllText(Path.Combine(webRoot.FullName, "templates", "product-launch.html"), "<!doctype html><title>Product launch template</title><div id=\"root\"></div>");
@@ -31,6 +34,9 @@ public sealed class WebAppTests : IDisposable
   [Arguments("/", "Home")]
   [Arguments("/how-it-works", "How it works")]
   [Arguments("/contact", "Contact us")]
+  [Arguments("/pricing", "Pricing")]
+  [Arguments("/privacy", "Privacy Policy")]
+  [Arguments("/terms", "Terms of Service")]
   [Arguments("/templates", "Templates")]
   [Arguments("/templates/product-launch", "Product launch template")]
   [Arguments("/ideas", "App")]
@@ -56,6 +62,7 @@ public sealed class WebAppTests : IDisposable
   [Arguments("/ideas/not-an-id")]
   [Arguments("/how-it-works.html")]
   [Arguments("/app.html")]
+  [Arguments("/pricing.html")]
   [Arguments("/templates/no-such-template")]
   [Arguments("/templates/Product_Launch")]
   [Arguments("/templates/product-launch.html")]

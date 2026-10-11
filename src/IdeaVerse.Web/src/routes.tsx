@@ -6,6 +6,9 @@ import { Skeleton } from './components/Skeleton';
 import { ContactPage } from './marketing/ContactPage';
 import { HomePage } from './marketing/HomePage';
 import { HowItWorksPage } from './marketing/HowItWorksPage';
+import { PricingPage } from './marketing/PricingPage';
+import { LegalPage } from './legal/LegalPage';
+import { privacyPolicy, terms } from './legal/legal';
 import { TemplatePage } from './templates/TemplatePage';
 import { TemplatesPage } from './templates/TemplatesPage';
 import { AuthPage } from './pages/AuthPage';
@@ -13,6 +16,7 @@ import { ConfirmEmailPage } from './pages/ConfirmEmailPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { publicPages } from './seo/pages';
 
 /**
  * Signed-in pages load on first visit, so the public pages do not download the whole app.
@@ -46,6 +50,9 @@ export const routes: RouteObject[] = [
       { path: '/', element: <HomePage /> },
       { path: '/how-it-works', element: <HowItWorksPage /> },
       { path: '/contact', element: <ContactPage /> },
+      { path: '/pricing', element: <PricingPage /> },
+      { path: '/privacy', element: <LegalPage document={privacyPolicy} description={publicPages['/privacy'].description} /> },
+      { path: '/terms', element: <LegalPage document={terms} description={publicPages['/terms'].description} /> },
       { path: '/templates', element: <TemplatesPage /> },
       { path: '/templates/:slug', element: <TemplatePage /> },
       { element: <RequireAuth />, HydrateFallback: Loading, children: signedIn },
