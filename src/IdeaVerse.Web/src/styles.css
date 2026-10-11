@@ -250,6 +250,8 @@ a {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  /* An email in a message, such as "We sent a link to …", wraps rather than pushing the card wider. */
+  overflow-wrap: anywhere;
 }
 
 .muted {
@@ -1525,7 +1527,8 @@ h3 {
 /* Sign in and sign up */
 .auth-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* Two equal halves that hold their width: a long email scrolls inside its box instead of widening the card. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   max-width: 920px;
   margin: 8px auto;
   border-radius: 28px;
