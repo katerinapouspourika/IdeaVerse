@@ -41,7 +41,7 @@ function describe(error: unknown, mode: Mode): string {
 }
 
 export function AuthPage({ mode }: { mode: Mode }) {
-  usePageMeta(mode === 'login' ? 'Sign in' : 'Create your account', { index: mode === 'register' });
+  usePageMeta(mode === 'login' ? 'Sign in' : 'Create your account', { index: false });
   const { account, login, register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

@@ -10,15 +10,25 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>IdeaVerse</title>
-    <!-- Returning users skip the prerendered public home page while their dashboard loads (see src/auth/sessionHint.ts). -->
+    <!--
+      Returning users skip the prerendered public home page while their dashboard loads (see src/auth/sessionHint.ts).
+      Should the app fail to start, the page reveals itself after three seconds rather than stay blank.
+    -->
     <script>
       try {
-        if (localStorage.getItem('ideaverse.session') === '1') document.documentElement.classList.add('has-session');
+        if (location.pathname === '/' && localStorage.getItem('ideaverse.session') === '1') document.documentElement.classList.add('has-session');
       } catch {}
     </script>
     <style>
       .has-session .prerendered {
         visibility: hidden;
+        animation: reveal-prerendered 0s 3s forwards;
+      }
+
+      @keyframes reveal-prerendered {
+        to {
+          visibility: visible;
+        }
       }
     </style>
   </head>

@@ -63,6 +63,9 @@ export function ContactPage() {
             </div>
           ) : (
             <form className="card stack" onSubmit={submit} aria-label="Contact us">
+              <noscript>
+                <p className="error">Sending a message needs JavaScript. Please turn it on and reload the page.</p>
+              </noscript>
               <div className="row wrap">
                 <Field label="Your name" className="grow" error={fieldError(send.error, 'name')}>
                   {(props) => <input {...props} required maxLength={100} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />}

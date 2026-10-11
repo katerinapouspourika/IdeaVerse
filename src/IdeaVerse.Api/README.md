@@ -25,8 +25,8 @@ The API also serves the web app (`src/IdeaVerse.Web`) from `wwwroot` when one is
 
 - The public pages, prerendered by the web build, come from their own files: `/` from `index.html`, `/how-it-works` from `how-it-works.html`, `/contact` from `contact.html`.
 - The app's own routes (`AppRoutes`: `/login`, `/ideas`, `/ideas/{id}`, `/settings`, …) get the empty app shell `app.html`. Keep that list in step with `src/IdeaVerse.Web/src/routes.tsx`.
-- Unknown `/api` routes return 404. Any other unknown address returns `404.html` with status 404, so made-up URLs are not indexed; a missing file such as an image gets a plain 404.
-- The web app's files are compressed (Brotli or gzip); API responses are not, since compressing secrets next to attacker-controlled text over HTTPS can leak them (BREACH).
+- Unknown `/api` routes return 404. Any other unknown address, including malformed idea ids and the built `.html` files themselves, returns `404.html` with status 404, so made-up URLs are not indexed; a missing file such as an image gets the usual problem-details 404.
+- Pages are served as UTF-8 HTML. The web app's files are compressed (Brotli or gzip); API responses (under `/api` in any casing) are not, since compressing secrets next to attacker-controlled text over HTTPS can leak them (BREACH).
 - Content-hashed files under `/assets` are cached for a year, images, fonts and videos for a day, and pages are revalidated on every visit.
 
 ## Features

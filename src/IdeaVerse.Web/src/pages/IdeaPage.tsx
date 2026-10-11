@@ -52,11 +52,11 @@ function IdeaDetail({ idea }: { idea: Idea }) {
 
   // Opening an idea from another workspace switches the header to it, once; switching away afterwards is the user's choice.
   useEffect(() => {
-    if (matchedIdea.current === idea.id || all.length === 0) {
+    if (matchedIdea.current === idea.id || !all.some((w) => w.id === ideaWorkspaceId)) {
       return;
     }
     matchedIdea.current = idea.id;
-    if (current?.id !== ideaWorkspaceId && all.some((w) => w.id === ideaWorkspaceId)) {
+    if (current?.id !== ideaWorkspaceId) {
       select(ideaWorkspaceId);
     }
   }, [idea.id, ideaWorkspaceId, all, current, select]);

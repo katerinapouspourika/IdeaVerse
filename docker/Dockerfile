@@ -89,8 +89,8 @@ RUN if ls *.json 1>/dev/null 2>&1; then \
 
 FROM node:lts-alpine AS web-build
 ARG WEB_PROJECT
-# The public address the web app is served from, for canonical URLs, link previews, and the sitemap.
-ARG SITE_URL=http://localhost:8080
+# The public address the web app is served from, for canonical URLs, link previews, and the sitemap; left out when empty.
+ARG SITE_URL
 WORKDIR /web
 COPY --link src/${WEB_PROJECT}/ ./
 RUN --mount=type=cache,target=/root/.npm \

@@ -32,7 +32,7 @@ internal static class WebAppExtensions
     "/forgot-password",
     "/reset-password",
     "/ideas",
-    "/ideas/{id}",
+    "/ideas/{id:guid}",
     "/notifications",
     "/people",
     "/invitations",
@@ -66,6 +66,11 @@ internal static class WebAppExtensions
   private const string NotFoundFile = "404.html";
 
   /// <summary>
+  /// The content type every page is served with.
+  /// </summary>
+  private const string HtmlContentType = "text/html; charset=utf-8";
+
+  /// <summary>
   /// Registers response compression for the web app's files.
   /// </summary>
   /// <param name="services">The service collection.</param>
@@ -91,7 +96,8 @@ internal static class WebAppExtensions
   /// <returns>The same application.</returns>
   public static WebApplication UseWebAppFiles(this WebApplication app)
   {
-    app.UseWhen(context => !context.Request.Path.StartsWithSegments("/api", StringComparison.Ordinal), branch => branch.UseResponseCompression());
+    app.UseWhen(IsWebAppRequest, branch => branch.UseResponseCompression());
+    app.Use(HideBuiltPagesAsync);
     app.UseStaticFiles(new StaticFileOptions
     {
       ContentTypeProvider = ContentTypes(),
@@ -109,7 +115,7 @@ internal static class WebAppExtensions
   /// <returns>The same route builder.</returns>
   public static IEndpointRouteBuilder MapWebAppFallback(this IEndpointRouteBuilder endpoints)
   {
-    var files = new StaticFileOptions { OnPrepareResponse = context => SetCacheHeaders(context.Context) };
+    var files = new StaticFileOptions { ContentTypeProvider = ContentTypes(), OnPrepareResponse = context => SetCacheHeaders(context.Context) };
     endpoints.MapFallback("/api/{**path}", () => TypedResults.NotFound()).ExcludeFromDescription();
     foreach (var (route, file) in PublicPages)
     {
@@ -126,7 +132,27 @@ internal static class WebAppExtensions
   }
 
   /// <summary>
-  /// Writes the "not found" page with status 404, or an empty 404 when the web app is not built.
+  /// Whether a request is for the web app rather than the API, matching <c>/api</c> in any casing as routing does.
+  /// </summary>
+  /// <param name="context">The HTTP context.</param>
+  /// <returns><see langword="true"/> unless the path is under <c>/api</c>.</returns>
+  private static bool IsWebAppRequest(HttpContext context)
+    => !context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase);
+
+  /// <summary>
+  /// Answers requests for the built HTML files themselves, such as <c>/how-it-works.html</c>, with the "not found" page,
+  /// so each page is only reachable at its own address.
+  /// </summary>
+  /// <param name="context">The HTTP context.</param>
+  /// <param name="next">The rest of the pipeline.</param>
+  /// <returns>A task that completes when the response is written.</returns>
+  private static Task HideBuiltPagesAsync(HttpContext context, RequestDelegate next)
+    => context.Request.Path.Value?.EndsWith(".html", StringComparison.OrdinalIgnoreCase) == true
+      ? ServeNotFoundAsync(context)
+      : next(context);
+
+  /// <summary>
+  /// Writes the "not found" page with status 404 (its headers only, for <c>HEAD</c>), or an empty 404 when the web app is not built.
   /// </summary>
   /// <param name="context">The HTTP context.</param>
   /// <returns>A task that completes when the response is written.</returns>
@@ -134,22 +160,32 @@ internal static class WebAppExtensions
   {
     context.Response.StatusCode = StatusCodes.Status404NotFound;
     var page = context.RequestServices.GetRequiredService<IWebHostEnvironment>().WebRootFileProvider.GetFileInfo(NotFoundFile);
-    if (page.Exists && HttpMethods.IsGet(context.Request.Method))
+    if (!page.Exists)
     {
-      context.Response.ContentType = "text/html; charset=utf-8";
-      SetCacheHeaders(context);
-      await context.Response.SendFileAsync(page, context.RequestAborted).ConfigureAwait(false);
+      return;
     }
+
+    context.Response.ContentType = HtmlContentType;
+    SetCacheHeaders(context);
+    if (HttpMethods.IsHead(context.Request.Method))
+    {
+      context.Response.ContentLength = page.Length;
+      await context.Response.CompleteAsync().ConfigureAwait(false);
+      return;
+    }
+
+    await context.Response.SendFileAsync(page, context.RequestAborted).ConfigureAwait(false);
   }
 
   /// <summary>
-  /// The default content types, plus the web app manifest.
+  /// The default content types, plus the web app manifest, with pages declared as UTF-8.
   /// </summary>
   /// <returns>The content type provider.</returns>
   private static FileExtensionContentTypeProvider ContentTypes()
   {
     var provider = new FileExtensionContentTypeProvider();
     provider.Mappings[".webmanifest"] = "application/manifest+json";
+    provider.Mappings[".html"] = HtmlContentType;
     return provider;
   }
 

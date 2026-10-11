@@ -14,6 +14,8 @@ public sealed class WebAppTests : IDisposable
     File.WriteAllText(Path.Combine(webRoot.FullName, "app.html"), "<!doctype html><title>App</title><div id=\"root\"></div>");
     File.WriteAllText(Path.Combine(webRoot.FullName, "404.html"), "<!doctype html><title>Page not found</title><div id=\"root\"></div>");
     File.WriteAllText(Path.Combine(webRoot.FullName, "logo.png"), "png");
+    Directory.CreateDirectory(Path.Combine(webRoot.FullName, "how-it-works"));
+    File.WriteAllText(Path.Combine(webRoot.FullName, "how-it-works", "clip.mp4"), "mp4");
     Directory.CreateDirectory(Path.Combine(webRoot.FullName, "assets"));
     File.WriteAllText(Path.Combine(webRoot.FullName, "assets", "index-abc123.js"), "console.log('app');");
   }
@@ -36,7 +38,7 @@ public sealed class WebAppTests : IDisposable
     using var response = await client.GetAsync(path);
 
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
-    await Assert.That(response.Content.Headers.ContentType!.MediaType).IsEqualTo("text/html");
+    await Assert.That(response.Content.Headers.ContentType!.ToString()).IsEqualTo("text/html; charset=utf-8");
     await Assert.That(await response.Content.ReadAsStringAsync()).Contains($"<title>{title}</title>");
     await Assert.That(response.Headers.CacheControl!.NoCache).IsTrue();
   }
@@ -44,6 +46,10 @@ public sealed class WebAppTests : IDisposable
   [Test]
   [Arguments("/no-such-page")]
   [Arguments("/ideas/0199a0f0-0000-7000-8000-000000000000/extra")]
+  [Arguments("/ideas/not-an-id")]
+  [Arguments("/how-it-works.html")]
+  [Arguments("/app.html")]
+  [Arguments("/INDEX.HTML")]
   public async Task Get_UnknownAddress_ServesNotFoundPageWithStatus404(string path)
   {
     await using var factory = new IdeaVerseApiFactory(webRoot.FullName);
@@ -52,7 +58,23 @@ public sealed class WebAppTests : IDisposable
     using var response = await client.GetAsync(path);
 
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+    await Assert.That(response.Content.Headers.ContentType!.ToString()).IsEqualTo("text/html; charset=utf-8");
+    await Assert.That(response.Headers.CacheControl!.NoCache).IsTrue();
     await Assert.That(await response.Content.ReadAsStringAsync()).Contains("<title>Page not found</title>");
+  }
+
+  [Test]
+  public async Task Head_UnknownAddress_ReturnsNotFoundPageHeadersWithoutBody()
+  {
+    await using var factory = new IdeaVerseApiFactory(webRoot.FullName);
+    var client = factory.CreateClient();
+    using var request = new HttpRequestMessage(HttpMethod.Head, "/no-such-page");
+
+    using var response = await client.SendAsync(request);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+    await Assert.That(response.Content.Headers.ContentType!.ToString()).IsEqualTo("text/html; charset=utf-8");
+    await Assert.That(await response.Content.ReadAsByteArrayAsync()).IsEmpty();
   }
 
   [Test]
@@ -67,22 +89,27 @@ public sealed class WebAppTests : IDisposable
   }
 
   [Test]
-  public async Task Get_Image_IsCachedForADay()
+  [Arguments("/logo.png")]
+  [Arguments("/how-it-works/clip.mp4")]
+  public async Task Get_ImageOrVideo_IsCachedForADay(string path)
   {
     await using var factory = new IdeaVerseApiFactory(webRoot.FullName);
     var client = factory.CreateClient();
 
-    using var response = await client.GetAsync("/logo.png");
+    using var response = await client.GetAsync(path);
 
     await Assert.That(response.Headers.CacheControl!.MaxAge).IsEqualTo(TimeSpan.FromDays(1));
   }
 
   [Test]
-  public async Task Get_PageAcceptingBrotli_IsCompressed()
+  [Arguments("/assets/index-abc123.js")]
+  [Arguments("/how-it-works")]
+  [Arguments("/no-such-page")]
+  public async Task Get_WebAppFileAcceptingBrotli_IsCompressed(string path)
   {
     await using var factory = new IdeaVerseApiFactory(webRoot.FullName);
     var client = factory.CreateClient();
-    using var request = new HttpRequestMessage(HttpMethod.Get, "/assets/index-abc123.js");
+    using var request = new HttpRequestMessage(HttpMethod.Get, path);
     request.Headers.AcceptEncoding.ParseAdd("br");
 
     using var response = await client.SendAsync(request);
@@ -91,11 +118,13 @@ public sealed class WebAppTests : IDisposable
   }
 
   [Test]
-  public async Task Get_ApiAcceptingBrotli_IsNotCompressed()
+  [Arguments("/api/v1/account")]
+  [Arguments("/API/v1/account")]
+  public async Task Get_ApiAcceptingBrotli_IsNotCompressed(string path)
   {
     await using var factory = new IdeaVerseApiFactory(webRoot.FullName);
     using var client = await factory.CreateSignedInClientAsync();
-    using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/account");
+    using var request = new HttpRequestMessage(HttpMethod.Get, path);
     request.Headers.AcceptEncoding.ParseAdd("br");
 
     using var response = await client.SendAsync(request);

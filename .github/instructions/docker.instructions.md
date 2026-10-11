@@ -20,6 +20,8 @@ applyTo: "docker/**,compose*.yaml"
 - `CONFIGURATION`: `Release` (default) or `Debug`
 - `PUBLISHED_PROJECT`: Project name to publish (without path or extension)
 - `DATABASE_PROJECT`: EF Core project for migration bundles
+- `WEB_PROJECT`: Optional web app under `src/` (for example `IdeaVerse.Web`) built in the `web-build` stage and served from the API's `wwwroot`.
+- `SITE_URL`: The public address the web app is served from (for example `https://ideaverse.app`), used for canonical URLs, link previews, and the sitemap. Production images must set it; without it those are left out.
 - `DBCONTEXT`: Optional DbContext name for migrations. If omitted, the migration bundle step must not pass `--context`; EF Core auto-discovers the single DbContext in `DATABASE_PROJECT`.
 
 ## Image Selection

@@ -25,5 +25,16 @@ export function usePageMeta(title: string | null, { description = siteDescriptio
     metaTag('name', 'description').content = description;
     metaTag('property', 'og:description').content = description;
     metaTag('name', 'robots').content = index ? 'index, follow' : 'noindex';
+
+    // The prerendered page's canonical address only holds for that page; keep it in step with client-side navigation.
+    const canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    const url = document.head.querySelector<HTMLMetaElement>('meta[property="og:url"]');
+    if (canonical && index) {
+      canonical.href = new URL(window.location.pathname, canonical.href).href;
+      if (url) url.content = canonical.href;
+    } else {
+      canonical?.remove();
+      url?.remove();
+    }
   }, [title, description, index]);
 }

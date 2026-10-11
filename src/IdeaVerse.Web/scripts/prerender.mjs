@@ -5,7 +5,8 @@
 // - `app.html` is the empty app shell the API serves for signed-in pages.
 // - `sitemap.xml` and `robots.txt` list the public pages.
 //
-// Absolute URLs use SITE_URL, the address the site is served from (default http://localhost:8080). Set it for production builds.
+// Absolute URLs use SITE_URL, the address the site is served from, such as https://ideaverse.app. Without it, the pages
+// leave out their canonical URLs, sitemap, and other absolute links, since a wrong address is worse than none.
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -13,15 +14,26 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = join(root, 'dist');
 const ssrDir = join(root, 'dist-prerender');
-const siteUrl = (process.env.SITE_URL || 'http://localhost:8080').replace(/\/+$/, '');
-if (!process.env.SITE_URL) {
-  console.warn(`SITE_URL is not set; canonical and preview URLs use ${siteUrl}.`);
+/** The validated site address without a trailing slash, or `null` when SITE_URL is not set. */
+function readSiteUrl() {
+  if (!process.env.SITE_URL) {
+    console.warn('SITE_URL is not set: pages get no canonical URLs or preview links, and no sitemap is written.');
+    return null;
+  }
+  const url = new URL(process.env.SITE_URL);
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new Error(`SITE_URL must be an http or https address, not ${process.env.SITE_URL}.`);
+  }
+  return url.origin + url.pathname.replace(/\/+$/, '');
 }
+
+const siteUrl = readSiteUrl();
 
 const ssr = await import(pathToFileURL(join(ssrDir, 'prerender.js')).href);
 const template = await readFile(join(dist, 'index.html'), 'utf8');
 
 const escape = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+/** A path as an absolute URL on the site; escape it before putting it in HTML or XML. */
 const absolute = (path) => `${siteUrl}${path}`;
 const jsonLd = (data) => `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
 
@@ -68,29 +80,35 @@ function headTags(path, meta, { index }) {
     `<meta property="og:site_name" content="${ssr.siteName}" />`,
     `<meta property="og:title" content="${title}" />`,
     `<meta property="og:description" content="${description}" />`,
-    `<meta property="og:image" content="${absolute(ssr.shareImagePath)}" />`,
-    `<meta property="og:image:width" content="1200" />`,
-    `<meta property="og:image:height" content="630" />`,
-    `<meta property="og:image:alt" content="${ssr.siteName}: plan ideas together, on time" />`,
-    `<meta name="twitter:card" content="summary_large_image" />`,
   ];
-  if (index) {
-    tags.push(`<link rel="canonical" href="${absolute(path)}" />`, `<meta property="og:url" content="${absolute(path)}" />`);
+  if (siteUrl) {
+    tags.push(
+      `<meta property="og:image" content="${escape(absolute(ssr.shareImagePath))}" />`,
+      `<meta property="og:image:width" content="1200" />`,
+      `<meta property="og:image:height" content="630" />`,
+      `<meta property="og:image:alt" content="${ssr.siteName}: plan ideas together, on time" />`,
+      `<meta name="twitter:card" content="summary_large_image" />`,
+    );
+    if (index) {
+      tags.push(`<link rel="canonical" href="${escape(absolute(path))}" />`, `<meta property="og:url" content="${escape(absolute(path))}" />`);
+    }
   }
-  return [...tags, ...structuredData(path)].join('\n    ');
+  return [...tags, ...(siteUrl ? structuredData(path) : [])].join('\n    ');
 }
 
 /** The built `index.html` with a page's head tags and rendered content filled in. */
 function page(path, meta, { index }) {
   const html = ssr.render(path);
+  // Function replacers, so `$&` and friends in the inserted text stay literal.
   return template
-    .replace(/<title>[^<]*<\/title>/, headTags(path, meta, { index }))
+    .replace(/<title>[^<]*<\/title>/, () => headTags(path, meta, { index }))
     .replace(/<meta name="description"[^>]*>\s*/, '')
-    .replace('<div id="root"></div>', `<div id="root"><div class="prerendered">${html}</div></div>`);
+    .replace('<div id="root"></div>', () => `<div id="root"><div class="prerendered">${html}</div></div>`);
 }
 
 const files = {
-  'app.html': template,
+  // Sign-in, account, and signed-in pages: nothing for search engines, whether or not they run the app.
+  'app.html': template.replace(/<title>/, () => '<meta name="robots" content="noindex" />\n    <title>'),
   '404.html': page('/this-page-does-not-exist', ssr.notFoundMeta, { index: false }),
 };
 for (const [path, meta] of Object.entries(ssr.publicPages)) {
@@ -98,18 +116,21 @@ for (const [path, meta] of Object.entries(ssr.publicPages)) {
 }
 
 const today = new Date().toISOString().slice(0, 10);
-files['sitemap.xml'] = [
+const sitemap = siteUrl && [
   '<?xml version="1.0" encoding="UTF-8"?>',
   '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-  ...Object.keys(ssr.publicPages).map((path) => `  <url><loc>${absolute(path)}</loc><lastmod>${today}</lastmod></url>`),
+  ...Object.keys(ssr.publicPages).map((path) => `  <url><loc>${escape(absolute(path))}</loc><lastmod>${today}</lastmod></url>`),
   '</urlset>',
   '',
 ].join('\n');
-files['robots.txt'] = ['User-agent: *', 'Disallow: /api/', '', `Sitemap: ${absolute('/sitemap.xml')}`, ''].join('\n');
+if (sitemap) {
+  files['sitemap.xml'] = sitemap;
+}
+files['robots.txt'] = ['User-agent: *', 'Disallow: /api/', '', ...(siteUrl ? [`Sitemap: ${absolute('/sitemap.xml')}`, ''] : [])].join('\n');
 
 for (const [name, content] of Object.entries(files)) {
   await mkdir(dirname(join(dist, name)), { recursive: true });
   await writeFile(join(dist, name), content);
 }
 await rm(ssrDir, { recursive: true, force: true });
-console.log(`prerendered ${Object.keys(files).join(', ')} for ${siteUrl}`);
+console.log(`prerendered ${Object.keys(files).join(', ')}${siteUrl ? ` for ${siteUrl}` : ''}`);
