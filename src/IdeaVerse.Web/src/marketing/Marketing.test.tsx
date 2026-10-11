@@ -28,6 +28,25 @@ describe('Public pages', () => {
     }
   });
 
+  it('plays a walkthrough from the button in its middle, showing the controls once it has started', async () => {
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(function (this: HTMLMediaElement) {
+      this.dispatchEvent(new Event('play'));
+      return Promise.resolve();
+    });
+    fakeApi(signedOut);
+    renderApp('/how-it-works');
+    const [first] = walkthroughs;
+    const video = await screen.findByLabelText(`Video: ${first!.title}`);
+    expect(video).not.toHaveAttribute('controls');
+
+    await userEvent.click(screen.getByRole('button', { name: `Play video: ${first!.title}` }));
+
+    expect(play).toHaveBeenCalled();
+    expect(video).toHaveAttribute('controls');
+    expect(screen.queryByRole('button', { name: `Play video: ${first!.title}` })).not.toBeInTheDocument();
+    play.mockRestore();
+  });
+
   it('opens the menu on small screens and closes it after navigating', async () => {
     fakeApi(signedOut);
     renderApp('/');
