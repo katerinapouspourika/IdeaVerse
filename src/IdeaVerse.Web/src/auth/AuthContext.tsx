@@ -9,6 +9,10 @@ import { rememberSession } from './sessionHint';
 interface Auth {
   account: Account | null;
   isLoading: boolean;
+  /** Whether the API couldn't be reached to find out who is signed in, as when offline; not the same as signed out. */
+  unreachable: boolean;
+  /** Asks the API again who is signed in, as it also does once the connection comes back. */
+  retry: () => void;
   login: (email: string, password: string) => Promise<void>;
   /** Creates an account; the user must confirm their email before signing in. */
   register: (email: string, password: string) => Promise<void>;
@@ -67,7 +71,7 @@ async function fetchAccount(): Promise<Account | null> {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const client = useQueryClient();
-  const { data, isLoading } = useQuery({ queryKey: accountKey, queryFn: fetchAccount, staleTime: Infinity });
+  const { data, isLoading, error, refetch } = useQuery({ queryKey: accountKey, queryFn: fetchAccount, staleTime: Infinity });
 
   /** Drops cached data from the previous session, keeping the account query its observers are attached to. */
   const forgetOtherData = () => client.removeQueries({ predicate: (query) => query.queryKey[0] !== accountKey[0] });
@@ -111,6 +115,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const auth: Auth = {
     account: data ?? null,
     isLoading,
+    unreachable: error !== null && data === undefined,
+    retry: () => void refetch(),
     login,
     register,
     logout,
