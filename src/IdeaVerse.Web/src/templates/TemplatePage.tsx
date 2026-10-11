@@ -31,7 +31,7 @@ function TemplateDetail({ template }: { template: IdeaTemplate }) {
             </button>
           ) : (
             <Link to="/register" className="button primary">
-              Sign up free to use it
+              Get started free
             </Link>
           )}
         </div>

@@ -30,7 +30,7 @@ describe('Template gallery', () => {
     fakeApi(signedOut);
     renderApp('/templates/product-launch');
 
-    expect(await screen.findByRole('link', { name: 'Sign up free to use it' })).toHaveAttribute('href', '/register');
+    expect(await within(screen.getByRole('main')).findByRole('link', { name: 'Get started free' })).toHaveAttribute('href', '/register');
   });
 
   it('shows the not found page for an unknown template', async () => {

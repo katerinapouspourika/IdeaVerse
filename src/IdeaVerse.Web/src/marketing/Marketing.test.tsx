@@ -11,7 +11,7 @@ describe('Public pages', () => {
     const router = renderApp('/');
 
     expect(await screen.findByRole('heading', { level: 1, name: /Turn bright ideas into done ideas/ })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('link', { name: 'Get started free' }));
+    await userEvent.click(within(screen.getByRole('main')).getAllByRole('link', { name: 'Get started free' })[0]!);
 
     expect(await screen.findByRole('heading', { name: 'Create your account' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/register');

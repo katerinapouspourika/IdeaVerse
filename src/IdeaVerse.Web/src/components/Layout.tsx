@@ -179,7 +179,7 @@ function PublicBar() {
           Sign in
         </NavLink>
         <Link to="/register" className="button primary small">
-          Get started
+          Get started free
         </Link>
       </nav>
       <div className="account">
