@@ -95,7 +95,7 @@ describe('Password reset', () => {
     await userEvent.type(screen.getByLabelText('Repeat new password'), 'Different1!');
     await userEvent.click(screen.getByRole('button', { name: 'Change password' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('don’t match');
+    expect(screen.getByLabelText('Repeat new password')).toHaveAccessibleDescription('The two passwords don’t match.');
     await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(false));
   });
 

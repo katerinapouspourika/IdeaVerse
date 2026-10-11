@@ -4,6 +4,9 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { readAccountProblems, type AccountProblems } from '../auth/identityErrors';
+import { meetsPasswordRules } from '../auth/passwordRules';
+import { PasswordRules } from '../auth/PasswordRules';
 import { Field } from '../components/Field';
 import { ResendConfirmation } from '../components/ResendConfirmation';
 import { usePageMeta } from '../seo/usePageMeta';
@@ -46,14 +49,16 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const { account, login, register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [problems, setProblems] = useState<AccountProblems | null>(null);
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const [registered, setRegistered] = useState(false);
   const [pending, setPending] = useState(false);
   const text = copy[mode];
-  const state = location.state as { from?: string; signedOut?: boolean } | null;
+  const state = location.state as { from?: string; signedOut?: boolean; email?: string } | null;
+  // Filled in when they came from "Sign in instead" after finding their email already has an account.
+  const [email, setEmail] = useState(state?.email ?? '');
   const from = state?.from ?? '/';
 
   if (account && !state?.signedOut) {
@@ -78,8 +83,13 @@ export function AuthPage({ mode }: { mode: Mode }) {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (mode === 'register' && !meetsPasswordRules(password)) {
+      setProblems({ duplicateEmail: false, expiredLink: false, password: 'Your password doesn’t meet every rule yet.' });
+      return;
+    }
     setPending(true);
     setError(null);
+    setProblems(null);
     setNeedsConfirmation(false);
     try {
       if (mode === 'register') {
@@ -90,6 +100,12 @@ export function AuthPage({ mode }: { mode: Mode }) {
       await login(email, password);
       await navigate(from, { replace: true });
     } catch (caught) {
+      if (mode === 'register') {
+        const found = readAccountProblems(caught);
+        setProblems(found);
+        setError(found.other ?? null);
+        return;
+      }
       setError(describe(caught, mode));
       setNeedsConfirmation(caught instanceof ApiError && caught.status === 401 && caught.message === notConfirmed);
     } finally {
@@ -105,15 +121,22 @@ export function AuthPage({ mode }: { mode: Mode }) {
       <h1>{text.title}</h1>
       <p className="muted">Plan ideas, line up what they need, and never lose track of a date.</p>
       <form onSubmit={(event) => void submit(event)} className="stack">
-        <Field label="Email">
+        <Field label="Email" error={problems?.email}>
           {(props) => (
             <input {...props} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           )}
         </Field>
-        <Field
-          label="Password"
-          hint={mode === 'register' ? 'At least 6 characters, with an uppercase letter, a digit, and a symbol.' : undefined}
-        >
+        {problems?.duplicateEmail && (
+          <p className="account-exists">
+            <Link to="/login" state={{ email }}>
+              Sign in instead
+            </Link>
+            <Link to="/forgot-password" state={{ email }}>
+              Forgot your password?
+            </Link>
+          </p>
+        )}
+        <Field label="Password" hint={mode === 'register' ? <PasswordRules password={password} /> : undefined} error={problems?.password}>
           {(props) => (
             <input
               {...props}

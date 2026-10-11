@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { aWorkspace, fakeApi, ideasRoute, signedOut } from '../test/fakeApi';
@@ -70,21 +70,61 @@ describe('AuthPage', () => {
     expect(router.state.location.pathname).toBe('/invitations');
   });
 
-  it('shows the password rules the API rejects on registration', async () => {
+  it('ticks off the password rules as they are met, and stops a weak password before calling the API', async () => {
+    const calls = fakeApi(signedOut);
+    renderApp('/register');
+
+    await userEvent.type(await screen.findByLabelText('Email'), 'kat@example.com');
+    const password = screen.getByLabelText('Password');
+    await userEvent.type(password, 'Password');
+    const rules = within(screen.getByRole('list', { name: 'Requirements' }));
+    expect(rules.getByText('An uppercase letter')).toHaveTextContent('(done)');
+    expect(rules.getByText('A number')).toHaveTextContent('(not yet)');
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(password).toHaveAccessibleDescription(expect.stringContaining('Your password doesn’t meet every rule yet.'));
+    expect(calls.some((c) => c.method === 'POST')).toBe(false);
+  });
+
+  it('puts the API’s password rule in plain words under the password', async () => {
     fakeApi({
       ...signedOut,
       'POST /api/v1/auth/register': {
         status: 400,
-        body: { title: 'One or more validation errors occurred.', errors: { PasswordRequiresDigit: ['Passwords must have at least one digit.'] } },
+        body: { title: 'One or more validation errors occurred.', errors: { PasswordRequiresDigit: ['Passwords must have at least one digit (\'0\'-\'9\').'] } },
       },
     });
     renderApp('/register');
 
     await userEvent.type(await screen.findByLabelText('Email'), 'kat@example.com');
-    await userEvent.type(screen.getByLabelText('Password'), 'Password!');
+    await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!');
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Passwords must have at least one digit.');
+    await waitFor(() => expect(screen.getByLabelText('Password')).toHaveAccessibleDescription(expect.stringContaining('Your password needs a number.')));
+    expect(screen.queryByText(/\('0'-'9'\)/)).not.toBeInTheDocument();
+  });
+
+  it('offers to sign in or reset the password when the email already has an account', async () => {
+    fakeApi({
+      ...signedOut,
+      'POST /api/v1/auth/register': {
+        status: 400,
+        body: { errors: { DuplicateUserName: ["Username 'kat@example.com' is already taken."], DuplicateEmail: ["Email 'kat@example.com' is already taken."] } },
+      },
+    });
+    const router = renderApp('/register');
+
+    await userEvent.type(await screen.findByLabelText('Email'), 'kat@example.com');
+    await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!');
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    await waitFor(() => expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('An account with this email already exists.'));
+    expect(screen.queryByText(/already taken/)).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Forgot your password?' })).toHaveAttribute('href', '/forgot-password');
+    await userEvent.click(screen.getByRole('link', { name: 'Sign in instead' }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
+    expect(await screen.findByLabelText('Email')).toHaveValue('kat@example.com');
   });
 
   it('starts the sign-up card empty after typing on the sign-in card', async () => {
