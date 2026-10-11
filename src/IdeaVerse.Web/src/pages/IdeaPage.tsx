@@ -11,7 +11,7 @@ import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { Progress } from '../components/Progress';
 import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
-import { formatTags, parseTags } from '../components/tagInput';
+import { TagInput } from '../components/TagInput';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { ActivitySection } from './ActivitySection';
 import { ComponentsSection } from './ComponentsSection';
@@ -65,9 +65,20 @@ function IdeaDetail({ idea }: { idea: Idea }) {
         <EditIdeaForm idea={idea} onDone={() => setEditing(false)} />
       ) : (
         <section className="card stack">
-          <div className="row spread wrap">
-            <h1>{idea.title}</h1>
-            <StatusBadge idea={idea} />
+          <div className="row spread wrap idea-heading">
+            <div className="row wrap">
+              <h1>{idea.title}</h1>
+              <StatusBadge idea={idea} />
+            </div>
+            {idea.canEdit && (
+              <button type="button" className="button primary small" onClick={() => setEditing(true)}>
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                </svg>
+                Edit details
+              </button>
+            )}
           </div>
           <p>
             Implement by <strong>{formatDate(idea.targetDate)}</strong>{' '}
@@ -78,14 +89,7 @@ function IdeaDetail({ idea }: { idea: Idea }) {
           {idea.description && <p className="description">{idea.description}</p>}
           <Progress done={idea.completedComponentCount} total={idea.componentCount} />
           {idea.canEdit ? (
-            <>
-              <div className="row">
-                <button type="button" className="button" onClick={() => setEditing(true)}>
-                  Edit details
-                </button>
-              </div>
-              <ImproveIdea idea={idea} />
-            </>
+            <ImproveIdea idea={idea} />
           ) : (
             <p className="muted small">
               {personLabel(idea.ownerName, idea.ownerEmail)}’s idea. You can follow it here; only its team and the workspace’s admins can change it.
@@ -111,11 +115,11 @@ function EditIdeaForm({ idea, onDone }: { idea: Idea; onDone: () => void }) {
   const [description, setDescription] = useState(idea.description ?? '');
   const [targetDate, setTargetDate] = useState(idea.targetDate);
   const [status, setStatus] = useState<IdeaStatus>(idea.status);
-  const [tags, setTags] = useState(formatTags(idea.tags));
+  const [tags, setTags] = useState(idea.tags);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    update.mutate({ title, description: description || null, targetDate, status, tags: parseTags(tags) }, { onSuccess: onDone });
+    update.mutate({ title, description: description || null, targetDate, status, tags }, { onSuccess: onDone });
   };
 
   return (
@@ -149,8 +153,8 @@ function EditIdeaForm({ idea, onDone }: { idea: Idea; onDone: () => void }) {
           <textarea {...props} rows={4} maxLength={4000} value={description} onChange={(e) => setDescription(e.target.value)} />
         )}
       </Field>
-      <Field label="Tags" hint="Separate tags with commas." error={fieldError(update.error, 'tags')}>
-        {(props) => <input {...props} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="e.g. marketing, q4" />}
+      <Field label="Tags" hint="Type a tag and press Enter to add it." error={fieldError(update.error, 'tags')}>
+        {(props) => <TagInput {...props} tags={tags} onChange={setTags} />}
       </Field>
       <ErrorMessage error={update.error} />
       <div className="row">

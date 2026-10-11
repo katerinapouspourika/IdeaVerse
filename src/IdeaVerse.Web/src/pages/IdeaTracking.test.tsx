@@ -99,7 +99,16 @@ describe('Idea tracking', () => {
 
     const form = screen.getByRole('form', { name: 'New idea' });
     await userEvent.type(within(form).getByLabelText('Title'), 'Spring launch');
-    await userEvent.type(within(form).getByLabelText(/Tags/), 'Marketing, q4 ,');
+    const tags = within(form).getByLabelText(/Tags/);
+    await userEvent.type(tags, 'Marketing{Enter}');
+    await userEvent.type(tags, 'q4,');
+    await userEvent.type(tags, 'marketing{Enter}');
+
+    expect(calls.some((c) => c.method === 'POST')).toBe(false);
+    expect(within(form).getByRole('list', { name: 'Chosen tags' }).textContent).toBe('marketing×q4×');
+    expect(tags).toHaveValue('');
+
+    await userEvent.type(tags, 'draft');
     await userEvent.click(within(form).getByRole('button', { name: 'Add idea' }));
 
     await waitFor(() =>
@@ -107,9 +116,23 @@ describe('Idea tracking', () => {
         title: 'Spring launch',
         description: null,
         targetDate: addDays(todayIso(), 14),
-        tags: ['Marketing', 'q4'],
+        tags: ['marketing', 'q4', 'draft'],
       }),
     );
+  });
+
+  it('removes tags with their button or Backspace', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
+    renderApp('/ideas');
+    await userEvent.click(await screen.findByRole('button', { name: 'New idea' }));
+    const form = screen.getByRole('form', { name: 'New idea' });
+    const tags = within(form).getByLabelText(/Tags/);
+    await userEvent.type(tags, 'one{Enter}two{Enter}three{Enter}');
+
+    await userEvent.click(within(form).getByRole('button', { name: 'Remove tag two' }));
+    await userEvent.type(tags, '{Backspace}');
+
+    expect(within(form).getByRole('list', { name: 'Chosen tags' }).textContent).toBe('one×');
   });
 });
 
@@ -128,9 +151,9 @@ describe('Archiving an idea', () => {
     renderApp('/ideas/idea-1');
 
     await userEvent.click(await screen.findByRole('button', { name: 'Edit details' }));
-    const tags = screen.getByLabelText('Tags');
-    expect(tags).toHaveValue('marketing');
-    await userEvent.type(tags, ', launch');
+    expect(screen.getByRole('list', { name: 'Chosen tags' })).toHaveTextContent('marketing');
+    await userEvent.type(screen.getByLabelText('Tags'), 'launch{Enter}');
+    expect(screen.queryByRole('button', { name: 'Edit details' })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect((calls.find((c) => c.method === 'PUT')?.body as { tags: string[] }).tags).toEqual(['marketing', 'launch']));
