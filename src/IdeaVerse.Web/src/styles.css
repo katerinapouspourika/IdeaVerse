@@ -1433,15 +1433,43 @@ h3 {
   order: 2;
 }
 
+.walkthrough-video {
+  position: relative;
+}
+
+/* Sized by the recording's own 16:10 shape: the height attribute would otherwise fix it at 640px and crop the picture. */
 .walkthrough-video video {
   display: block;
   width: 100%;
+  height: auto;
   aspect-ratio: 16 / 10;
-  object-fit: cover;
   border-radius: 20px;
   border: 1px solid var(--border);
   background: var(--bg-tint);
   box-shadow: var(--shadow-lift);
+}
+
+.video-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  padding: 0 0 0 4px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--gradient);
+  color: #ffffff;
+  box-shadow: var(--shadow-lift);
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  transition: transform 0.15s;
+}
+
+.video-play:hover {
+  transform: translate(-50%, -50%) scale(1.08);
 }
 
 .check-steps {
