@@ -55,7 +55,7 @@ describe('Contact page', () => {
     await userEvent.type(within(form).getByLabelText('Message'), 'Do you have a team plan?');
     await userEvent.click(within(form).getByRole('button', { name: 'Send message' }));
 
-    expect(await screen.findByText('Thanks, your message is on its way!')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Thanks, your message is on its way!' })).toHaveFocus();
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ name: 'Mia', email: 'mia@example.com', message: 'Do you have a team plan?' });
   });
 

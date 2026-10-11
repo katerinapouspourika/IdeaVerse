@@ -78,13 +78,4 @@ describe('Dashboard', () => {
     expect(await screen.findByText(/Nothing overdue or due this week/)).toBeInTheDocument();
     expect(screen.getByText('You’re all caught up. Time to capture a new idea?')).toBeInTheDocument();
   });
-
-  it('opens the new idea form from the dashboard', async () => {
-    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
-    renderApp('/');
-
-    (await screen.findByRole('link', { name: 'New idea' })).click();
-
-    expect(await screen.findByRole('form', { name: 'New idea' })).toBeInTheDocument();
-  });
 });

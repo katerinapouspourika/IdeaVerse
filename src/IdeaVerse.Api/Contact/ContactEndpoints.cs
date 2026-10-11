@@ -1,5 +1,8 @@
 namespace Pouspourika.IdeaVerse.Api.Contact;
 
+using System.ComponentModel.DataAnnotations;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading.RateLimiting;
 
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -25,7 +28,13 @@ internal static class ContactEndpoints
   /// <returns>The same service collection.</returns>
   public static IServiceCollection AddContactForm(this IServiceCollection services)
   {
-    services.AddOptions<ContactOptions>().BindConfiguration(ContactOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
+    services.AddOptions<ContactOptions>()
+      .BindConfiguration(ContactOptions.SectionName)
+      .ValidateDataAnnotations()
+      .Validate(
+        o => string.IsNullOrWhiteSpace(o.Recipient) || new EmailAddressAttribute().IsValid(o.Recipient),
+        $"{ContactOptions.SectionName}:{nameof(ContactOptions.Recipient)} must be an email address, or empty to turn the form off.")
+      .ValidateOnStart();
     services.AddRateLimiter(o =>
     {
       o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -33,7 +42,7 @@ internal static class ContactEndpoints
       {
         var limit = context.RequestServices.GetRequiredService<IOptions<ContactOptions>>().Value.MessagesPerHour;
         return RateLimitPartition.GetFixedWindowLimiter(
-          context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+          PartitionKey(context.Connection.RemoteIpAddress),
           _ => new FixedWindowRateLimiterOptions { PermitLimit = limit, Window = TimeSpan.FromHours(1), QueueLimit = 0 });
       });
     });
@@ -86,7 +95,35 @@ internal static class ContactEndpoints
 
       {request.Message.Trim()}
       """;
-    await mailSender.SendAsync(new MailMessage(recipient, $"Contact form: {name}", body), cancellationToken).ConfigureAwait(false);
+    await mailSender.SendAsync(new MailMessage(recipient, $"Contact form: {name}", body, request.Email.Trim()), cancellationToken).ConfigureAwait(false);
     return TypedResults.NoContent();
+  }
+
+  /// <summary>
+  /// The rate limiting bucket for a client address: the address itself for IPv4, and its /64 network for IPv6,
+  /// since one IPv6 client typically controls a whole /64.
+  /// </summary>
+  /// <param name="address">The client's address, if known.</param>
+  /// <returns>The partition key.</returns>
+  private static string PartitionKey(IPAddress? address)
+  {
+    if (address is null)
+    {
+      return "unknown";
+    }
+
+    if (address.IsIPv4MappedToIPv6)
+    {
+      address = address.MapToIPv4();
+    }
+
+    if (address.AddressFamily != AddressFamily.InterNetworkV6)
+    {
+      return address.ToString();
+    }
+
+    var bytes = address.GetAddressBytes();
+    Array.Clear(bytes, 8, 8);
+    return $"{new IPAddress(bytes)}/64";
   }
 }

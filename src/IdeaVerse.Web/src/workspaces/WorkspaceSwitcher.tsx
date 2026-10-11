@@ -14,20 +14,21 @@ export function WorkspaceSwitcher() {
     return null;
   }
 
-  const change = (value: string) => {
+  const change = async (value: string) => {
     if (value === newWorkspace) {
-      void navigate('/workspaces/new');
+      await navigate('/workspaces/new');
       return;
     }
-    select(value);
-    // An idea belongs to one workspace, so leave it for the new workspace's list; other pages show the new workspace in place.
+    // An idea belongs to one workspace, so leave it for the new workspace's list first;
+    // otherwise the idea page would switch straight back to the idea's own workspace. Other pages show the new workspace in place.
     if (pathname.startsWith('/ideas/')) {
-      void navigate('/ideas');
+      await navigate('/ideas');
     }
+    select(value);
   };
 
   return (
-    <select className="switcher" aria-label="Workspace" value={current.id} onChange={(e) => change(e.target.value)}>
+    <select className="switcher" aria-label="Workspace" value={current.id} onChange={(e) => void change(e.target.value)}>
       {all.map((workspace) => (
         <option key={workspace.id} value={workspace.id}>
           {workspace.name}

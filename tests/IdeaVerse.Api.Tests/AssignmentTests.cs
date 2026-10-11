@@ -5,6 +5,7 @@ using System.Net;
 using Pouspourika.IdeaVerse.Api.Accounts;
 using Pouspourika.IdeaVerse.Api.Comments;
 using Pouspourika.IdeaVerse.Api.Components;
+using Pouspourika.IdeaVerse.Api.Ideas;
 using Pouspourika.IdeaVerse.Api.Notifications;
 using Pouspourika.IdeaVerse.Api.Workspaces;
 
@@ -206,6 +207,22 @@ public class AssignmentTests
     var (ideaId, budget) = await IdeaWithComponentAsync(owner);
     (await owner.UpdateComponentAsync(ideaId, budget.Id, new UpdateComponentRequest("Budget", null, IsDone: false, ownerId, Today.AddDays(2)))).Dispose();
     (await owner.PostAsync($"/api/v1/ideas/{ideaId}/archive", null)).Dispose();
+
+    var assignments = await owner.GetFromJsonAsync<AssignmentResponse[]>($"/api/v1/workspaces/{await owner.WorkspaceIdAsync()}/assignments", Json.Options);
+
+    await Assert.That(assignments!).IsEmpty();
+  }
+
+  [Test]
+  public async Task Assignments_DoneIdea_AreLeftOut()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    var ownerId = await UserIdAsync(owner, "owner@example.com");
+    var (ideaId, budget) = await IdeaWithComponentAsync(owner);
+    (await owner.UpdateComponentAsync(ideaId, budget.Id, new UpdateComponentRequest("Budget", null, IsDone: false, ownerId, Today.AddDays(2)))).Dispose();
+    var idea = await owner.GetFromJsonAsync<IdeaResponse>($"/api/v1/ideas/{ideaId}", Json.Options);
+    (await owner.PutAsJsonAsync($"/api/v1/ideas/{ideaId}", new UpdateIdeaRequest(idea!.Title, null, idea.TargetDate, IdeaStatus.Done), Json.Options)).Dispose();
 
     var assignments = await owner.GetFromJsonAsync<AssignmentResponse[]>($"/api/v1/workspaces/{await owner.WorkspaceIdAsync()}/assignments", Json.Options);
 

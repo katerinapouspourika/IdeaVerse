@@ -147,7 +147,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
 /** The welcome panel beside the sign-in and sign-up forms on wide screens. */
 function AuthAside() {
   return (
-    <aside className="auth-aside" aria-hidden="true">
+    <aside className="auth-aside" aria-label="About IdeaVerse">
       <div className="stack tight">
         <p className="eyebrow">IdeaVerse</p>
         <h2 className="section-title">Bright ideas deserve a plan.</h2>

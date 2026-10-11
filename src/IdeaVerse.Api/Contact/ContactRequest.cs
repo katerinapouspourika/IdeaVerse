@@ -10,7 +10,7 @@ using System.ComponentModel.DataAnnotations;
 /// <param name="Message">The message.</param>
 /// <param name="Website">A field hidden from people; anything in it marks the message as spam and it is dropped.</param>
 public sealed record ContactRequest(
-  [property: Required(AllowEmptyStrings = false), MaxLength(ContactRequest.NameMaxLength)] string Name,
+  [property: Required(AllowEmptyStrings = false), MaxLength(ContactRequest.NameMaxLength), RegularExpression(@"^[^\p{Cc}]*$", ErrorMessage = "The name cannot contain line breaks or control characters.")] string Name,
   [property: Required(AllowEmptyStrings = false), EmailAddress, MaxLength(ContactRequest.EmailMaxLength)] string Email,
   [property: Required(AllowEmptyStrings = false), MaxLength(ContactRequest.MessageMaxLength)] string Message,
   string? Website = null)

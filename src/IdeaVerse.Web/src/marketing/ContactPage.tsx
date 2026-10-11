@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { ApiError } from '../api/client';
 import { useSendContactMessage } from '../api/queries';
@@ -23,6 +23,14 @@ function ContactForm(initial: { name: string; email: string }) {
   const [email, setEmail] = useState(initial.email);
   const [message, setMessage] = useState('');
   const [website, setWebsite] = useState('');
+  const thanks = useRef<HTMLHeadingElement>(null);
+
+  // The form is replaced by the thank-you note, so move focus there for keyboard and screen reader users.
+  useEffect(() => {
+    if (send.isSuccess) {
+      thanks.current?.focus();
+    }
+  }, [send.isSuccess]);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -46,7 +54,9 @@ function ContactForm(initial: { name: string; email: string }) {
               <span className="feature-icon big" aria-hidden="true">
                 💌
               </span>
-              <h2>Thanks, your message is on its way!</h2>
+              <h2 ref={thanks} tabIndex={-1}>
+                Thanks, your message is on its way!
+              </h2>
               <p className="muted">We’ll get back to you at {email}.</p>
             </div>
           ) : (

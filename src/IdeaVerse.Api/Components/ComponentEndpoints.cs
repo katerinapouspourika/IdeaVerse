@@ -28,7 +28,8 @@ internal static class ComponentEndpoints
     group.MapPut("/{componentId:guid}", UpdateAsync).WithValidation<UpdateComponentRequest>();
     group.MapDelete("/{componentId:guid}", DeleteAsync);
 
-    endpoints.MapGet("/api/v1/workspaces/{workspaceId:guid}/assignments", ListAssignedAsync).WithTags("Components").RequireAuthorization();
+    var workspace = endpoints.MapGroup("/api/v1/workspaces/{workspaceId:guid}").WithTags("Components").RequireAuthorization();
+    workspace.MapGet("/assignments", ListAssignedAsync);
 
     return endpoints;
   }
