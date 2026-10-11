@@ -1655,6 +1655,12 @@ textarea:disabled {
   margin: 24px auto;
 }
 
+/* An unknown template, use case, or comparison is shown inside a full-width page, which has no side gutter of its own. */
+.content.full > .not-found {
+  margin: 40px auto;
+  width: calc(100% - 32px);
+}
+
 .not-found .logo {
   margin: 0 auto;
 }

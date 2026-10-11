@@ -1,6 +1,6 @@
 import { Download, LogOut, Menu as MenuIcon, Settings, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet, ScrollRestoration, useLocation, useNavigate } from 'react-router';
+import { Link, NavLink, Outlet, ScrollRestoration, useLocation, useMatches, useNavigate } from 'react-router';
 
 import { useReceivedInvitations } from '../api/queries';
 import { personLabel } from '../api/types';
@@ -14,13 +14,18 @@ import { NotificationBell } from './NotificationBell';
 import { ThemeToggle } from './ThemeToggle';
 import { useInstallPrompt } from './useInstallPrompt';
 
-/** Pages that lay themselves out across the full width, such as the public home page. */
-const fullWidthPaths = ['/how-it-works', '/contact'];
+/** What a route can tell the layout about its page. */
+export interface PageHandle {
+  /** The page lays itself out across the full width, like the public pages, rather than in the content column. */
+  fullWidth?: boolean;
+}
 
 export function Layout() {
   const { account } = useAuth();
   const { pathname } = useLocation();
-  const fullWidth = fullWidthPaths.includes(pathname) || (pathname === '/' && !account);
+  const matches = useMatches();
+  // The home page is the full-width public landing page for visitors, and the dashboard once signed in.
+  const fullWidth = matches.some((match) => (match.handle as PageHandle | undefined)?.fullWidth) || (pathname === '/' && !account);
   const main = useFocusOnNavigation();
 
   return (
