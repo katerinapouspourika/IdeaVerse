@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router';
 
+import { personLabel } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { useWorkspace, WorkspaceProvider } from '../workspaces/WorkspaceContext';
 import { WorkspaceSwitcher } from '../workspaces/WorkspaceSwitcher';
@@ -46,7 +47,7 @@ function TopBar() {
         <div className="account">
           <NotificationBell />
           <Link to="/settings" className="muted account-link" title="Settings">
-            {account.email}
+            {personLabel(account.displayName, account.email)}
           </Link>
           <button type="button" className="button ghost" onClick={() => void signOut()}>
             Sign out

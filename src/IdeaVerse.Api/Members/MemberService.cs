@@ -24,7 +24,7 @@ public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> 
   private const string EmailField = nameof(AddMemberRequest.Email);
 
   /// <summary>
-  /// Lists an idea's team: the owner first, then members by email.
+  /// Lists an idea's team: the owner first, then members by name, or email for those without one.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="ideaId">The idea identifier.</param>
@@ -34,7 +34,7 @@ public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> 
   {
     var owner = await context.VisibleIdeas(userId)
       .Where(i => i.Id == ideaId)
-      .Select(i => new MemberResponse(i.OwnerId, i.Owner!.Email!, IdeaRole.Owner, i.CreatedAt))
+      .Select(i => new MemberResponse(i.OwnerId, i.Owner!.Email!, i.Owner.DisplayName, IdeaRole.Owner, i.CreatedAt))
       .FirstOrDefaultAsync(cancellationToken)
       .ConfigureAwait(false);
     if (owner is null)
@@ -44,8 +44,8 @@ public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> 
 
     var members = await context.IdeaMembers
       .Where(m => m.IdeaId == ideaId)
-      .OrderBy(m => m.User!.Email)
-      .Select(m => new MemberResponse(m.UserId, m.User!.Email!, IdeaRole.Member, m.AddedAt))
+      .OrderBy(m => m.User!.DisplayName ?? m.User.Email)
+      .Select(m => new MemberResponse(m.UserId, m.User!.Email!, m.User.DisplayName, IdeaRole.Member, m.AddedAt))
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
 
@@ -79,7 +79,7 @@ public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> 
     var email = userManager.NormalizeEmail(request.Email.Trim());
     var account = await context.WorkspaceMembers
       .Where(m => m.WorkspaceId == idea.WorkspaceId && m.User!.NormalizedEmail == email)
-      .Select(m => new { m.UserId, m.User!.Email })
+      .Select(m => new { m.UserId, m.User!.Email, m.User.DisplayName })
       .FirstOrDefaultAsync(cancellationToken)
       .ConfigureAwait(false);
     if (account is null)
@@ -100,7 +100,7 @@ public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> 
     var member = new IdeaMember { IdeaId = ideaId, UserId = account.UserId, AddedAt = timeProvider.GetUtcNow() };
     context.IdeaMembers.Add(member);
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-    return MemberChangeResult.Changed(new MemberResponse(account.UserId, account.Email!, IdeaRole.Member, member.AddedAt));
+    return MemberChangeResult.Changed(new MemberResponse(account.UserId, account.Email!, account.DisplayName, IdeaRole.Member, member.AddedAt));
   }
 
   /// <summary>

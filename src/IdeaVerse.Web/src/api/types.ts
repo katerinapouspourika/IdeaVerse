@@ -18,6 +18,8 @@ export interface Workspace {
 export interface WorkspaceMember {
   userId: string;
   email: string;
+  /** Display name, or `null` when the person has not set one. */
+  name: string | null;
   role: WorkspaceRole;
   joinedAt: string;
 }
@@ -28,6 +30,7 @@ export interface Invitation {
   email: string;
   role: WorkspaceRole;
   invitedByEmail: string;
+  invitedByName: string | null;
   sentAt: string;
   expiresAt: string;
 }
@@ -39,6 +42,7 @@ export interface ReceivedInvitation {
   workspaceName: string;
   role: WorkspaceRole;
   invitedByEmail: string;
+  invitedByName: string | null;
   expiresAt: string;
 }
 
@@ -58,6 +62,7 @@ export interface Idea {
   /** Whether the user may delete the idea and manage its team. */
   canManage: boolean;
   ownerEmail: string;
+  ownerName: string | null;
   memberCount: number;
   componentCount: number;
   completedComponentCount: number;
@@ -97,6 +102,8 @@ export interface ComponentUpdate extends ComponentInput {
 export interface Member {
   userId: string;
   email: string;
+  /** Display name, or `null` when the person has not set one. */
+  name: string | null;
   role: IdeaRole;
   addedAt: string;
 }
@@ -121,6 +128,8 @@ export interface Notifications {
 
 export interface Account {
   email: string;
+  /** The name others see, or `null` until set. */
+  displayName: string | null;
   /** IANA time zone deciding the user's "today" and when reminders arrive; `null` until chosen, when UTC applies. */
   timeZone: string | null;
   /** Whether reminders are emailed as well as shown in the app. */
@@ -171,4 +180,9 @@ export interface BrainstormedIdea {
   score: number;
   strengths: string[];
   weaknesses: string[];
+}
+
+/** What to call a person: their display name, or their email when they have none. */
+export function personLabel(name: string | null | undefined, email: string): string {
+  return name?.trim() ? name : email;
 }

@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router';
 
 import { formatDate } from '../api/dates';
 import { useAcceptInvitation, useDeclineInvitation, useReceivedInvitations } from '../api/queries';
-import type { ReceivedInvitation } from '../api/types';
+import { personLabel, type ReceivedInvitation } from '../api/types';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { useWorkspace } from './WorkspaceContext';
 
@@ -45,7 +45,7 @@ export function ReceivedInvitations({ emptyText }: { emptyText?: string }) {
             <span>
               <strong>{invitation.workspaceName}</strong>
               <span className="muted small block">
-                {invitation.invitedByEmail} invited you as {invitation.role === 'Admin' ? 'an admin' : 'a member'} · until{' '}
+                {personLabel(invitation.invitedByName, invitation.invitedByEmail)} invited you as {invitation.role === 'Admin' ? 'an admin' : 'a member'} · until{' '}
                 {formatDate(invitation.expiresAt.slice(0, 10))}
               </span>
             </span>

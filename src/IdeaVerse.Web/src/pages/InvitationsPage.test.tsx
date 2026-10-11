@@ -10,7 +10,7 @@ const invitation: ReceivedInvitation = {
   workspaceId: 'ws-2',
   workspaceName: 'Globex',
   role: 'Admin',
-  invitedByEmail: 'leo@example.com',
+  invitedByEmail: 'leo@example.com', invitedByName: null,
   expiresAt: '2099-01-08T09:00:00Z',
 };
 

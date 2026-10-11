@@ -13,7 +13,7 @@ import {
   useRevokeInvitation,
   useWorkspaceMembers,
 } from '../api/queries';
-import type { Workspace, WorkspaceMember, WorkspaceRole } from '../api/types';
+import { personLabel, type Workspace, type WorkspaceMember, type WorkspaceRole } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
@@ -67,7 +67,7 @@ function DangerZone({ workspace }: { workspace: Workspace }) {
   const handOver = (event: FormEvent) => {
     event.preventDefault();
     const person = others.find((m) => m.userId === successor);
-    if (person && window.confirm(`Make ${person.email} the owner of ${workspace.name}? You will stay as an admin.`)) {
+    if (person && window.confirm(`Make ${personLabel(person.name, person.email)} the owner of ${workspace.name}? You will stay as an admin.`)) {
       transfer.mutate(successor, { onSuccess: () => setSuccessor('') });
     }
   };
@@ -92,7 +92,7 @@ function DangerZone({ workspace }: { workspace: Workspace }) {
                   <option value="">Choose a person…</option>
                   {others.map((m) => (
                     <option key={m.userId} value={m.userId}>
-                      {m.email}
+                      {m.name ? `${m.name} (${m.email})` : m.email}
                     </option>
                   ))}
                 </select>
@@ -174,7 +174,7 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
   const removeMember = (member: WorkspaceMember, leaving: boolean) => {
     const question = leaving
       ? `Leave ${workspace.name}? You will no longer see its ideas, and you will be taken off their teams.`
-      : `Remove ${member.email} from ${workspace.name}? They will be taken off the teams of its ideas.`;
+      : `Remove ${personLabel(member.name, member.email)} from ${workspace.name}? They will be taken off the teams of its ideas.`;
     if (window.confirm(question)) {
       remove.mutate(member.userId, { onSuccess: () => (leaving ? void navigate('/') : undefined) });
     }
@@ -192,13 +192,14 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
             return (
               <li key={member.userId}>
                 <span>
-                  {member.email}
+                  {personLabel(member.name, member.email)}
                   {isMe && <span className="muted"> (you)</span>}
+                  {member.name && <span className="muted small block">{member.email}</span>}
                 </span>
                 <span className="row">
                   {canManage && !isOwner ? (
                     <select
-                      aria-label={`Role of ${member.email}`}
+                      aria-label={`Role of ${personLabel(member.name, member.email)}`}
                       value={member.role}
                       disabled={changeRole.isPending}
                       onChange={(e) => changeRole.mutate({ userId: member.userId, role: e.target.value as WorkspaceRole })}
@@ -213,7 +214,7 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
                     <button
                       type="button"
                       className="button ghost small"
-                      aria-label={isMe ? 'Leave workspace' : `Remove ${member.email}`}
+                      aria-label={isMe ? 'Leave workspace' : `Remove ${personLabel(member.name, member.email)}`}
                       onClick={() => removeMember(member, isMe)}
                     >
                       {isMe ? 'Leave' : 'Remove'}
@@ -299,7 +300,7 @@ function OpenInvitations({ workspaceId }: { workspaceId: string }) {
             <span>
               {invitation.email}
               <span className="muted small block">
-                {invitation.role} · invited by {invitation.invitedByEmail} · until {formatDate(invitation.expiresAt.slice(0, 10))}
+                {invitation.role} · invited by {personLabel(invitation.invitedByName, invitation.invitedByEmail)} · until {formatDate(invitation.expiresAt.slice(0, 10))}
               </span>
             </span>
             <button

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 
 import { useAddMember, useMembers, useRemoveMember, useWorkspaceMembers } from '../api/queries';
-import type { Idea, Member } from '../api/types';
+import { personLabel, type Idea, type Member } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
@@ -15,7 +15,7 @@ export function TeamSection({ idea }: { idea: Idea }) {
     const leaving = member.email === account?.email;
     const question = leaving
       ? `Leave the team of “${idea.title}”? You will still see it, but no longer get its reminders.`
-      : `Remove ${member.email} from this idea’s team?`;
+      : `Remove ${personLabel(member.name, member.email)} from this idea’s team?`;
     if (window.confirm(question)) {
       remove.mutate(member.userId);
     }
@@ -33,8 +33,9 @@ export function TeamSection({ idea }: { idea: Idea }) {
             return (
               <li key={member.userId}>
                 <span>
-                  {member.email}
+                  {personLabel(member.name, member.email)}
                   {isMe && <span className="muted"> (you)</span>}
+                  {member.name && <span className="muted small block">{member.email}</span>}
                 </span>
                 <span className="row">
                   <span className="badge">{member.role}</span>
@@ -83,7 +84,7 @@ function AddMemberForm({ idea, team }: { idea: Idea; team: Member[] }) {
             <option value="">Choose a person…</option>
             {candidates.map((person) => (
               <option key={person.userId} value={person.email}>
-                {person.email}
+                {person.name ? `${person.name} (${person.email})` : person.email}
               </option>
             ))}
           </select>

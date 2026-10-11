@@ -10,5 +10,6 @@ using Pouspourika.IdeaVerse.Api.Workspaces;
 /// <param name="WorkspaceName">The workspace's name.</param>
 /// <param name="Role">The role the person gets on joining.</param>
 /// <param name="InvitedByEmail">The email address of who sent the invitation.</param>
+/// <param name="InvitedByName">Their display name, or <see langword="null"/> when they have not set one.</param>
 /// <param name="ExpiresAt">When the invitation stops working.</param>
-public sealed record ReceivedInvitationResponse(Guid Id, Guid WorkspaceId, string WorkspaceName, WorkspaceRole Role, string InvitedByEmail, DateTimeOffset ExpiresAt);
+public sealed record ReceivedInvitationResponse(Guid Id, Guid WorkspaceId, string WorkspaceName, WorkspaceRole Role, string InvitedByEmail, string? InvitedByName, DateTimeOffset ExpiresAt);

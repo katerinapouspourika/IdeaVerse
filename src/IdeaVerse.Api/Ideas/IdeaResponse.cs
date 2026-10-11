@@ -19,6 +19,7 @@ using Pouspourika.IdeaVerse.Api.Data;
 /// <param name="CanEdit">Whether the signed-in user may edit the idea, postpone it, and change its components.</param>
 /// <param name="CanManage">Whether the signed-in user may delete the idea and manage its team.</param>
 /// <param name="OwnerEmail">The email address of the idea's owner.</param>
+/// <param name="OwnerName">The display name of the idea's owner, or <see langword="null"/> when they have not set one.</param>
 /// <param name="MemberCount">How many team members, besides the owner, the idea has.</param>
 /// <param name="ComponentCount">How many components the idea has.</param>
 /// <param name="CompletedComponentCount">How many of those components are done.</param>
@@ -37,6 +38,7 @@ public sealed record IdeaResponse(
   bool CanEdit,
   bool CanManage,
   string OwnerEmail,
+  string? OwnerName,
   int MemberCount,
   int ComponentCount,
   int CompletedComponentCount,
@@ -64,6 +66,7 @@ public sealed record IdeaResponse(
       context.EditableIdeas(userId).Any(e => e.Id == i.Id),
       context.ManagedIdeas(userId).Any(e => e.Id == i.Id),
       i.Owner!.Email!,
+      i.Owner.DisplayName,
       i.Members.Count,
       i.Components.Count,
       i.Components.Count(c => c.IsDone),

@@ -10,5 +10,8 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
 {
   /// <inheritdoc/>
   public void Configure(EntityTypeBuilder<User> builder)
-    => builder.Property(u => u.TimeZone).HasMaxLength(User.TimeZoneMaxLength);
+  {
+    builder.Property(u => u.DisplayName).HasMaxLength(User.DisplayNameMaxLength);
+    builder.Property(u => u.TimeZone).HasMaxLength(User.TimeZoneMaxLength);
+  }
 }

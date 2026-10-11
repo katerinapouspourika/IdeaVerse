@@ -1,16 +1,20 @@
 import { ApiError } from '../api/client';
 
-/** Shows a request failure; field errors are shown next to their inputs instead. */
-export function ErrorMessage({ error }: { error: unknown }) {
+/**
+ * Shows a request failure. Field errors are shown next to their inputs instead, unless `includeFieldErrors` is set
+ * for forms whose errors don't map to inputs, such as Identity's password checks.
+ */
+export function ErrorMessage({ error, includeFieldErrors = false }: { error: unknown; includeFieldErrors?: boolean }) {
   if (!error) {
     return null;
   }
 
-  if (error instanceof ApiError && Object.keys(error.fieldErrors).length > 0) {
+  const fieldMessages = error instanceof ApiError ? Object.values(error.fieldErrors).flat() : [];
+  if (fieldMessages.length > 0 && !includeFieldErrors) {
     return null;
   }
 
-  const message = error instanceof Error ? error.message : 'Something went wrong.';
+  const message = fieldMessages.length > 0 ? fieldMessages.join(' ') : error instanceof Error ? error.message : 'Something went wrong.';
   return (
     <p role="alert" className="error">
       {message}

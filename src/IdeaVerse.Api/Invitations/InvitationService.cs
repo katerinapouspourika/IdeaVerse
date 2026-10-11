@@ -65,7 +65,7 @@ public sealed class InvitationService(
     var invitations = await context.Invitations
       .Where(i => i.WorkspaceId == workspaceId && i.ExpiresAt > now)
       .OrderByDescending(i => i.SentAt)
-      .Select(i => new InvitationResponse(i.Id, i.Email, i.Role, i.InvitedBy!.Email!, i.SentAt, i.ExpiresAt))
+      .Select(i => new InvitationResponse(i.Id, i.Email, i.Role, i.InvitedBy!.Email!, i.InvitedBy.DisplayName, i.SentAt, i.ExpiresAt))
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
     return (Outcome: ChangeOutcome.Changed, Invitations: invitations);
@@ -117,15 +117,21 @@ public sealed class InvitationService(
     invitation.SentAt = now;
     invitation.ExpiresAt = now + Invitation.Lifetime;
 
-    var details = await context.Workspaces
+    var workspaceName = await context.Workspaces
       .Where(w => w.Id == workspaceId)
-      .Select(w => new { w.Name, InviterEmail = context.Users.Where(u => u.Id == userId).Select(u => u.Email).Single() })
+      .Select(w => w.Name)
       .SingleAsync(cancellationToken)
       .ConfigureAwait(false);
-    await mailSender.SendAsync(InvitationEmail(invitation, details.Name, details.InviterEmail!), cancellationToken).ConfigureAwait(false);
+    var sender = await context.Users
+      .Where(u => u.Id == userId)
+      .Select(u => new { u.Email, u.DisplayName })
+      .SingleAsync(cancellationToken)
+      .ConfigureAwait(false);
+    var inviter = sender.DisplayName is { } name ? $"{name} ({sender.Email})" : sender.Email!;
+    await mailSender.SendAsync(InvitationEmail(invitation, workspaceName, inviter), cancellationToken).ConfigureAwait(false);
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-    var response = new InvitationResponse(invitation.Id, invitation.Email, invitation.Role, details.InviterEmail!, invitation.SentAt, invitation.ExpiresAt);
+    var response = new InvitationResponse(invitation.Id, invitation.Email, invitation.Role, sender.Email!, sender.DisplayName, invitation.SentAt, invitation.ExpiresAt);
     return new InvitationChangeResult(ChangeOutcome.Changed, response, isNew);
   }
 
@@ -161,7 +167,7 @@ public sealed class InvitationService(
   public async Task<IReadOnlyList<ReceivedInvitationResponse>> ListReceivedAsync(string userId, CancellationToken cancellationToken)
     => await Received(userId)
       .OrderBy(i => i.ExpiresAt)
-      .Select(i => new ReceivedInvitationResponse(i.Id, i.WorkspaceId, i.Workspace!.Name, i.Role, i.InvitedBy!.Email!, i.ExpiresAt))
+      .Select(i => new ReceivedInvitationResponse(i.Id, i.WorkspaceId, i.Workspace!.Name, i.Role, i.InvitedBy!.Email!, i.InvitedBy.DisplayName, i.ExpiresAt))
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
 
@@ -272,13 +278,13 @@ public sealed class InvitationService(
   /// </summary>
   /// <param name="invitation">The invitation.</param>
   /// <param name="workspaceName">The workspace's name.</param>
-  /// <param name="inviterEmail">The email address of who sent it.</param>
+  /// <param name="inviter">Who sent it: their name and email, or just their email.</param>
   /// <returns>The email.</returns>
-  private MailMessage InvitationEmail(Invitation invitation, string workspaceName, string inviterEmail)
+  private MailMessage InvitationEmail(Invitation invitation, string workspaceName, string inviter)
   {
     var link = app.Value.Link("/invitations");
     var expires = invitation.ExpiresAt.ToString("dddd d MMMM yyyy", CultureInfo.InvariantCulture);
-    var body = $"{inviterEmail} invited you to join {workspaceName} on IdeaVerse, where the team plans its ideas together.\n\n"
+    var body = $"{inviter} invited you to join {workspaceName} on IdeaVerse, where the team plans its ideas together.\n\n"
       + $"Open your invitations to accept:\n{link}\n\n"
       + $"New to IdeaVerse? Create an account with this email address ({invitation.Email}) and the invitation will be waiting for you.\n\n"
       + $"The invitation expires on {expires}. If you weren't expecting it, you can ignore this email.";
