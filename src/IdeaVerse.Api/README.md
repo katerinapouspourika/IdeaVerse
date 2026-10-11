@@ -56,18 +56,21 @@ The API also serves the web app (`src/IdeaVerse.Web`) from `wwwroot` when one is
 | `POST` | `/api/v1/invitations/{invitationId}/accept` | Join the workspace with the invited role; returns the workspace. |
 | `DELETE` | `/api/v1/invitations/{invitationId}` | Decline an invitation. |
 
-- **Ideas** — every idea belongs to a workspace, and everyone in it sees the idea; anyone else gets 404. The idea's owner, its team, and the workspace's owner and admins can edit and postpone it; the idea's owner and the workspace's owner and admins can delete it. Others get 403.
+- **Ideas** — every idea belongs to a workspace, and everyone in it sees the idea; anyone else gets 404. The idea's owner, its team, and the workspace's owner and admins can edit and postpone it; the idea's owner and the workspace's owner and admins can archive, restore, and delete it. Others get 403.
 
 | Method | Route | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/v1/workspaces/{workspaceId}/ideas?status=` | List a workspace's ideas, soonest target date first, optionally filtered by status. |
+| `GET` | `/api/v1/workspaces/{workspaceId}/ideas?status=&search=&tag=&sort=&archived=` | List a workspace's active ideas (or, with `archived=true`, its archived ones). `search` matches title or description ignoring case, `tag` one tag; `sort` is `TargetDate` (default, soonest first), `Title`, `Updated`, or `Created` (both newest first). |
+| `GET` | `/api/v1/workspaces/{workspaceId}/tags` | The tags the workspace's ideas use, alphabetically. |
 | `GET` | `/api/v1/ideas/{id}` | Get one idea. |
-| `POST` | `/api/v1/workspaces/{workspaceId}/ideas` | Create an idea in a workspace, owned by the user; the target date must be today or later. |
-| `PUT` | `/api/v1/ideas/{id}` | Replace title, description, target date, and status. A changed date must be today or later. |
+| `POST` | `/api/v1/workspaces/{workspaceId}/ideas` | Create an idea in a workspace, owned by the user; the target date must be today or later. Optional `tags`. |
+| `PUT` | `/api/v1/ideas/{id}` | Replace title, description, target date, and status, and `tags` when given. A changed date must be today or later. |
 | `POST` | `/api/v1/ideas/{id}/postpone` | Move to a later date, mark `Postponed`, and count the postponement. Completed ideas cannot be postponed. |
+| `POST` | `/api/v1/ideas/{id}/archive` | Archive an idea: it leaves the list, is no longer overdue, and its team and assignees get no reminders. 409 when already archived. |
+| `POST` | `/api/v1/ideas/{id}/restore` | Bring an archived idea back. 409 when it is not archived. |
 | `DELETE` | `/api/v1/ideas/{id}` | Delete an idea. |
 
-Statuses are `Planned`, `InProgress`, `Postponed`, and `Done`. Responses include `isOverdue` (the target date has passed and the idea is not done), the `workspaceId`, the `ownerEmail`, the caller's `role` (`Owner`, `Member` of the team, or `Viewer`), whether they `canEdit` and `canManage` it, `memberCount`, and component progress as `componentCount` and `completedComponentCount`.
+Statuses are `Planned`, `InProgress`, `Postponed`, and `Done`. Tags are trimmed, lower-cased, and deduplicated; an idea has at most 10, of up to 30 characters, without commas. Responses include `tags`, `archivedAt`, `isOverdue` (the target date has passed and the idea is neither done nor archived), the `workspaceId`, the `ownerEmail`, the caller's `role` (`Owner`, `Member` of the team, or `Viewer`), whether they `canEdit` and `canManage` it, `memberCount`, and component progress as `componentCount` and `completedComponentCount`.
 
 - **Components** — the things an idea needs before it can be implemented (a budget, a designer, a venue), under `/api/v1/ideas/{ideaId}/components`. Everyone in the workspace sees them; those who can edit the idea change them. Each has a title, optional notes, a done flag with the time it was completed, and a position. Deleting an idea deletes its components.
 
@@ -88,7 +91,7 @@ Validation errors return `400` with RFC 9457 problem details whose `errors` are 
 | `POST` | `/api/v1/ideas/{ideaId}/members` | Add the person in the workspace with `email`. Emails of no one in the workspace return 400; existing members return 409. |
 | `DELETE` | `/api/v1/ideas/{ideaId}/members/{userId}` | Remove a member, or leave. The idea's owner cannot be removed (409). |
 
-- **Discussion and activity** — everyone who can see an idea can read and post comments under `/api/v1/ideas/{ideaId}/comments`. Authors edit their own (`PUT`); authors and the workspace's owner and admins delete them (`DELETE`); others get 403. Comments carry `canEdit` and `canDelete` for the caller, and stay without an author if their author deletes their account. `GET /api/v1/ideas/{ideaId}/activity` returns the idea's 100 most recent changes, newest first: created, renamed, description edited, rescheduled, status changed, postponed, components added, ticked off, reopened, or removed, and team members added, removed, or leaving, each with who did it and a `detail` such as the new status or the component's title.
+- **Discussion and activity** — everyone who can see an idea can read and post comments under `/api/v1/ideas/{ideaId}/comments`. Authors edit their own (`PUT`); authors and the workspace's owner and admins delete them (`DELETE`); others get 403. Comments carry `canEdit` and `canDelete` for the caller, and stay without an author if their author deletes their account. `GET /api/v1/ideas/{ideaId}/activity` returns the idea's 100 most recent changes, newest first: created, renamed, description edited, rescheduled, status changed, postponed, components added, ticked off, reopened, or removed, team members added, removed, or leaving, tags changed, and archiving or restoring, each with who did it and a `detail` such as the new status or the component's title.
 
 - **AI help** — Claude-powered help from `src/IdeaVerse.Agents`, for people in the workspace. Each request counts once against the workspace's `Ai:DailyLimitPerWorkspace` for the UTC day; a request the AI fails to answer is not counted. Without `ANTHROPIC_API_KEY`, or with `Ai:Enabled` off, the requests return 503 and the status reports `enabled: false`, so the web app hides AI help.
 

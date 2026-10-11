@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { request } from './client';
 import type {
@@ -12,8 +12,8 @@ import type {
   ComponentUpdate,
   Idea,
   IdeaImprovement,
+  IdeaFilter,
   IdeaInput,
-  IdeaStatus,
   IdeaUpdate,
   Invitation,
   Member,
@@ -30,7 +30,8 @@ export const keys = {
   invitations: (workspaceId: string) => ['workspaces', workspaceId, 'invitations'] as const,
   receivedInvitations: ['invitations'] as const,
   ai: (workspaceId: string) => ['workspaces', workspaceId, 'ai'] as const,
-  ideas: (workspaceId: string, status?: IdeaStatus) => ['ideas', workspaceId, status ?? 'all'] as const,
+  ideas: (workspaceId: string, query: string) => ['ideas', workspaceId, query] as const,
+  tags: (workspaceId: string) => ['tags', workspaceId] as const,
   idea: (id: string) => ['idea', id] as const,
   components: (ideaId: string) => ['idea', ideaId, 'components'] as const,
   members: (ideaId: string) => ['idea', ideaId, 'members'] as const,
@@ -147,11 +148,31 @@ export function useDeclineInvitation() {
   });
 }
 
-export function useIdeas(workspaceId: string, status?: IdeaStatus) {
-  const query = status ? `?status=${status}` : '';
+/** The query string for `filter`, leaving out the parts that are not set or are defaults. */
+export function ideaQuery(filter: IdeaFilter): string {
+  const params = new URLSearchParams();
+  if (filter.status) params.set('status', filter.status);
+  if (filter.search?.trim()) params.set('search', filter.search.trim());
+  if (filter.tag) params.set('tag', filter.tag);
+  if (filter.sort && filter.sort !== 'TargetDate') params.set('sort', filter.sort);
+  if (filter.archived) params.set('archived', 'true');
+  const query = params.toString();
+  return query ? `?${query}` : '';
+}
+
+export function useIdeas(workspaceId: string, filter: IdeaFilter = {}) {
+  const query = ideaQuery(filter);
   return useQuery({
-    queryKey: keys.ideas(workspaceId, status),
+    queryKey: keys.ideas(workspaceId, query),
     queryFn: () => request<Idea[]>('GET', `/api/v1/workspaces/${workspaceId}/ideas${query}`),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useTags(workspaceId: string) {
+  return useQuery({
+    queryKey: keys.tags(workspaceId),
+    queryFn: () => request<string[]>('GET', `/api/v1/workspaces/${workspaceId}/tags`),
   });
 }
 
@@ -178,6 +199,7 @@ function useInvalidateIdea() {
   const client = useQueryClient();
   return (ideaId?: string) => {
     void client.invalidateQueries({ queryKey: ['ideas'] });
+    void client.invalidateQueries({ queryKey: ['tags'] });
     if (ideaId) {
       void client.invalidateQueries({ queryKey: ['idea', ideaId] });
     }
@@ -208,6 +230,14 @@ export function usePostponeIdea(id: string) {
   });
 }
 
+export function useArchiveIdea(id: string) {
+  const invalidate = useInvalidateIdea();
+  return useMutation({
+    mutationFn: (archive: boolean) => request<Idea>('POST', `/api/v1/ideas/${id}/${archive ? 'archive' : 'restore'}`),
+    onSuccess: () => invalidate(id),
+  });
+}
+
 export function useDeleteIdea(id: string) {
   const client = useQueryClient();
   return useMutation({
@@ -215,6 +245,7 @@ export function useDeleteIdea(id: string) {
     onSuccess: () => {
       client.removeQueries({ queryKey: ['idea', id] });
       void client.invalidateQueries({ queryKey: ['ideas'] });
+      void client.invalidateQueries({ queryKey: ['tags'] });
     },
   });
 }

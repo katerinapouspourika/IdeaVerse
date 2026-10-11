@@ -12,8 +12,10 @@ using System.ComponentModel.DataAnnotations;
 /// <param name="Description">An optional description.</param>
 /// <param name="TargetDate">The date the idea should be implemented by.</param>
 /// <param name="Status">The lifecycle status.</param>
+/// <param name="Tags">The idea's tags; left unchanged when omitted. They are trimmed, lower-cased, and deduplicated.</param>
 public sealed record UpdateIdeaRequest(
   [property: Required(AllowEmptyStrings = false), MaxLength(Idea.TitleMaxLength)] string Title,
   [property: MaxLength(Idea.DescriptionMaxLength)] string? Description,
   DateOnly TargetDate,
-  IdeaStatus Status);
+  IdeaStatus Status,
+  IReadOnlyList<string>? Tags = null);

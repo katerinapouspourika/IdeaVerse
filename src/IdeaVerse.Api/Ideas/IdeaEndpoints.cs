@@ -29,34 +29,55 @@ internal static class IdeaEndpoints
     var workspaceIdeas = endpoints.MapGroup("/api/v1/workspaces/{workspaceId:guid}/ideas").WithTags("Ideas").RequireAuthorization();
     workspaceIdeas.MapGet("/", ListAsync);
     workspaceIdeas.MapPost("/", CreateAsync).WithValidation<CreateIdeaRequest>();
+    endpoints.MapGet("/api/v1/workspaces/{workspaceId:guid}/tags", ListTagsAsync).WithTags("Ideas").RequireAuthorization();
 
     var group = endpoints.MapGroup("/api/v1/ideas").WithTags("Ideas").RequireAuthorization();
     group.MapGet("/{id:guid}", GetAsync).WithName(GetIdeaRouteName);
     group.MapPut("/{id:guid}", UpdateAsync).WithValidation<UpdateIdeaRequest>();
     group.MapPost("/{id:guid}/postpone", PostponeAsync).WithValidation<PostponeIdeaRequest>();
+    group.MapPost("/{id:guid}/archive", ArchiveAsync);
+    group.MapPost("/{id:guid}/restore", RestoreAsync);
     group.MapDelete("/{id:guid}", DeleteAsync);
 
     return endpoints;
   }
 
   /// <summary>
-  /// Lists a workspace's ideas, soonest target date first.
+  /// Lists a workspace's active ideas, or its archived ones, filtered and ordered by the query string.
   /// </summary>
   /// <param name="workspaceId">The workspace identifier.</param>
-  /// <param name="status">Optional status to filter by.</param>
+  /// <param name="filter">Filters and order.</param>
   /// <param name="user">The signed-in user.</param>
   /// <param name="service">The idea service.</param>
   /// <param name="cancellationToken">Token to cancel the request.</param>
   /// <returns>The ideas, or 404 when the user is not in the workspace.</returns>
   private static async Task<Results<Ok<IdeaResponse[]>, NotFound>> ListAsync(
     Guid workspaceId,
-    IdeaStatus? status,
+    [AsParameters] IdeaListQuery filter,
     ClaimsPrincipal user,
     IdeaService service,
     CancellationToken cancellationToken)
   {
-    var ideas = await service.ListAsync(user.GetUserId(), workspaceId, status, cancellationToken).ConfigureAwait(false);
+    var ideas = await service.ListAsync(user.GetUserId(), workspaceId, filter, cancellationToken).ConfigureAwait(false);
     return ideas is null ? TypedResults.NotFound() : TypedResults.Ok(ideas.ToArray());
+  }
+
+  /// <summary>
+  /// Lists the tags used by a workspace's ideas, alphabetically.
+  /// </summary>
+  /// <param name="workspaceId">The workspace identifier.</param>
+  /// <param name="user">The signed-in user.</param>
+  /// <param name="service">The idea service.</param>
+  /// <param name="cancellationToken">Token to cancel the request.</param>
+  /// <returns>The tags, or 404 when the user is not in the workspace.</returns>
+  private static async Task<Results<Ok<string[]>, NotFound>> ListTagsAsync(
+    Guid workspaceId,
+    ClaimsPrincipal user,
+    IdeaService service,
+    CancellationToken cancellationToken)
+  {
+    var tags = await service.ListTagsAsync(user.GetUserId(), workspaceId, cancellationToken).ConfigureAwait(false);
+    return tags is null ? TypedResults.NotFound() : TypedResults.Ok(tags.ToArray());
   }
 
   /// <summary>
@@ -145,6 +166,36 @@ internal static class IdeaEndpoints
     var result = await service.PostponeAsync(user.GetUserId(), id, request, cancellationToken).ConfigureAwait(false);
     return ToHttpResult(result);
   }
+
+  /// <summary>
+  /// Archives an idea: it leaves the list and stops sending reminders, and can be restored.
+  /// </summary>
+  /// <param name="id">The idea identifier.</param>
+  /// <param name="user">The signed-in user.</param>
+  /// <param name="service">The idea service.</param>
+  /// <param name="cancellationToken">Token to cancel the request.</param>
+  /// <returns>The archived idea, 404, 403 when the user is neither the idea's owner nor a workspace admin, or 409 when it is already archived.</returns>
+  private static async Task<Results<Ok<IdeaResponse>, NotFound, ValidationProblem, ProblemHttpResult>> ArchiveAsync(
+    Guid id,
+    ClaimsPrincipal user,
+    IdeaService service,
+    CancellationToken cancellationToken)
+    => ToHttpResult(await service.SetArchivedAsync(user.GetUserId(), id, archive: true, cancellationToken).ConfigureAwait(false));
+
+  /// <summary>
+  /// Brings an archived idea back to the list.
+  /// </summary>
+  /// <param name="id">The idea identifier.</param>
+  /// <param name="user">The signed-in user.</param>
+  /// <param name="service">The idea service.</param>
+  /// <param name="cancellationToken">Token to cancel the request.</param>
+  /// <returns>The restored idea, 404, 403 when the user is neither the idea's owner nor a workspace admin, or 409 when it is not archived.</returns>
+  private static async Task<Results<Ok<IdeaResponse>, NotFound, ValidationProblem, ProblemHttpResult>> RestoreAsync(
+    Guid id,
+    ClaimsPrincipal user,
+    IdeaService service,
+    CancellationToken cancellationToken)
+    => ToHttpResult(await service.SetArchivedAsync(user.GetUserId(), id, archive: false, cancellationToken).ConfigureAwait(false));
 
   /// <summary>
   /// Deletes an idea.

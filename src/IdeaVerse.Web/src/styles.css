@@ -675,3 +675,103 @@ h3 {
   flex-direction: column;
   align-items: stretch;
 }
+
+.toolbar .field {
+  min-width: 160px;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tag {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 0.8rem;
+}
+
+.archived-banner {
+  background: var(--warn-soft);
+  color: var(--warn);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+}
+
+.calendar {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.calendar th {
+  color: var(--muted);
+  font-weight: 600;
+  padding: 4px;
+}
+
+.calendar td {
+  border: 1px solid var(--border);
+  vertical-align: top;
+  height: 72px;
+  padding: 4px;
+  overflow: hidden;
+}
+
+.calendar td.outside {
+  background: var(--bg);
+}
+
+.calendar td.today .day {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-radius: 999px;
+  padding: 0 6px;
+}
+
+.calendar .day {
+  display: inline-block;
+  margin-bottom: 2px;
+  color: var(--muted);
+}
+
+.calendar-idea {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 6px;
+  padding: 1px 4px;
+  margin-top: 2px;
+  text-decoration: none;
+}
+
+.calendar-idea.is-overdue {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.calendar-idea.is-done {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+@media (max-width: 600px) {
+  .calendar td {
+    height: 56px;
+    padding: 2px;
+  }
+
+  .calendar th {
+    font-size: 0.7rem;
+  }
+}

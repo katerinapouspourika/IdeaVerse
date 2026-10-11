@@ -1,14 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 
 import { daysUntil, describeDue, formatDate } from '../api/dates';
 import { BrainstormPanel, describeBrainstormed } from '../ai/BrainstormPanel';
-import { useAiStatus, useIdeas } from '../api/queries';
-import { personLabel, statuses, statusLabels, type Idea, type IdeaStatus, type Workspace } from '../api/types';
+import { useAiStatus, useIdeas, useTags } from '../api/queries';
+import { personLabel, sortLabels, statuses, statusLabels, type Idea, type IdeaSort, type IdeaStatus, type Workspace } from '../api/types';
+import { Field } from '../components/Field';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { Progress } from '../components/Progress';
 import { StatusBadge } from '../components/StatusBadge';
+import { Tags } from '../components/Tags';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
+import { IdeaCalendar } from './IdeaCalendar';
 import { NewIdeaForm } from './NewIdeaForm';
 import { WelcomePage } from './WelcomePage';
 
@@ -26,12 +29,24 @@ export function IdeasPage() {
   return <WorkspaceIdeas key={current.id} workspace={current} />;
 }
 
+/** Which ideas the status tabs show: all active ones, one status, or the archive. */
+type Tab = IdeaStatus | 'All' | 'Archived';
+
 function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
-  const [status, setStatus] = useState<IdeaStatus | undefined>();
+  const [tab, setTab] = useState<Tab>('All');
+  const [search, setSearch] = useState('');
+  const [tag, setTag] = useState('');
+  const [sort, setSort] = useState<IdeaSort>('TargetDate');
+  const [view, setView] = useState<'list' | 'calendar'>('list');
   const [adding, setAdding] = useState<{ title: string; description: string } | null>(null);
   const [brainstorming, setBrainstorming] = useState(false);
-  const ideas = useIdeas(workspace.id, status);
+  const debouncedSearch = useDebounced(search, 250);
+  const archived = tab === 'Archived';
+  const status = tab === 'All' || archived ? undefined : tab;
+  const ideas = useIdeas(workspace.id, { status, search: debouncedSearch, tag: tag || undefined, sort, archived });
+  const tags = useTags(workspace.id);
   const ai = useAiStatus(workspace.id);
+  const filtered = status !== undefined || debouncedSearch.trim() !== '' || tag !== '';
 
   return (
     <div className="stack">
@@ -68,17 +83,70 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
       )}
 
       <nav className="tabs" aria-label="Filter by status">
-        <FilterTab label="All" active={status === undefined} onClick={() => setStatus(undefined)} />
+        <FilterTab label="All" active={tab === 'All'} onClick={() => setTab('All')} />
         {statuses.map((s) => (
-          <FilterTab key={s} label={statusLabels[s]} active={status === s} onClick={() => setStatus(s)} />
+          <FilterTab key={s} label={statusLabels[s]} active={tab === s} onClick={() => setTab(s)} />
         ))}
+        <FilterTab label="Archived" active={archived} onClick={() => setTab('Archived')} />
       </nav>
+
+      <div className="row wrap end toolbar">
+        <Field label="Search">
+          {(props) => (
+            <input {...props} type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Title or description" />
+          )}
+        </Field>
+        {tags.data && tags.data.length > 0 && (
+          <Field label="Tag">
+            {(props) => (
+              <select {...props} value={tag} onChange={(e) => setTag(e.target.value)}>
+                <option value="">All tags</option>
+                {tags.data.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+        )}
+        <Field label="Sort by">
+          {(props) => (
+            <select {...props} value={sort} onChange={(e) => setSort(e.target.value as IdeaSort)}>
+              {(Object.keys(sortLabels) as IdeaSort[]).map((s) => (
+                <option key={s} value={s}>
+                  {sortLabels[s]}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+        <div className="tabs" role="group" aria-label="View">
+          <FilterTab label="List" active={view === 'list'} onClick={() => setView('list')} />
+          <FilterTab label="Calendar" active={view === 'calendar'} onClick={() => setView('calendar')} />
+        </div>
+      </div>
 
       {ideas.isLoading && <p className="muted">Loading ideas…</p>}
       <ErrorMessage error={ideas.error} />
-      {ideas.data && <IdeaList ideas={ideas.data} filtered={status !== undefined} />}
+      {ideas.data &&
+        (view === 'calendar' ? (
+          <IdeaCalendar ideas={ideas.data} />
+        ) : (
+          <IdeaList ideas={ideas.data} filtered={filtered} archived={archived} />
+        ))}
     </div>
   );
+}
+
+/** `value`, once it has stopped changing for `delay` milliseconds. */
+function useDebounced<T>(value: T, delay: number): T {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return settled;
 }
 
 function FilterTab({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
@@ -89,17 +157,23 @@ function FilterTab({ label, active, onClick }: { label: string; active: boolean;
   );
 }
 
-function IdeaList({ ideas, filtered }: { ideas: Idea[]; filtered: boolean }) {
+function IdeaList({ ideas, filtered, archived }: { ideas: Idea[]; filtered: boolean; archived: boolean }) {
   if (ideas.length === 0) {
     return (
       <div className="card empty">
-        <p>{filtered ? 'No ideas with this status.' : 'No ideas yet. Add your first one and give it a date.'}</p>
+        <p>
+          {filtered
+            ? 'No ideas match.'
+            : archived
+              ? 'Nothing archived. Archive an idea you’ve set aside to keep it out of the list without deleting it.'
+              : 'No ideas yet. Add your first one and give it a date.'}
+        </p>
       </div>
     );
   }
 
   const overdue = ideas.filter((i) => i.isOverdue).length;
-  const dueSoon = ideas.filter((i) => i.status !== 'Done' && !i.isOverdue && daysUntil(i.targetDate) <= 7).length;
+  const dueSoon = archived ? 0 : ideas.filter((i) => i.status !== 'Done' && !i.isOverdue && daysUntil(i.targetDate) <= 7).length;
 
   return (
     <>
@@ -125,9 +199,10 @@ function IdeaList({ ideas, filtered }: { ideas: Idea[]; filtered: boolean }) {
                 </span>
                 <Progress done={idea.completedComponentCount} total={idea.componentCount} />
               </div>
-              <div className="row small muted">
+              <div className="row small muted wrap">
                 <span>{describeTeam(idea)}</span>
                 {idea.postponeCount > 0 && <span>Postponed {idea.postponeCount}×</span>}
+                <Tags tags={idea.tags} />
               </div>
             </Link>
           </li>

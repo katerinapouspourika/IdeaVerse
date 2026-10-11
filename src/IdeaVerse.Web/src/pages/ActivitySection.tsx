@@ -36,6 +36,12 @@ export function describeActivity(entry: ActivityEntry): string {
       return `${who} took ${detail} off the team`;
     case 'MemberLeft':
       return `${who} left the team`;
+    case 'TagsChanged':
+      return detail ? `${who} set the tags to ${detail}` : `${who} removed the tags`;
+    case 'Archived':
+      return `${who} archived the idea`;
+    case 'Restored':
+      return `${who} restored the idea`;
   }
 }
 
