@@ -3,6 +3,7 @@ namespace Pouspourika.IdeaVerse.Api.Members;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
+using Pouspourika.IdeaVerse.Api.Activity;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Ideas;
 
@@ -99,6 +100,7 @@ public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> 
 
     var member = new IdeaMember { IdeaId = ideaId, UserId = account.UserId, AddedAt = timeProvider.GetUtcNow() };
     context.IdeaMembers.Add(member);
+    context.Record(ideaId, userId, ActivityKind.MemberAdded, member.AddedAt, account.DisplayName ?? account.Email);
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     return MemberChangeResult.Changed(new MemberResponse(account.UserId, account.Email!, account.DisplayName, IdeaRole.Member, member.AddedAt));
   }
@@ -133,10 +135,27 @@ public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> 
       return MemberChangeResult.Forbidden("Only the idea's owner and the workspace's admins can remove other team members.");
     }
 
-    var removed = await context.IdeaMembers
-      .Where(m => m.IdeaId == ideaId && m.UserId == memberUserId)
-      .ExecuteDeleteAsync(cancellationToken)
+    var member = await context.IdeaMembers
+      .Include(m => m.User)
+      .FirstOrDefaultAsync(m => m.IdeaId == ideaId && m.UserId == memberUserId, cancellationToken)
       .ConfigureAwait(false);
-    return removed > 0 ? MemberChangeResult.Changed() : MemberChangeResult.NotFound();
+    if (member is null)
+    {
+      return MemberChangeResult.NotFound();
+    }
+
+    context.IdeaMembers.Remove(member);
+    var now = timeProvider.GetUtcNow();
+    if (userId == memberUserId)
+    {
+      context.Record(ideaId, userId, ActivityKind.MemberLeft, now);
+    }
+    else
+    {
+      context.Record(ideaId, userId, ActivityKind.MemberRemoved, now, member.User?.DisplayName ?? member.User?.Email);
+    }
+
+    await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    return MemberChangeResult.Changed();
   }
 }

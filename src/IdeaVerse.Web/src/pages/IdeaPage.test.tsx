@@ -30,6 +30,7 @@ function ideaRoutes(access: Partial<Idea>, team: Member[]) {
     ...signedIn,
     'GET /api/v1/ideas/idea-1': { status: 200, body: anIdea({ ...access, componentCount: 1 }) },
     'GET /api/v1/ideas/idea-1/components': { status: 200, body: [budget] },
+    'GET /api/v1/ideas/idea-1/comments': { status: 200, body: [] },
     'GET /api/v1/ideas/idea-1/members': { status: 200, body: team },
     'GET /api/v1/workspaces/ws-1/members': { status: 200, body: people },
   };
