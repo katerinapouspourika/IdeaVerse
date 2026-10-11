@@ -14,6 +14,8 @@ public sealed class WebAppTests : IDisposable
     File.WriteAllText(Path.Combine(webRoot.FullName, "app.html"), "<!doctype html><title>App</title><div id=\"root\"></div>");
     File.WriteAllText(Path.Combine(webRoot.FullName, "404.html"), "<!doctype html><title>Page not found</title><div id=\"root\"></div>");
     File.WriteAllText(Path.Combine(webRoot.FullName, "logo.png"), "png");
+    File.WriteAllText(Path.Combine(webRoot.FullName, "sw.js"), "self.addEventListener('fetch', () => {});");
+    File.WriteAllText(Path.Combine(webRoot.FullName, "manifest.webmanifest"), "{}");
     Directory.CreateDirectory(Path.Combine(webRoot.FullName, "how-it-works"));
     File.WriteAllText(Path.Combine(webRoot.FullName, "how-it-works", "clip.mp4"), "mp4");
     Directory.CreateDirectory(Path.Combine(webRoot.FullName, "assets"));
@@ -75,6 +77,31 @@ public sealed class WebAppTests : IDisposable
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
     await Assert.That(response.Content.Headers.ContentType!.ToString()).IsEqualTo("text/html; charset=utf-8");
     await Assert.That(await response.Content.ReadAsByteArrayAsync()).IsEmpty();
+  }
+
+  [Test]
+  public async Task Get_ServiceWorker_IsServedAsScriptAndAlwaysRevalidated()
+  {
+    await using var factory = new IdeaVerseApiFactory(webRoot.FullName);
+    var client = factory.CreateClient();
+
+    using var response = await client.GetAsync("/sw.js");
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+    await Assert.That(response.Content.Headers.ContentType!.MediaType).IsEqualTo("text/javascript");
+    await Assert.That(response.Headers.CacheControl!.NoCache).IsTrue();
+  }
+
+  [Test]
+  public async Task Get_Manifest_IsServedAsWebAppManifest()
+  {
+    await using var factory = new IdeaVerseApiFactory(webRoot.FullName);
+    var client = factory.CreateClient();
+
+    using var response = await client.GetAsync("/manifest.webmanifest");
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+    await Assert.That(response.Content.Headers.ContentType!.MediaType).IsEqualTo("application/manifest+json");
   }
 
   [Test]

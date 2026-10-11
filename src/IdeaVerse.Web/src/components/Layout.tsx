@@ -1,4 +1,4 @@
-import { LogOut, Menu as MenuIcon, Settings, X } from 'lucide-react';
+import { Download, LogOut, Menu as MenuIcon, Settings, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, ScrollRestoration, useLocation, useNavigate } from 'react-router';
 
@@ -12,6 +12,7 @@ import { FeedbackProvider } from './Feedback';
 import { Menu } from './Menu';
 import { NotificationBell } from './NotificationBell';
 import { ThemeToggle } from './ThemeToggle';
+import { useInstallPrompt } from './useInstallPrompt';
 
 /** Pages that lay themselves out across the full width, such as the public home page. */
 const fullWidthPaths = ['/how-it-works', '/contact'];
@@ -102,6 +103,7 @@ function AppBar() {
   const { current } = useWorkspace();
   const navigate = useNavigate();
   const menu = useMenu();
+  const { install } = useInstallPrompt();
 
   const signOut = async () => {
     await logout();
@@ -146,6 +148,7 @@ function AppBar() {
             }
             items={[
               { label: 'Settings', icon: <Settings aria-hidden="true" size={16} />, onSelect: () => void navigate('/settings') },
+              ...(install ? [{ label: 'Install app', icon: <Download aria-hidden="true" size={16} />, onSelect: () => void install() }] : []),
               { label: 'Sign out', icon: <LogOut aria-hidden="true" size={16} />, onSelect: () => void signOut() },
             ]}
           />
