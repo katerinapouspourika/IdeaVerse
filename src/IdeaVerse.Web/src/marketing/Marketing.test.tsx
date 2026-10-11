@@ -84,6 +84,27 @@ describe('Public pages', () => {
   });
 });
 
+describe('Public page layout', () => {
+  it.each(['/pricing', '/templates', '/templates/product-launch', '/use-cases/marketing-teams', '/compare', '/privacy'])(
+    'runs %s edge to edge, like the home page',
+    async (path) => {
+      fakeApi(signedOut);
+      renderApp(path);
+
+      await screen.findByRole('heading', { level: 1 });
+      expect(screen.getByRole('main')).toHaveClass('full');
+    },
+  );
+
+  it('keeps signed-in pages in the content column', async () => {
+    fakeApi({ ...signedIn, 'GET /api/v1/workspaces/ws-1/members': { status: 200, body: [] } });
+    renderApp('/settings');
+
+    await screen.findByRole('heading', { level: 1, name: 'Settings' });
+    expect(screen.getByRole('main')).not.toHaveClass('full');
+  });
+});
+
 describe('Contact page', () => {
   it('sends a message and thanks the visitor', async () => {
     const calls = fakeApi({ ...signedOut, 'POST /api/v1/contact': { status: 204 } });
