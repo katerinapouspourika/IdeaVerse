@@ -14,6 +14,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
 import { usePageMeta } from '../seo/usePageMeta';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
+import { IdeaBoard } from './IdeaBoard';
 import { IdeaCalendar } from './IdeaCalendar';
 import { NewIdeaForm } from './NewIdeaForm';
 import { WelcomePage } from './WelcomePage';
@@ -41,7 +42,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const [search, setSearch] = useState('');
   const [tag, setTag] = useState('');
   const [sort, setSort] = useState<IdeaSort>('TargetDate');
-  const [view, setView] = useState<'list' | 'calendar'>('list');
+  const [view, setView] = useState<'list' | 'board' | 'calendar'>('list');
   const location = useLocation();
   const navigate = useNavigate();
   const openForm = (location.state as { adding?: boolean } | null)?.adding === true;
@@ -56,7 +57,8 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const [brainstorming, setBrainstorming] = useState(false);
   const debouncedSearch = useDebounced(search, 250);
   const archived = tab === 'Archived';
-  const status = tab === 'All' || archived ? undefined : tab;
+  // The board shows every status in its own column, so it ignores the status tabs.
+  const status = tab === 'All' || archived || view === 'board' ? undefined : tab;
   const ideas = useIdeas(workspace.id, { status, search: debouncedSearch, tag: tag || undefined, sort, archived });
   const tags = useTags(workspace.id);
   const ai = useAiStatus(workspace.id);
@@ -97,10 +99,9 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
       )}
 
       <nav className="tabs" aria-label="Filter by status">
-        <FilterTab label="All" active={tab === 'All'} onClick={() => setTab('All')} />
-        {statuses.map((s) => (
-          <FilterTab key={s} label={statusLabels[s]} active={tab === s} onClick={() => setTab(s)} />
-        ))}
+        <FilterTab label="All" active={tab === 'All' || (view === 'board' && !archived)} onClick={() => setTab('All')} />
+        {view !== 'board' &&
+          statuses.map((s) => <FilterTab key={s} label={statusLabels[s]} active={tab === s} onClick={() => setTab(s)} />)}
         <FilterTab label="Archived" active={archived} onClick={() => setTab('Archived')} />
       </nav>
 
@@ -137,6 +138,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
         </Field>
         <div className="tabs" role="group" aria-label="View">
           <FilterTab label="List" active={view === 'list'} onClick={() => setView('list')} />
+          <FilterTab label="Board" active={view === 'board'} onClick={() => setView('board')} />
           <FilterTab label="Calendar" active={view === 'calendar'} onClick={() => setView('calendar')} />
         </div>
       </div>
@@ -146,6 +148,8 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
       {ideas.data &&
         (view === 'calendar' ? (
           <IdeaCalendar ideas={ideas.data} />
+        ) : view === 'board' ? (
+          <IdeaBoard ideas={ideas.data} />
         ) : (
           <IdeaList
             ideas={ideas.data}

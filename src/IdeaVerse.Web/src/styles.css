@@ -2056,3 +2056,96 @@ a:focus-visible {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* Board view: a column per status, scrolling sideways on narrow screens. */
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.board-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 240px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--bg-tint);
+  border: 2px dashed transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.board-column.drop-target {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.board-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1rem;
+}
+
+.board-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.board-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+}
+
+.board-card[draggable='true'] {
+  cursor: grab;
+}
+
+.board-card.dragging {
+  opacity: 0.5;
+}
+
+.board-card.is-overdue {
+  border-left: 4px solid var(--danger);
+}
+
+.board-title {
+  color: var(--text);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.board-title:hover {
+  color: var(--accent);
+}
+
+.grip {
+  flex: none;
+  color: var(--muted);
+}
+
+.board-move select {
+  width: 100%;
+  min-height: 34px;
+  padding: 4px 8px;
+}
+
+.board-empty {
+  margin: 0;
+  text-align: center;
+}
+
+@media (max-width: 860px) {
+  .board {
+    grid-template-columns: repeat(4, minmax(240px, 80vw));
+  }
+}
