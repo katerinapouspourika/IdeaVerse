@@ -2,6 +2,7 @@ import { ArrowLeft, Check } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 
 import { useAuth } from '../auth/AuthContext';
+import { cardGridClass } from '../components/cardGrid';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { publicPages } from '../seo/pages';
 import { usePageMeta } from '../seo/usePageMeta';
@@ -41,7 +42,7 @@ export function UseCasesPage() {
     <div className="landing">
       <Hero eyebrow="Use cases" title="Made for teams with more ideas than time" lead="See how different teams use IdeaVerse to plan their ideas and finish them on time." />
       <section className="landing-section">
-        <ul className="landing-inner template-grid">
+        <ul className={`landing-inner ${cardGridClass(useCases.length)}`}>
           {useCases.map((u) => (
             <li key={u.slug}>
               <Link to={`/use-cases/${u.slug}`} className="card stack template-card">
@@ -71,7 +72,7 @@ function UseCaseDetail({ useCase }: { useCase: UseCase }) {
     <div className="landing">
       <Hero eyebrow={useCase.audience} title={useCase.headline} lead={useCase.summary} />
       <section className="landing-section">
-        <div className="landing-inner stack solution">
+        <div className="landing-inner stack">
           <nav aria-label="Breadcrumb" className="breadcrumb small">
             <Link to="/use-cases">
               <ArrowLeft aria-hidden="true" size={16} /> All use cases
@@ -91,7 +92,7 @@ function UseCaseDetail({ useCase }: { useCase: UseCase }) {
             <h2 id="helps-heading" className="section-title">
               How IdeaVerse helps
             </h2>
-            <div className="feature-grid">
+            <div className={cardGridClass(useCase.helps.length)}>
               {useCase.helps.map((h) => (
                 <div key={h.title} className="card stack tight">
                   <h3>{h.title}</h3>
@@ -105,7 +106,7 @@ function UseCaseDetail({ useCase }: { useCase: UseCase }) {
               <h2 id="templates-heading" className="section-title">
                 Templates to start with
               </h2>
-              <ul className="template-grid">
+              <ul className={cardGridClass(suggested.length)}>
                 {suggested.map((t) => (
                   <li key={t.slug}>
                     <Link to={`/templates/${t.slug}`} className="card stack template-card">
@@ -133,7 +134,7 @@ export function ComparisonsPage() {
     <div className="landing">
       <Hero eyebrow="Compare" title="Is IdeaVerse the right fit?" lead="An honest look at how IdeaVerse compares with other ways teams plan their ideas, including when they’re the better choice." />
       <section className="landing-section">
-        <ul className="landing-inner template-grid">
+        <ul className={`landing-inner ${cardGridClass(comparisons.length)}`}>
           {comparisons.map((c) => (
             <li key={c.slug}>
               <Link to={`/compare/${c.slug}`} className="card stack template-card">
@@ -164,7 +165,7 @@ function ComparisonDetail({ comparison }: { comparison: Comparison }) {
     <div className="landing">
       <Hero eyebrow="Compare" title={comparison.headline} lead={comparison.summary} />
       <section className="landing-section">
-        <div className="landing-inner stack solution">
+        <div className="landing-inner stack">
           <nav aria-label="Breadcrumb" className="breadcrumb small">
             <Link to="/compare">
               <ArrowLeft aria-hidden="true" size={16} /> All comparisons
