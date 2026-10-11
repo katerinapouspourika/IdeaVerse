@@ -55,13 +55,19 @@ describe('Registration and confirmation', () => {
 });
 
 describe('Password reset', () => {
-  it('links to the reset page from sign-in', async () => {
+  it('links to the reset page from beside the password, carrying over the email typed so far', async () => {
     fakeApi(signedOut);
     const router = renderApp('/login');
 
-    await userEvent.click(await screen.findByRole('link', { name: 'Forgot your password?' }));
+    await userEvent.type(await screen.findByLabelText('Email'), 'kat@example.com');
+    const password = screen.getByLabelText('Password');
+    const forgot = screen.getByRole('link', { name: 'Forgot your password?' });
+    expect(password.compareDocumentPosition(forgot) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(forgot.compareDocumentPosition(screen.getByRole('button', { name: 'Sign in' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await userEvent.click(forgot);
 
     expect(router.state.location.pathname).toBe('/forgot-password');
+    expect(await screen.findByLabelText('Email')).toHaveValue('kat@example.com');
   });
 
   it('sends a reset link without revealing whether the account exists', async () => {

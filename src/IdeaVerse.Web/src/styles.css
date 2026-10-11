@@ -2905,3 +2905,11 @@ a:focus-visible {
     margin: 4px 0 12px;
   }
 }
+
+/* A link just under a field, such as "Forgot your password?" under the password. */
+.field-after {
+  margin: -8px 0 0;
+  text-align: right;
+  font-size: 0.85rem;
+  font-weight: 700;
+}

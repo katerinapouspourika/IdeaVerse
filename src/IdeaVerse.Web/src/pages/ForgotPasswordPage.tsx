@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 
 import { forgotPassword } from '../api/account';
 import { ErrorMessage } from '../components/ErrorMessage';
@@ -8,7 +8,9 @@ import { usePageMeta } from '../seo/usePageMeta';
 
 export function ForgotPasswordPage() {
   usePageMeta('Forgot your password', { index: false });
-  const [email, setEmail] = useState('');
+  const location = useLocation();
+  // Filled in from the sign-in form, where they may have typed it already.
+  const [email, setEmail] = useState((location.state as { email?: string } | null)?.email ?? '');
   const [sent, setSent] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
