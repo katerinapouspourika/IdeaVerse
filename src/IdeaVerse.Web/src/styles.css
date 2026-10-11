@@ -223,6 +223,7 @@ a {
 
 .grow {
   flex: 1 1 200px;
+  min-width: 0;
 }
 
 .card {
@@ -291,6 +292,7 @@ a {
 .field {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 4px;
   font-size: 0.9rem;
   font-weight: 600;
@@ -303,6 +305,8 @@ a {
 input,
 select,
 textarea {
+  /* Never wider than the space it is given: a select otherwise grows to its longest option. */
+  max-width: 100%;
   font: inherit;
   font-weight: 400;
   color: var(--text);
@@ -512,6 +516,12 @@ textarea:focus-visible,
   gap: 8px;
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
+}
+
+/* A long name or email wraps rather than being cut off beside the role badge. */
+.team li > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .checklist li:last-child,
