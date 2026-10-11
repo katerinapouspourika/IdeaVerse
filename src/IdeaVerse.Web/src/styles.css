@@ -2905,3 +2905,12 @@ a:focus-visible {
     margin: 4px 0 12px;
   }
 }
+
+/* A short note about what happens next, such as the template waiting for someone signing up. */
+.note {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-small);
+  background: var(--accent-soft);
+  color: var(--text);
+}
