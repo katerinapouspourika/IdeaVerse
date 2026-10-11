@@ -166,9 +166,11 @@ export function ideaQuery(filter: IdeaFilter): string {
   return query ? `?${query}` : '';
 }
 
-export function useIdeas(workspaceId: string, filter: IdeaFilter = {}) {
+/** A workspace's ideas; `enabled: false` waits, as the command palette does until something is typed. */
+export function useIdeas(workspaceId: string, filter: IdeaFilter = {}, enabled = true) {
   const query = ideaQuery(filter);
   return useQuery({
+    enabled,
     queryKey: keys.ideas(workspaceId, query),
     queryFn: () => request<Idea[]>('GET', `/api/v1/workspaces/${workspaceId}/ideas${query}`),
     placeholderData: keepPreviousData,

@@ -5,6 +5,7 @@ import { Link, NavLink, Outlet, ScrollRestoration, useLocation, useNavigate } fr
 import { useReceivedInvitations } from '../api/queries';
 import { personLabel } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
+import { Commands } from '../commands/Commands';
 import { useWorkspace, WorkspaceProvider } from '../workspaces/WorkspaceContext';
 import { WorkspaceSwitcher } from '../workspaces/WorkspaceSwitcher';
 import { FeedbackProvider } from './Feedback';
@@ -129,6 +130,7 @@ function AppBar() {
         <InvitationsLink />
       </nav>
       <div className="account">
+        <Commands />
         <ThemeToggle />
         <NotificationBell />
         {account && (

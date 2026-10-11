@@ -51,8 +51,14 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const navigate = useNavigate();
   const openForm = (location.state as { adding?: boolean } | null)?.adding === true;
   const [adding, setAdding] = useState<{ title: string; description: string } | null>(openForm ? { title: '', description: '' } : null);
+  const [handledRequest, setHandledRequest] = useState(openForm ? location.key : null);
+  // Asked for again while the page is open, by the command palette or the N shortcut: opens the form.
+  if (openForm && handledRequest !== location.key) {
+    setHandledRequest(location.key);
+    setAdding((open) => open ?? { title: '', description: '' });
+  }
 
-  // Opened by the dashboard's "New idea": forget the request, so going back or reloading does not open the form again.
+  // Opened by "New idea" elsewhere: forget the request, so going back or reloading does not open the form again.
   useEffect(() => {
     if (openForm) {
       void navigate('.', { replace: true, state: null });

@@ -2361,3 +2361,123 @@ a:focus-visible {
   font-size: 0.85rem;
   font-weight: 700;
 }
+
+/* Command palette and keyboard shortcuts */
+
+.modal-backdrop.top {
+  align-items: flex-start;
+  padding-top: min(12vh, 96px);
+}
+
+.search-button {
+  gap: 6px;
+  width: auto;
+  padding: 0 10px;
+}
+
+.search-kbd,
+.shortcut-list kbd {
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.modal.palette {
+  width: min(620px, 100%);
+  padding: 0;
+  overflow: hidden;
+}
+
+.palette-input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 16px 20px;
+  font-size: 1.05rem;
+  background: var(--surface);
+}
+
+.palette-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.palette-list {
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.palette-group {
+  margin: 8px 12px 4px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.palette-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+}
+
+.palette-option.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.palette-icon {
+  display: inline-flex;
+  color: var(--muted);
+}
+
+.palette-option.active .palette-icon {
+  color: var(--accent);
+}
+
+.palette-empty,
+.palette-hint {
+  margin: 0;
+  padding: 10px 20px;
+}
+
+.palette-hint {
+  border-top: 1px solid var(--border);
+}
+
+.modal.shortcuts {
+  width: min(520px, 100%);
+}
+
+.shortcut-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shortcut-list dd {
+  margin: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .search-kbd {
+    display: none;
+  }
+
+  .search-button {
+    width: 40px;
+    padding: 0;
+  }
+}
