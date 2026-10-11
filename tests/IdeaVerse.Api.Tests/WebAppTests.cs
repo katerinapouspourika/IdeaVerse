@@ -11,6 +11,9 @@ public sealed class WebAppTests : IDisposable
     File.WriteAllText(Path.Combine(webRoot.FullName, "index.html"), "<!doctype html><title>Home</title><div id=\"root\"></div>");
     File.WriteAllText(Path.Combine(webRoot.FullName, "how-it-works.html"), "<!doctype html><title>How it works</title><div id=\"root\"></div>");
     File.WriteAllText(Path.Combine(webRoot.FullName, "contact.html"), "<!doctype html><title>Contact us</title><div id=\"root\"></div>");
+    File.WriteAllText(Path.Combine(webRoot.FullName, "templates.html"), "<!doctype html><title>Templates</title><div id=\"root\"></div>");
+    Directory.CreateDirectory(Path.Combine(webRoot.FullName, "templates"));
+    File.WriteAllText(Path.Combine(webRoot.FullName, "templates", "product-launch.html"), "<!doctype html><title>Product launch template</title><div id=\"root\"></div>");
     File.WriteAllText(Path.Combine(webRoot.FullName, "app.html"), "<!doctype html><title>App</title><div id=\"root\"></div>");
     File.WriteAllText(Path.Combine(webRoot.FullName, "404.html"), "<!doctype html><title>Page not found</title><div id=\"root\"></div>");
     File.WriteAllText(Path.Combine(webRoot.FullName, "logo.png"), "png");
@@ -28,6 +31,8 @@ public sealed class WebAppTests : IDisposable
   [Arguments("/", "Home")]
   [Arguments("/how-it-works", "How it works")]
   [Arguments("/contact", "Contact us")]
+  [Arguments("/templates", "Templates")]
+  [Arguments("/templates/product-launch", "Product launch template")]
   [Arguments("/ideas", "App")]
   [Arguments("/ideas/0199a0f0-0000-7000-8000-000000000000", "App")]
   [Arguments("/login", "App")]
@@ -51,6 +56,10 @@ public sealed class WebAppTests : IDisposable
   [Arguments("/ideas/not-an-id")]
   [Arguments("/how-it-works.html")]
   [Arguments("/app.html")]
+  [Arguments("/templates/no-such-template")]
+  [Arguments("/templates/Product_Launch")]
+  [Arguments("/templates/product-launch.html")]
+  [Arguments("/templates/product-launch/extra")]
   [Arguments("/INDEX.HTML")]
   public async Task Get_UnknownAddress_ServesNotFoundPageWithStatus404(string path)
   {

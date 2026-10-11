@@ -194,6 +194,7 @@ function Footer() {
         <span className="muted small">© {new Date().getFullYear()} IdeaVerse · Plan ideas, together, on time.</span>
         <nav className="row wrap small" aria-label="Footer">
           <Link to="/how-it-works">How it works</Link>
+          <Link to="/templates">Templates</Link>
           <Link to="/contact">Contact us</Link>
         </nav>
       </div>

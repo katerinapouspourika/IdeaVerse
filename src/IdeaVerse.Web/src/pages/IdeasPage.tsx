@@ -50,13 +50,16 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const [view, setView] = useState<'list' | 'board' | 'calendar' | 'timeline' | 'matrix'>('list');
   const location = useLocation();
   const navigate = useNavigate();
-  const openForm = (location.state as { adding?: boolean } | null)?.adding === true;
-  const [adding, setAdding] = useState<{ title: string; description: string } | null>(openForm ? { title: '', description: '' } : null);
+  const request = location.state as { adding?: boolean; template?: string } | null;
+  const openForm = request?.adding === true;
+  const requested = { title: '', description: '', template: request?.template };
+  const [adding, setAdding] = useState<{ title: string; description: string; template?: string } | null>(openForm ? requested : null);
   const [handledRequest, setHandledRequest] = useState(openForm ? location.key : null);
-  // Asked for again while the page is open, by the command palette or the N shortcut: opens the form.
+  // Asked for again while the page is open, by the command palette, the N shortcut, or a template: opens the form,
+  // keeping a draft already in it unless a template was chosen.
   if (openForm && handledRequest !== location.key) {
     setHandledRequest(location.key);
-    setAdding((open) => open ?? { title: '', description: '' });
+    setAdding((open) => (requested.template ? requested : (open ?? requested)));
   }
 
   // Opened by "New idea" elsewhere: forget the request, so going back or reloading does not open the form again.
@@ -96,9 +99,10 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
 
       {adding && (
         <NewIdeaForm
-          key={adding.title}
+          key={`${adding.template ?? ''}:${adding.title}`}
           workspaceId={workspace.id}
           initial={adding}
+          template={adding.template}
           onDone={() => setAdding(null)}
         />
       )}

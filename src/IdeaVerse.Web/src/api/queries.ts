@@ -223,6 +223,19 @@ export function useCreateIdea(workspaceId: string) {
   });
 }
 
+/** Adds a list of components to an idea, one at a time so they keep their order, as starting from a template does. */
+export function useAddComponents() {
+  const invalidate = useInvalidateIdea();
+  return useMutation({
+    mutationFn: async ({ ideaId, components }: { ideaId: string; components: ComponentInput[] }) => {
+      for (const component of components) {
+        await request<Component>('POST', `/api/v1/ideas/${ideaId}/components`, component);
+      }
+    },
+    onSettled: (_result, _error, { ideaId }) => invalidate(ideaId),
+  });
+}
+
 export function useUpdateIdea(id: string) {
   const invalidate = useInvalidateIdea();
   return useMutation({

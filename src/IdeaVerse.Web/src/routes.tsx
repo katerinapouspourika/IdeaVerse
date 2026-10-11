@@ -6,6 +6,8 @@ import { Skeleton } from './components/Skeleton';
 import { ContactPage } from './marketing/ContactPage';
 import { HomePage } from './marketing/HomePage';
 import { HowItWorksPage } from './marketing/HowItWorksPage';
+import { TemplatePage } from './templates/TemplatePage';
+import { TemplatesPage } from './templates/TemplatesPage';
 import { AuthPage } from './pages/AuthPage';
 import { ConfirmEmailPage } from './pages/ConfirmEmailPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
@@ -44,6 +46,8 @@ export const routes: RouteObject[] = [
       { path: '/', element: <HomePage /> },
       { path: '/how-it-works', element: <HowItWorksPage /> },
       { path: '/contact', element: <ContactPage /> },
+      { path: '/templates', element: <TemplatesPage /> },
+      { path: '/templates/:slug', element: <TemplatePage /> },
       { element: <RequireAuth />, HydrateFallback: Loading, children: signedIn },
       { path: '*', element: <NotFoundPage /> },
     ],

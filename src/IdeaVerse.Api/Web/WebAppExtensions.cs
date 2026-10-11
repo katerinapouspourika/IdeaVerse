@@ -2,6 +2,7 @@ namespace Pouspourika.IdeaVerse.Api.Web;
 
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Net.Http.Headers;
 
 /// <summary>
@@ -48,7 +49,14 @@ internal static class WebAppExtensions
     ("/", "index.html"),
     ("/how-it-works", "how-it-works.html"),
     ("/contact", "contact.html"),
+    ("/templates", "templates.html"),
   ];
+
+  /// <summary>
+  /// Folders of public pages the web build prerenders one per item, such as <c>/templates/product-launch</c> from
+  /// <c>templates/product-launch.html</c>. An address whose page wasn't built gets the "not found" page.
+  /// </summary>
+  internal static readonly string[] PageCollections = ["templates"];
 
   /// <summary>
   /// Folder Vite writes content-hashed bundles to; their names change with their content, so they can be cached for good.
@@ -127,6 +135,11 @@ internal static class WebAppExtensions
       endpoints.MapFallbackToFile(route, AppShellFile, files);
     }
 
+    foreach (var collection in PageCollections)
+    {
+      endpoints.MapFallback($"/{collection}/{{slug:regex(^[a-z0-9-]+$)}}", context => ServeCollectionPageAsync(context, collection)).ExcludeFromDescription();
+    }
+
     endpoints.MapFallback(ServeNotFoundAsync).ExcludeFromDescription();
     return endpoints;
   }
@@ -152,19 +165,38 @@ internal static class WebAppExtensions
       : next(context);
 
   /// <summary>
+  /// Writes the prerendered page of one item in a collection, such as a template, or the "not found" page when it wasn't built.
+  /// </summary>
+  /// <param name="context">The HTTP context, whose <c>slug</c> route value names the item.</param>
+  /// <param name="collection">The collection's folder, such as <c>templates</c>.</param>
+  /// <returns>A task that completes when the response is written.</returns>
+  private static Task ServeCollectionPageAsync(HttpContext context, string collection)
+  {
+    var slug = (string)context.GetRouteValue("slug")!;
+    var page = context.RequestServices.GetRequiredService<IWebHostEnvironment>().WebRootFileProvider.GetFileInfo($"{collection}/{slug}.html");
+    return page.Exists ? SendPageAsync(context, page) : ServeNotFoundAsync(context);
+  }
+
+  /// <summary>
   /// Writes the "not found" page with status 404 (its headers only, for <c>HEAD</c>), or an empty 404 when the web app is not built.
   /// </summary>
   /// <param name="context">The HTTP context.</param>
   /// <returns>A task that completes when the response is written.</returns>
-  private static async Task ServeNotFoundAsync(HttpContext context)
+  private static Task ServeNotFoundAsync(HttpContext context)
   {
     context.Response.StatusCode = StatusCodes.Status404NotFound;
     var page = context.RequestServices.GetRequiredService<IWebHostEnvironment>().WebRootFileProvider.GetFileInfo(NotFoundFile);
-    if (!page.Exists)
-    {
-      return;
-    }
+    return page.Exists ? SendPageAsync(context, page) : Task.CompletedTask;
+  }
 
+  /// <summary>
+  /// Writes a built page as HTML that browsers revalidate (its headers only, for <c>HEAD</c>), keeping the status already set.
+  /// </summary>
+  /// <param name="context">The HTTP context.</param>
+  /// <param name="page">The page's file.</param>
+  /// <returns>A task that completes when the response is written.</returns>
+  private static async Task SendPageAsync(HttpContext context, IFileInfo page)
+  {
     context.Response.ContentType = HtmlContentType;
     SetCacheHeaders(context);
     if (HttpMethods.IsHead(context.Request.Method))

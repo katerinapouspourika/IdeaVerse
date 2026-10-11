@@ -2668,3 +2668,51 @@ a:focus-visible {
 .mention-option.active {
   background: var(--accent-soft);
 }
+
+/* Templates */
+
+.template-grid {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.template-card {
+  height: 100%;
+  text-decoration: none;
+  transition: border-color 0.15s;
+}
+
+.template-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-lift);
+}
+
+.template-card p {
+  margin: 0;
+}
+
+.template-meta {
+  margin-top: auto;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.template-detail {
+  max-width: 760px;
+}
+
+.template-steps {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.template-preview ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
