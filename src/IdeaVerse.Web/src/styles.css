@@ -922,6 +922,81 @@ h3 {
   font-weight: 900;
 }
 
+.nav-group {
+  position: relative;
+}
+
+.nav-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.nav-group-toggle svg {
+  transition: transform 0.15s;
+}
+
+.nav-group-toggle[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+.nav-group-heading {
+  display: none;
+}
+
+.nav-panel {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  z-index: 30;
+  width: 300px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lift);
+}
+
+.nav-panel.open {
+  display: block;
+}
+
+.nav-panel-link {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--radius-small);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.nav-panel-link:hover,
+.nav-panel-link:focus-visible,
+.nav-panel-link[aria-current='page'] {
+  background: var(--accent-soft);
+}
+
+.nav-panel-label {
+  font-weight: 800;
+}
+
+.nav-panel-link[aria-current='page'] .nav-panel-label {
+  color: var(--accent);
+}
+
+.nav-panel-blurb {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
 @media (max-width: 860px) {
   .menu-button {
     display: inline-flex;
@@ -958,6 +1033,37 @@ h3 {
 
   .site-menu .switcher {
     max-width: none;
+  }
+
+  /* In the small-screen menu, Explore's pages are listed under a heading rather than behind a button. */
+  .nav-group-toggle {
+    display: none;
+  }
+
+  .nav-group-heading {
+    display: block;
+    margin: 8px 14px 2px;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .nav-panel,
+  .nav-panel.open {
+    display: block;
+    position: static;
+    width: auto;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .nav-panel-link {
+    padding: 10px 14px;
+    border-radius: 12px;
   }
 
   .nav-spacer {

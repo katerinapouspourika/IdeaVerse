@@ -42,6 +42,27 @@ describe('Public pages', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'We’d love to hear from you' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Menu' })).toHaveAttribute('aria-expanded', 'false');
   });
+
+  it('opens Explore in the header, closes it with Escape, and goes to a page from it', async () => {
+    fakeApi(signedOut);
+    const router = renderApp('/');
+    const nav = within(await screen.findByRole('navigation', { name: 'Main' }));
+
+    const explore = nav.getByRole('button', { name: 'Explore' });
+    await userEvent.click(explore);
+    expect(explore).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.keyboard('{Escape}');
+    expect(explore).toHaveAttribute('aria-expanded', 'false');
+    expect(explore).toHaveFocus();
+
+    await userEvent.click(explore);
+    await userEvent.click(nav.getByRole('link', { name: /Use cases/ }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Made for teams with more ideas than time' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/use-cases');
+    expect(nav.getByRole('button', { name: 'Explore' })).toHaveAttribute('aria-expanded', 'false');
+    expect(nav.getByRole('button', { name: 'Explore' })).toHaveClass('active');
+  });
 });
 
 describe('Contact page', () => {
