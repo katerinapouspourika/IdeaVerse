@@ -10,6 +10,7 @@ import type {
   Component,
   ComponentSuggestion,
   ComponentInput,
+  ComponentOrder,
   ComponentUpdate,
   ContactMessage,
   Idea,
@@ -231,6 +232,7 @@ export function useUpdateIdea(id: string) {
 /** Changes an idea's status, keeping its other details, as the board does when an idea is dragged to another column. */
 export function useMoveIdea() {
   const invalidate = useInvalidateIdea();
+  const store = useStoreIdea();
   return useMutation({
     mutationFn: ({ idea, status }: { idea: Idea; status: IdeaStatus }) =>
       request<Idea>('PUT', `/api/v1/ideas/${idea.id}`, {
@@ -240,6 +242,7 @@ export function useMoveIdea() {
         status,
         tags: idea.tags,
       } satisfies IdeaUpdate),
+    onSuccess: store,
     onSettled: (_saved, _error, { idea }) => invalidate(idea.id),
   });
 }
@@ -323,6 +326,40 @@ export function useUpdateComponent(ideaId: string) {
     onSuccess: (saved) => {
       client.setQueryData<Component[]>(keys.components(ideaId), (current) => current?.map((c) => (c.id === saved.id ? saved : c)));
       invalidate(ideaId);
+    },
+  });
+}
+
+/**
+ * Puts an idea's components in a new order, showing it at once. Moves are saved one at a time, in the order they were made,
+ * and once the last one is answered the list is reloaded, so it ends up as the server has it even if a move was refused.
+ */
+export function useReorderComponents(ideaId: string) {
+  const client = useQueryClient();
+  const mutationKey = ['reorder-components', ideaId];
+  return useMutation({
+    mutationKey,
+    scope: { id: `reorder-components-${ideaId}` },
+    mutationFn: (componentIds: string[]) =>
+      request<Component[]>('PUT', `/api/v1/ideas/${ideaId}/components/order`, { componentIds } satisfies ComponentOrder),
+    onMutate: async (componentIds) => {
+      await client.cancelQueries({ queryKey: keys.components(ideaId) });
+      const previous = client.getQueryData<Component[]>(keys.components(ideaId));
+      if (previous) {
+        const byId = new Map(previous.map((c) => [c.id, c]));
+        client.setQueryData(
+          keys.components(ideaId),
+          componentIds.flatMap((id, position) => {
+            const component = byId.get(id);
+            return component ? [{ ...component, position }] : [];
+          }),
+        );
+      }
+    },
+    onSettled: () => {
+      if (client.isMutating({ mutationKey }) <= 1) {
+        void client.invalidateQueries({ queryKey: keys.components(ideaId) });
+      }
     },
   });
 }

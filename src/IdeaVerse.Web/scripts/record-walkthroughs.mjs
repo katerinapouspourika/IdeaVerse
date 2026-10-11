@@ -139,6 +139,16 @@ const showPointer = () => {
   });
 };
 
+/** Opens an idea from the list: a click shows it in the side panel, and the panel's link opens its page. */
+async function openIdea(page, title) {
+  await click(page, page.getByRole('link', { name: new RegExp(title) }));
+  const panel = page.getByRole('dialog', { name: title });
+  await panel.waitFor();
+  await page.waitForTimeout(800);
+  await click(page, panel.getByRole('link', { name: 'Open full page' }));
+  await page.getByRole('heading', { level: 1, name: title }).waitFor();
+}
+
 const walkthroughs = {
   async 'capture-an-idea'(page) {
     await page.goto(`${base}/ideas`);
@@ -159,8 +169,7 @@ const walkthroughs = {
 
   async 'plan-what-it-needs'(page) {
     await page.goto(`${base}/ideas`);
-    await click(page, page.getByRole('link', { name: /Spring product launch/ }));
-    await page.getByRole('heading', { name: 'Spring product launch' }).waitFor();
+    await openIdea(page, 'Spring product launch');
     const add = page.getByRole('form', { name: 'Add component' });
     for (const component of ['Budget sign-off', 'Teaser video', 'Launch venue']) {
       await type(page, add.getByLabel('Add something it needs'), component);
@@ -175,7 +184,7 @@ const walkthroughs = {
 
   async 'work-as-a-team'(page) {
     await page.goto(`${base}/ideas`);
-    await click(page, page.getByRole('link', { name: /Spring product launch/ }));
+    await openIdea(page, 'Spring product launch');
     const team = page.getByRole('form', { name: 'Add team member' });
     await team.scrollIntoViewIfNeeded();
     await click(page, team.getByLabel('Add someone from the workspace'));

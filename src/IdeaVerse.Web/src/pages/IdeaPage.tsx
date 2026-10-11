@@ -5,7 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { ImproveIdea } from '../ai/ImproveIdea';
 import { ApiError } from '../api/client';
 import { addDays, describeDue, formatDate, todayIso } from '../api/dates';
-import { useArchiveIdea, useDeleteIdea, useIdea, usePostponeIdea, useUpdateIdea } from '../api/queries';
+import { useArchiveIdea, useDeleteIdea, useIdea, useMoveIdea, usePostponeIdea, useUpdateIdea } from '../api/queries';
 import { personLabel, statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
 import { useConfirm, useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
@@ -84,7 +84,7 @@ function IdeaDetail({ idea }: { idea: Idea }) {
               <div className="row spread wrap idea-heading">
                 <div className="row wrap">
                   <h1>{idea.title}</h1>
-                  <StatusBadge idea={idea} />
+                  {idea.canEdit && !idea.archivedAt ? <QuickStatus idea={idea} /> : <StatusBadge idea={idea} />}
                 </div>
                 <div className="row">
                   {idea.canEdit && (
@@ -124,6 +124,38 @@ function IdeaDetail({ idea }: { idea: Idea }) {
         </aside>
       </div>
     </div>
+  );
+}
+
+/** The idea's status as a menu its team can change straight from the heading. */
+function QuickStatus({ idea }: { idea: Idea }) {
+  const move = useMoveIdea();
+  const toast = useToast();
+  const status = move.isPending ? move.variables.status : idea.status;
+
+  const change = (next: IdeaStatus) =>
+    move.mutate(
+      { idea, status: next },
+      {
+        onSuccess: () => toast({ message: `Status set to ${statusLabels[next]}` }),
+        onError: () => toast({ message: 'Couldn’t change the status. Try again.', tone: 'error' }),
+      },
+    );
+
+  return (
+    <span className="badges">
+      <label className="quick-status">
+        <span className="visually-hidden">Status</span>
+        <select className={`badge status-${status.toLowerCase()}`} value={status} onChange={(e) => change(e.target.value as IdeaStatus)}>
+          {statuses.map((s) => (
+            <option key={s} value={s}>
+              {statusLabels[s]}
+            </option>
+          ))}
+        </select>
+      </label>
+      {idea.isOverdue && <span className="badge overdue">Overdue</span>}
+    </span>
   );
 }
 

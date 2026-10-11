@@ -228,6 +228,122 @@ public class ComponentEndpointsTests
   }
 
   [Test]
+  public async Task Reorder_EveryComponentOnce_SavesTheNewOrder()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    var idea = await (await client.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    var budget = await (await client.CreateComponentAsync(idea.Id, "Budget")).ReadComponentAsync();
+    var designer = await (await client.CreateComponentAsync(idea.Id, "Designer")).ReadComponentAsync();
+    var venue = await (await client.CreateComponentAsync(idea.Id, "Venue")).ReadComponentAsync();
+
+    using var response = await ReorderAsync(client, idea.Id, venue.Id, budget.Id, designer.Id);
+    var listed = await (await client.GetAsync($"/api/v1/ideas/{idea.Id}/components")).ReadComponentsAsync();
+
+    await Assert.That((await response.ReadComponentsAsync()).Select(c => c.Title)).IsEquivalentTo(["Venue", "Budget", "Designer"], CollectionOrdering.Matching);
+    await Assert.That(listed.Select(c => c.Title)).IsEquivalentTo(["Venue", "Budget", "Designer"], CollectionOrdering.Matching);
+    await Assert.That(listed.Select(c => c.Position)).IsEquivalentTo([0, 1, 2], CollectionOrdering.Matching);
+  }
+
+  [Test]
+  [Arguments("missing")]
+  [Arguments("duplicate")]
+  [Arguments("foreign")]
+  public async Task Reorder_NotEveryComponentExactlyOnce_ReturnsValidationProblemAndKeepsOrder(string problem)
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    var idea = await (await client.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    var other = await (await client.CreateIdeaAsync("Other", Today.AddDays(5))).ReadIdeaAsync();
+    var budget = await (await client.CreateComponentAsync(idea.Id, "Budget")).ReadComponentAsync();
+    var venue = await (await client.CreateComponentAsync(idea.Id, "Venue")).ReadComponentAsync();
+    var unrelated = await (await client.CreateComponentAsync(other.Id, "Unrelated")).ReadComponentAsync();
+    Guid[] ids = problem switch
+    {
+      "missing" => [venue.Id],
+      "duplicate" => [venue.Id, venue.Id],
+      _ => [venue.Id, unrelated.Id],
+    };
+
+    using var response = await ReorderAsync(client, idea.Id, ids);
+    var listed = await (await client.GetAsync($"/api/v1/ideas/{idea.Id}/components")).ReadComponentsAsync();
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+    await Assert.That((await response.ReadValidationErrorsAsync()).Keys).Contains("componentIds");
+    await Assert.That(listed.Select(c => c.Id)).IsEquivalentTo([budget.Id, venue.Id], CollectionOrdering.Matching);
+  }
+
+  [Test]
+  public async Task Reorder_ByViewer_ReturnsForbidden()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var viewer = await factory.CreateSignedInClientAsync("viewer@example.com");
+    await factory.JoinAsync(owner, viewer, "viewer@example.com");
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    var component = await (await owner.CreateComponentAsync(idea.Id, "Budget")).ReadComponentAsync();
+
+    using var response = await ReorderAsync(viewer, idea.Id, component.Id);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+  }
+
+  [Test]
+  public async Task Reorder_ByWorkspaceMemberNotOnTeam_ReturnsForbidden()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var member = await factory.CreateSignedInClientAsync("member@example.com");
+    await factory.JoinAsync(owner, member, "member@example.com");
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    var component = await (await owner.CreateComponentAsync(idea.Id, "Budget")).ReadComponentAsync();
+
+    using var response = await ReorderAsync(member, idea.Id, component.Id);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+  }
+
+  [Test]
+  public async Task Reorder_WithoutComponentIds_ReturnsValidationProblem()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    var idea = await (await client.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+
+    using var response = await client.PutAsJsonAsync($"/api/v1/ideas/{idea.Id}/components/order", new { }, Json.Options);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+    await Assert.That((await response.ReadValidationErrorsAsync()).Keys).Contains("componentIds");
+  }
+
+  [Test]
+  public async Task Reorder_IdeaWithoutComponents_AcceptsAnEmptyOrder()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    var idea = await (await client.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+
+    using var response = await ReorderAsync(client, idea.Id);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+    await Assert.That(await response.ReadComponentsAsync()).IsEmpty();
+  }
+
+  [Test]
+  public async Task Reorder_IdeaInAnotherWorkspace_ReturnsNotFound()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var other = await factory.CreateSignedInClientAsync("other@example.com");
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    var component = await (await owner.CreateComponentAsync(idea.Id, "Budget")).ReadComponentAsync();
+
+    using var response = await ReorderAsync(other, idea.Id, component.Id);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+  }
+
+  [Test]
   public async Task Change_ByViewer_ReturnsForbiddenWhileListWorks()
   {
     await using var factory = new IdeaVerseApiFactory();
@@ -298,4 +414,7 @@ public class ComponentEndpointsTests
     await Assert.That(fromList.ComponentCount).IsEqualTo(3);
     await Assert.That(fromList.CompletedComponentCount).IsEqualTo(1);
   }
+
+  private static Task<HttpResponseMessage> ReorderAsync(HttpClient client, Guid ideaId, params Guid[] componentIds)
+    => client.PutAsJsonAsync($"/api/v1/ideas/{ideaId}/components/order", new ReorderComponentsRequest(componentIds), Json.Options);
 }
