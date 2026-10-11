@@ -203,7 +203,13 @@ const walkthroughs = {
     await page.waitForTimeout(600);
     const image = await poster(page);
     const discussion = page.getByRole('form', { name: 'Add comment' });
-    await type(page, discussion.getByLabel('Add a comment'), 'Mia, could you shortlist three venues by Friday?');
+    const box = discussion.getByLabel('Add a comment');
+    await type(page, box, '@Mi');
+    await page.getByRole('listbox', { name: 'People to mention' }).waitFor();
+    await page.waitForTimeout(700);
+    await box.press('Enter');
+    await box.pressSequentially('could you shortlist three venues by Friday?', { delay: 45 });
+    await page.waitForTimeout(300);
     await click(page, discussion.getByRole('button', { name: 'Comment' }));
     await page.getByText('shortlist three venues').waitFor();
     await page.waitForTimeout(1500);

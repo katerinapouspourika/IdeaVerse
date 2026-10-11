@@ -113,7 +113,7 @@ function IdeaDetail({ idea }: { idea: Idea }) {
             </section>
           )}
           <ComponentsSection ideaId={idea.id} workspaceId={idea.workspaceId} canEdit={idea.canEdit} />
-          <DiscussionSection ideaId={idea.id} />
+          <DiscussionSection ideaId={idea.id} workspaceId={idea.workspaceId} />
           <ActivitySection ideaId={idea.id} />
         </div>
 

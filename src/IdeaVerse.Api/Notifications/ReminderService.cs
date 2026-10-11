@@ -57,6 +57,7 @@ public sealed partial class ReminderService(
       ReminderKind.Assigned => $"Assigned to you: {about}",
       ReminderKind.AddedToTeam => $"You're on the team: {content.IdeaTitle}",
       ReminderKind.Commented => $"New comment on {content.IdeaTitle}",
+      ReminderKind.Mentioned => $"You were mentioned on {content.IdeaTitle}",
       _ => throw new ArgumentOutOfRangeException(nameof(content), content.Kind, "Unknown notification kind."),
     };
   }
@@ -259,9 +260,11 @@ public sealed partial class ReminderService(
         notification.Detail);
       var message = ReminderSchedule.Message(content, timeProvider.TodayIn(TimeZones.Find(item.TimeZone)));
       var link = app.Value.Link($"/ideas/{notification.IdeaId}");
-      var reason = notification.ComponentId is null
-        ? "You get this because you are on this idea's team in IdeaVerse."
-        : "You get this because this is assigned to you in IdeaVerse.";
+      var reason = notification.Kind == ReminderKind.Mentioned
+        ? "You get this because someone mentioned you in IdeaVerse."
+        : notification.ComponentId is null
+          ? "You get this because you are on this idea's team in IdeaVerse."
+          : "You get this because this is assigned to you in IdeaVerse.";
       var mail = new MailMessage(item.Email!, Subject(content), $"{message}\n\nOpen the idea: {link}\n\n{reason}");
 
       try
