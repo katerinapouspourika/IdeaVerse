@@ -8,6 +8,7 @@ import { useAuth } from '../auth/AuthContext';
 import { Commands } from '../commands/Commands';
 import { useWorkspace, WorkspaceProvider } from '../workspaces/WorkspaceContext';
 import { WorkspaceSwitcher } from '../workspaces/WorkspaceSwitcher';
+import { ExploreMenu } from './ExploreMenu';
 import { FeedbackProvider } from './Feedback';
 import { Menu } from './Menu';
 import { NotificationBell } from './NotificationBell';
@@ -169,6 +170,7 @@ function PublicBar() {
         <NavLink to="/how-it-works" className="nav-link">
           How it works
         </NavLink>
+        <ExploreMenu inOpenMenu={menu.open} />
         <NavLink to="/pricing" className="nav-link">
           Pricing
         </NavLink>
