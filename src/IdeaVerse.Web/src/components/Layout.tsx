@@ -8,6 +8,7 @@ import { useAuth } from '../auth/AuthContext';
 import { Commands } from '../commands/Commands';
 import { useWorkspace, WorkspaceProvider } from '../workspaces/WorkspaceContext';
 import { WorkspaceSwitcher } from '../workspaces/WorkspaceSwitcher';
+import { scrollKey } from '../freshLoadScroll';
 import { ExploreMenu } from './ExploreMenu';
 import { FeedbackProvider } from './Feedback';
 import { Menu } from './Menu';
@@ -42,7 +43,7 @@ export function Layout() {
           </main>
           <Footer />
         </div>
-        <ScrollRestoration />
+        <ScrollRestoration getKey={scrollKey} />
       </FeedbackProvider>
     </WorkspaceProvider>
   );
