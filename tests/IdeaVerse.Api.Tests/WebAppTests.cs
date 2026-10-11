@@ -14,6 +14,12 @@ public sealed class WebAppTests : IDisposable
     File.WriteAllText(Path.Combine(webRoot.FullName, "templates.html"), "<!doctype html><title>Templates</title><div id=\"root\"></div>");
     Directory.CreateDirectory(Path.Combine(webRoot.FullName, "templates"));
     File.WriteAllText(Path.Combine(webRoot.FullName, "templates", "product-launch.html"), "<!doctype html><title>Product launch template</title><div id=\"root\"></div>");
+    File.WriteAllText(Path.Combine(webRoot.FullName, "use-cases.html"), "<!doctype html><title>Use cases</title><div id=\"root\"></div>");
+    Directory.CreateDirectory(Path.Combine(webRoot.FullName, "use-cases"));
+    File.WriteAllText(Path.Combine(webRoot.FullName, "use-cases", "marketing-teams.html"), "<!doctype html><title>Marketing teams</title><div id=\"root\"></div>");
+    File.WriteAllText(Path.Combine(webRoot.FullName, "compare.html"), "<!doctype html><title>Compare</title><div id=\"root\"></div>");
+    Directory.CreateDirectory(Path.Combine(webRoot.FullName, "compare"));
+    File.WriteAllText(Path.Combine(webRoot.FullName, "compare", "spreadsheets.html"), "<!doctype html><title>Spreadsheets</title><div id=\"root\"></div>");
     File.WriteAllText(Path.Combine(webRoot.FullName, "app.html"), "<!doctype html><title>App</title><div id=\"root\"></div>");
     File.WriteAllText(Path.Combine(webRoot.FullName, "404.html"), "<!doctype html><title>Page not found</title><div id=\"root\"></div>");
     File.WriteAllText(Path.Combine(webRoot.FullName, "logo.png"), "png");
@@ -33,6 +39,10 @@ public sealed class WebAppTests : IDisposable
   [Arguments("/contact", "Contact us")]
   [Arguments("/templates", "Templates")]
   [Arguments("/templates/product-launch", "Product launch template")]
+  [Arguments("/use-cases", "Use cases")]
+  [Arguments("/use-cases/marketing-teams", "Marketing teams")]
+  [Arguments("/compare", "Compare")]
+  [Arguments("/compare/spreadsheets", "Spreadsheets")]
   [Arguments("/ideas", "App")]
   [Arguments("/ideas/0199a0f0-0000-7000-8000-000000000000", "App")]
   [Arguments("/login", "App")]
@@ -57,6 +67,8 @@ public sealed class WebAppTests : IDisposable
   [Arguments("/how-it-works.html")]
   [Arguments("/app.html")]
   [Arguments("/templates/no-such-template")]
+  [Arguments("/use-cases/astronauts")]
+  [Arguments("/compare/spreadsheets.html")]
   [Arguments("/templates/Product_Launch")]
   [Arguments("/templates/product-launch.html")]
   [Arguments("/templates/product-launch/extra")]

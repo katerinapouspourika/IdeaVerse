@@ -50,13 +50,15 @@ internal static class WebAppExtensions
     ("/how-it-works", "how-it-works.html"),
     ("/contact", "contact.html"),
     ("/templates", "templates.html"),
+    ("/use-cases", "use-cases.html"),
+    ("/compare", "compare.html"),
   ];
 
   /// <summary>
   /// Folders of public pages the web build prerenders one per item, such as <c>/templates/product-launch</c> from
   /// <c>templates/product-launch.html</c>. An address whose page wasn't built gets the "not found" page.
   /// </summary>
-  internal static readonly string[] PageCollections = ["templates"];
+  internal static readonly string[] PageCollections = ["templates", "use-cases", "compare"];
 
   /// <summary>
   /// Folder Vite writes content-hashed bundles to; their names change with their content, so they can be cached for good.
