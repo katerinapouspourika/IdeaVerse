@@ -88,6 +88,8 @@ Validation errors return `400` with RFC 9457 problem details whose `errors` are 
 | `POST` | `/api/v1/ideas/{ideaId}/members` | Add the person in the workspace with `email`. Emails of no one in the workspace return 400; existing members return 409. |
 | `DELETE` | `/api/v1/ideas/{ideaId}/members/{userId}` | Remove a member, or leave. The idea's owner cannot be removed (409). |
 
+- **Discussion and activity** — everyone who can see an idea can read and post comments under `/api/v1/ideas/{ideaId}/comments`. Authors edit their own (`PUT`); authors and the workspace's owner and admins delete them (`DELETE`); others get 403. Comments carry `canEdit` and `canDelete` for the caller, and stay without an author if their author deletes their account. `GET /api/v1/ideas/{ideaId}/activity` returns the idea's 100 most recent changes, newest first: created, renamed, description edited, rescheduled, status changed, postponed, components added, ticked off, reopened, or removed, and team members added, removed, or leaving, each with who did it and a `detail` such as the new status or the component's title.
+
 - **AI help** — Claude-powered help from `src/IdeaVerse.Agents`, for people in the workspace. Each request counts once against the workspace's `Ai:DailyLimitPerWorkspace` for the UTC day; a request the AI fails to answer is not counted. Without `ANTHROPIC_API_KEY`, or with `Ai:Enabled` off, the requests return 503 and the status reports `enabled: false`, so the web app hides AI help.
 
 | Method | Route | Purpose |

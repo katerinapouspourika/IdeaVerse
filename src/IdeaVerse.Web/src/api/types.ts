@@ -186,3 +186,40 @@ export interface BrainstormedIdea {
 export function personLabel(name: string | null | undefined, email: string): string {
   return name?.trim() ? name : email;
 }
+
+export interface Comment {
+  id: string;
+  body: string;
+  /** `null` once the author deleted their account. */
+  authorEmail: string | null;
+  authorName: string | null;
+  createdAt: string;
+  editedAt: string | null;
+  canEdit: boolean;
+  canDelete: boolean;
+}
+
+export type ActivityKind =
+  | 'Created'
+  | 'Renamed'
+  | 'DescriptionChanged'
+  | 'Rescheduled'
+  | 'StatusChanged'
+  | 'Postponed'
+  | 'ComponentAdded'
+  | 'ComponentCompleted'
+  | 'ComponentReopened'
+  | 'ComponentRemoved'
+  | 'MemberAdded'
+  | 'MemberRemoved'
+  | 'MemberLeft';
+
+export interface ActivityEntry {
+  id: string;
+  kind: ActivityKind;
+  detail: string | null;
+  /** `null` once the person deleted their account. */
+  actorEmail: string | null;
+  actorName: string | null;
+  createdAt: string;
+}

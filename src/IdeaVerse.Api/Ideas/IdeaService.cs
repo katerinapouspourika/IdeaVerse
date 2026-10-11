@@ -1,8 +1,11 @@
 namespace Pouspourika.IdeaVerse.Api.Ideas;
 
+using System.Globalization;
+
 using Microsoft.EntityFrameworkCore;
 
 using Pouspourika.IdeaVerse.Api.Accounts;
+using Pouspourika.IdeaVerse.Api.Activity;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Workspaces;
 
@@ -105,6 +108,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
     };
 
     context.Ideas.Add(idea);
+    context.Record(idea.Id, userId, ActivityKind.Created, now);
     return await SaveAsync(userId, idea, cancellationToken).ConfigureAwait(false);
   }
 
@@ -131,8 +135,31 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
       return IdeaChangeResult.Invalid(TargetDateRules.MemberName, TargetDateRules.NotInPastMessage);
     }
 
-    idea.Title = request.Title.Trim();
-    idea.Description = Normalize(request.Description);
+    var now = timeProvider.GetUtcNow();
+    var title = request.Title.Trim();
+    var description = Normalize(request.Description);
+    if (title != idea.Title)
+    {
+      context.Record(idea.Id, userId, ActivityKind.Renamed, now, title);
+    }
+
+    if (description != idea.Description)
+    {
+      context.Record(idea.Id, userId, ActivityKind.DescriptionChanged, now);
+    }
+
+    if (request.TargetDate != idea.TargetDate)
+    {
+      context.Record(idea.Id, userId, ActivityKind.Rescheduled, now, request.TargetDate.ToString("O", CultureInfo.InvariantCulture));
+    }
+
+    if (request.Status != idea.Status)
+    {
+      context.Record(idea.Id, userId, ActivityKind.StatusChanged, now, request.Status.ToString());
+    }
+
+    idea.Title = title;
+    idea.Description = description;
     idea.TargetDate = request.TargetDate;
     idea.Status = request.Status;
     return await SaveAsync(userId, idea, cancellationToken).ConfigureAwait(false);
@@ -174,6 +201,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
     idea.TargetDate = request.TargetDate;
     idea.Status = IdeaStatus.Postponed;
     idea.PostponeCount++;
+    context.Record(idea.Id, userId, ActivityKind.Postponed, timeProvider.GetUtcNow(), request.TargetDate.ToString("O", CultureInfo.InvariantCulture));
     return await SaveAsync(userId, idea, cancellationToken).ConfigureAwait(false);
   }
 

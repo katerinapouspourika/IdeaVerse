@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
+using Pouspourika.IdeaVerse.Api.Activity;
 using Pouspourika.IdeaVerse.Api.Ai;
+using Pouspourika.IdeaVerse.Api.Comments;
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Ideas;
 using Pouspourika.IdeaVerse.Api.Invitations;
@@ -57,6 +59,16 @@ public sealed class IdeaVerseDbContext(DbContextOptions<IdeaVerseDbContext> opti
   /// Gets how many AI requests each workspace made per day.
   /// </summary>
   public DbSet<AiUsage> AiUsage => Set<AiUsage>();
+
+  /// <summary>
+  /// Gets the comments on all ideas.
+  /// </summary>
+  public DbSet<Comment> Comments => Set<Comment>();
+
+  /// <summary>
+  /// Gets the history of all ideas.
+  /// </summary>
+  public DbSet<ActivityEntry> Activity => Set<ActivityEntry>();
 
   /// <summary>
   /// Gets the reminders raised for all users.

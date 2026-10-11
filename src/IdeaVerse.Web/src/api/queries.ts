@@ -2,8 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { request } from './client';
 import type {
+  ActivityEntry,
   AiStatus,
   BrainstormedIdea,
+  Comment,
   Component,
   ComponentSuggestion,
   ComponentInput,
@@ -32,6 +34,8 @@ export const keys = {
   idea: (id: string) => ['idea', id] as const,
   components: (ideaId: string) => ['idea', ideaId, 'components'] as const,
   members: (ideaId: string) => ['idea', ideaId, 'members'] as const,
+  comments: (ideaId: string) => ['idea', ideaId, 'comments'] as const,
+  activity: (ideaId: string) => ['idea', ideaId, 'activity'] as const,
   notifications: ['notifications'] as const,
 };
 
@@ -328,5 +332,39 @@ export function useTransferOwnership(workspaceId: string) {
   return useMutation({
     mutationFn: (userId: string) => request<Workspace>('POST', `/api/v1/workspaces/${workspaceId}/transfer`, { userId }),
     onSuccess: () => void client.invalidateQueries({ queryKey: keys.workspaces }),
+  });
+}
+
+export function useComments(ideaId: string) {
+  return useQuery({ queryKey: keys.comments(ideaId), queryFn: () => request<Comment[]>('GET', `/api/v1/ideas/${ideaId}/comments`) });
+}
+
+function useCommentMutation<TInput>(ideaId: string, run: (input: TInput) => Promise<unknown>) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: run,
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.comments(ideaId) }),
+  });
+}
+
+export function useAddComment(ideaId: string) {
+  return useCommentMutation(ideaId, (body: string) => request<Comment>('POST', `/api/v1/ideas/${ideaId}/comments`, { body }));
+}
+
+export function useEditComment(ideaId: string) {
+  return useCommentMutation(ideaId, ({ id, body }: { id: string; body: string }) =>
+    request<Comment>('PUT', `/api/v1/ideas/${ideaId}/comments/${id}`, { body }),
+  );
+}
+
+export function useDeleteComment(ideaId: string) {
+  return useCommentMutation(ideaId, (id: string) => request<void>('DELETE', `/api/v1/ideas/${ideaId}/comments/${id}`));
+}
+
+export function useActivity(ideaId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: keys.activity(ideaId),
+    queryFn: () => request<ActivityEntry[]>('GET', `/api/v1/ideas/${ideaId}/activity`),
+    enabled,
   });
 }

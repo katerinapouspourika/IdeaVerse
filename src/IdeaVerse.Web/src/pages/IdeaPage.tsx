@@ -11,7 +11,9 @@ import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { Progress } from '../components/Progress';
 import { StatusBadge } from '../components/StatusBadge';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
+import { ActivitySection } from './ActivitySection';
 import { ComponentsSection } from './ComponentsSection';
+import { DiscussionSection } from './DiscussionSection';
 import { TeamSection } from './TeamSection';
 
 export function IdeaPage() {
@@ -91,6 +93,8 @@ function IdeaDetail({ idea }: { idea: Idea }) {
       {idea.canEdit && idea.status !== 'Done' && <PostponeForm idea={idea} />}
       <ComponentsSection ideaId={idea.id} workspaceId={idea.workspaceId} canEdit={idea.canEdit} />
       <TeamSection idea={idea} />
+      <DiscussionSection ideaId={idea.id} />
+      <ActivitySection ideaId={idea.id} />
       {idea.canManage && <DeleteIdea idea={idea} />}
     </div>
   );

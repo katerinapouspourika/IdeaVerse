@@ -2,6 +2,7 @@ namespace Pouspourika.IdeaVerse.Api.Components;
 
 using Microsoft.EntityFrameworkCore;
 
+using Pouspourika.IdeaVerse.Api.Activity;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Ideas;
 
@@ -70,6 +71,7 @@ public sealed class ComponentService(IdeaVerseDbContext context, TimeProvider ti
     };
 
     context.Components.Add(component);
+    context.Record(ideaId, userId, ActivityKind.ComponentAdded, component.CreatedAt, component.Title);
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     return new ComponentChangeResult(ChangeOutcome.Changed, component);
   }
@@ -97,7 +99,9 @@ public sealed class ComponentService(IdeaVerseDbContext context, TimeProvider ti
 
     if (request.IsDone != component.IsDone)
     {
-      component.CompletedAt = request.IsDone ? timeProvider.GetUtcNow() : null;
+      var now = timeProvider.GetUtcNow();
+      component.CompletedAt = request.IsDone ? now : null;
+      context.Record(ideaId, userId, request.IsDone ? ActivityKind.ComponentCompleted : ActivityKind.ComponentReopened, now, request.Title.Trim());
     }
 
     component.Title = request.Title.Trim();
@@ -117,11 +121,18 @@ public sealed class ComponentService(IdeaVerseDbContext context, TimeProvider ti
   /// <returns>The outcome.</returns>
   public async Task<ComponentChangeResult> DeleteAsync(string userId, Guid ideaId, Guid componentId, CancellationToken cancellationToken)
   {
-    var deleted = await Editable(userId, ideaId)
-      .Where(c => c.Id == componentId)
-      .ExecuteDeleteAsync(cancellationToken)
+    var component = await Editable(userId, ideaId)
+      .FirstOrDefaultAsync(c => c.Id == componentId, cancellationToken)
       .ConfigureAwait(false);
-    return deleted > 0 ? new ComponentChangeResult(ChangeOutcome.Changed) : await DeniedAsync(userId, ideaId, cancellationToken).ConfigureAwait(false);
+    if (component is null)
+    {
+      return await DeniedAsync(userId, ideaId, cancellationToken).ConfigureAwait(false);
+    }
+
+    context.Components.Remove(component);
+    context.Record(ideaId, userId, ActivityKind.ComponentRemoved, timeProvider.GetUtcNow(), component.Title);
+    await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    return new ComponentChangeResult(ChangeOutcome.Changed);
   }
 
   /// <summary>

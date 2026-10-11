@@ -24,6 +24,7 @@ function ideaRoutes(components: Component[] = []) {
     ...aiOn,
     'GET /api/v1/ideas/idea-1': { status: 200, body: anIdea() },
     'GET /api/v1/ideas/idea-1/components': { status: 200, body: components },
+    'GET /api/v1/ideas/idea-1/comments': { status: 200, body: [] },
     'GET /api/v1/ideas/idea-1/members': { status: 200, body: [] },
     'GET /api/v1/workspaces/ws-1/members': { status: 200, body: [] },
   };
