@@ -88,6 +88,12 @@ export interface Component {
   position: number;
   createdAt: string;
   completedAt: string | null;
+  /** Who is responsible for it, if anyone. */
+  assigneeId: string | null;
+  assigneeEmail: string | null;
+  assigneeName: string | null;
+  /** ISO date it should be done by, `YYYY-MM-DD`, if any. */
+  dueDate: string | null;
 }
 
 export interface ComponentInput {
@@ -97,6 +103,8 @@ export interface ComponentInput {
 
 export interface ComponentUpdate extends ComponentInput {
   isDone: boolean;
+  assigneeId: string | null;
+  dueDate: string | null;
 }
 
 export interface Member {
@@ -108,7 +116,8 @@ export interface Member {
   addedAt: string;
 }
 
-export type ReminderKind = 'ComingUp' | 'Tomorrow' | 'Today' | 'Overdue';
+/** What a notification is about: a countdown stage (the first four), or something a teammate did. */
+export type ReminderKind = 'ComingUp' | 'Tomorrow' | 'Today' | 'Overdue' | 'Assigned' | 'AddedToTeam' | 'Commented';
 
 export interface Notification {
   id: string;

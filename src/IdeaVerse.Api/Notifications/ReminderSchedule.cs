@@ -13,6 +13,11 @@ public static class ReminderSchedule
   public const int WindowDays = 7;
 
   /// <summary>
+  /// Gets the countdown stages, in order, which people choose in their reminder settings.
+  /// </summary>
+  public static IReadOnlyList<ReminderKind> Stages { get; } = [ReminderKind.ComingUp, ReminderKind.Tomorrow, ReminderKind.Today, ReminderKind.Overdue];
+
+  /// <summary>
   /// Returns the reminder that applies to an idea due on <paramref name="targetDate"/>, or <see langword="null"/> when none does yet.
   /// </summary>
   /// <remarks>
@@ -33,23 +38,41 @@ public static class ReminderSchedule
     };
 
   /// <summary>
-  /// Writes the reminder text shown in the app and used as the email body's first line.
+  /// Writes an idea countdown's text, shown in the app and used as the email body's first line.
   /// </summary>
-  /// <param name="kind">The reminder kind.</param>
+  /// <param name="kind">The countdown stage.</param>
   /// <param name="ideaTitle">The idea's title.</param>
   /// <param name="targetDate">The target date the reminder was raised for.</param>
   /// <param name="today">The current date, for the "in N days" wording.</param>
   /// <returns>The message.</returns>
   public static string Message(ReminderKind kind, string ideaTitle, DateOnly targetDate, DateOnly today)
+    => Message(new NotificationContent(kind, ideaTitle, targetDate), today);
+
+  /// <summary>
+  /// Writes a notification's text, shown in the app and used as the email body's first line.
+  /// </summary>
+  /// <param name="content">What the notification is about.</param>
+  /// <param name="today">The reader's current date, for the "in N days" wording.</param>
+  /// <returns>The message.</returns>
+  public static string Message(NotificationContent content, DateOnly today)
   {
-    var date = targetDate.ToString("ddd d MMM yyyy", CultureInfo.InvariantCulture);
-    return kind switch
+    ArgumentNullException.ThrowIfNull(content);
+    var date = content.TargetDate.ToString("ddd d MMM yyyy", CultureInfo.InvariantCulture);
+    var idea = $"“{content.IdeaTitle}”";
+    var subject = content.ComponentTitle is { } component ? $"“{component}” for {idea}" : idea;
+    var actor = content.Actor ?? "Someone";
+    var days = Math.Max(content.TargetDate.DayNumber - today.DayNumber, 2);
+    return content.Kind switch
     {
-      ReminderKind.ComingUp => $"“{ideaTitle}” is due in {Math.Max(targetDate.DayNumber - today.DayNumber, 2)} days, on {date}.",
-      ReminderKind.Tomorrow => $"“{ideaTitle}” is due tomorrow, {date}.",
-      ReminderKind.Today => $"“{ideaTitle}” is due today.",
-      ReminderKind.Overdue => $"“{ideaTitle}” was due on {date} and isn’t done. Postpone it or mark it done so it doesn’t slip away.",
-      _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown reminder kind."),
+      ReminderKind.ComingUp => $"{subject} is due in {days} days, on {date}.",
+      ReminderKind.Tomorrow => $"{subject} is due tomorrow, {date}.",
+      ReminderKind.Today => $"{subject} is due today.",
+      ReminderKind.Overdue when content.ComponentTitle is not null => $"{subject} was due on {date} and isn’t done.",
+      ReminderKind.Overdue => $"{subject} was due on {date} and isn’t done. Postpone it or mark it done so it doesn’t slip away.",
+      ReminderKind.Assigned => $"{actor} assigned “{content.ComponentTitle}” for {idea} to you.",
+      ReminderKind.AddedToTeam => $"{actor} added you to the team of {idea}.",
+      ReminderKind.Commented => $"{actor} commented on {idea}: “{content.Detail}”",
+      _ => throw new ArgumentOutOfRangeException(nameof(content), content.Kind, "Unknown notification kind."),
     };
   }
 }

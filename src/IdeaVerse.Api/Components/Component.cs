@@ -1,5 +1,6 @@
 namespace Pouspourika.IdeaVerse.Api.Components;
 
+using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Ideas;
 
 /// <summary>
@@ -61,4 +62,19 @@ public sealed class Component
   /// Gets or sets when the component was marked done, or <see langword="null"/> while it is not done.
   /// </summary>
   public DateTimeOffset? CompletedAt { get; set; }
+
+  /// <summary>
+  /// Gets or sets the identifier of the <see cref="User"/> responsible for the component, if anyone.
+  /// </summary>
+  public string? AssigneeId { get; set; }
+
+  /// <summary>
+  /// Gets or sets the person responsible for the component.
+  /// </summary>
+  public User? Assignee { get; set; }
+
+  /// <summary>
+  /// Gets or sets the date the component should be done by, if any.
+  /// </summary>
+  public DateOnly? DueDate { get; set; }
 }

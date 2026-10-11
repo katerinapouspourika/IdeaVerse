@@ -9,6 +9,9 @@ const kindLabels: Record<ReminderKind, string> = {
   Tomorrow: 'Tomorrow',
   Today: 'Today',
   Overdue: 'Overdue',
+  Assigned: 'Assigned to you',
+  AddedToTeam: 'Added to team',
+  Commented: 'Comment',
 };
 
 export function NotificationsPage() {

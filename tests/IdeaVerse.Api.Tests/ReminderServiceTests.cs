@@ -22,10 +22,11 @@ public class ReminderServiceTests
     var first = await factory.RunRemindersAsync();
     var second = await factory.RunRemindersAsync();
 
+    var reminders = factory.Mail.Sent.Where(m => m.Subject == "Coming up: Launch");
     await Assert.That(first.Raised).IsEqualTo(2);
-    await Assert.That(first.Emailed).IsEqualTo(2);
-    await Assert.That(factory.Mail.Sent.Select(m => m.To)).IsEquivalentTo(["owner@example.com", "member@example.com"]);
-    await Assert.That(factory.Mail.Sent.Select(m => m.Subject).Distinct()).IsEquivalentTo(["Coming up: Launch"]);
+    await Assert.That(first.Emailed).IsEqualTo(3);
+    await Assert.That(reminders.Select(m => m.To)).IsEquivalentTo(["owner@example.com", "member@example.com"]);
+    await Assert.That(factory.Mail.Sent.Single(m => m.Subject != "Coming up: Launch").Subject).IsEqualTo("You're on the team: Launch");
     await Assert.That(second).IsEqualTo(new Notifications.ReminderRunResult(0, 0));
   }
 
@@ -100,7 +101,7 @@ public class ReminderServiceTests
 
     await factory.RunRemindersAsync();
 
-    await Assert.That(factory.Mail.Sent.Select(m => (m.To, m.Subject))).IsEquivalentTo(
+    await Assert.That(factory.Mail.Sent.Where(m => m.Subject.StartsWith("Due", StringComparison.Ordinal)).Select(m => (m.To, m.Subject))).IsEquivalentTo(
       [("owner@example.com", "Due tomorrow: Launch"), ("member@example.com", "Due today: Launch")]);
   }
 
@@ -126,7 +127,7 @@ public class ReminderServiceTests
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
-    await SetRemindersAsync(owner, email: false, Enum.GetValues<ReminderKind>());
+    await SetRemindersAsync(owner, email: false, [.. ReminderSchedule.Stages]);
     (await owner.CreateIdeaAsync("Launch", Today.AddDays(1))).Dispose();
 
     var result = await factory.RunRemindersAsync();
@@ -142,11 +143,11 @@ public class ReminderServiceTests
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
-    await SetRemindersAsync(owner, email: false, Enum.GetValues<ReminderKind>());
+    await SetRemindersAsync(owner, email: false, [.. ReminderSchedule.Stages]);
     (await owner.CreateIdeaAsync("Launch", Today.AddDays(1))).Dispose();
     await factory.RunRemindersAsync();
 
-    await SetRemindersAsync(owner, email: true, Enum.GetValues<ReminderKind>());
+    await SetRemindersAsync(owner, email: true, [.. ReminderSchedule.Stages]);
     var sameDay = await factory.RunRemindersAsync();
     factory.Time.Advance(TimeSpan.FromDays(1));
     var nextDay = await factory.RunRemindersAsync();

@@ -4,13 +4,13 @@ using Microsoft.EntityFrameworkCore;
 
 using Pouspourika.IdeaVerse.Api.Accounts;
 using Pouspourika.IdeaVerse.Api.Data;
-using Pouspourika.IdeaVerse.Api.Ideas;
 
 /// <summary>
 /// Reads and marks the signed-in user's reminders.
 /// </summary>
 /// <remarks>
-/// Only reminders about ideas the user still owns or is on the team of, in a workspace they are still in, are listed, so leaving or being removed from either hides the idea's reminders.
+/// Only notifications that still concern the user are listed (see <see cref="NotificationAccess.StillRelevant"/>), so leaving a
+/// team or workspace, or being unassigned, hides them.
 /// </remarks>
 /// <param name="context">The database context.</param>
 /// <param name="calendar">Tells the user's local date, for message wording.</param>
@@ -37,13 +37,34 @@ public sealed class NotificationService(IdeaVerseDbContext context, UserCalendar
       .ThenBy(n => n.TargetDate)
       .ThenBy(n => n.Id)
       .Take(PageSize)
-      .Select(n => new { n.Id, n.IdeaId, n.Idea!.Title, n.Kind, n.TargetDate, n.CreatedAt, n.ReadAt })
+      .Select(n => new
+      {
+        n.Id,
+        n.IdeaId,
+        n.Idea!.Title,
+        n.Kind,
+        n.TargetDate,
+        n.CreatedAt,
+        n.ReadAt,
+        ComponentTitle = n.Component!.Title,
+        ActorName = n.Actor!.DisplayName,
+        ActorEmail = n.Actor.Email,
+        n.Detail,
+      })
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
 
     var today = await calendar.TodayAsync(userId, cancellationToken).ConfigureAwait(false);
     var items = rows
-      .Select(n => new NotificationResponse(n.Id, n.IdeaId, n.Title, n.Kind, n.TargetDate, ReminderSchedule.Message(n.Kind, n.Title, n.TargetDate, today), n.CreatedAt, n.ReadAt))
+      .Select(n => new NotificationResponse(
+        n.Id,
+        n.IdeaId,
+        n.Title,
+        n.Kind,
+        n.TargetDate,
+        ReminderSchedule.Message(new NotificationContent(n.Kind, n.Title, n.TargetDate, n.ComponentTitle, n.ActorName ?? n.ActorEmail, n.Detail), today),
+        n.CreatedAt,
+        n.ReadAt))
       .ToList();
     return new NotificationsResponse(items, unread);
   }
@@ -74,19 +95,25 @@ public sealed class NotificationService(IdeaVerseDbContext context, UserCalendar
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
   /// <returns>A task that completes when the reminders are marked.</returns>
-  public Task MarkAllReadAsync(string userId, CancellationToken cancellationToken)
+  public async Task MarkAllReadAsync(string userId, CancellationToken cancellationToken)
   {
     var now = timeProvider.GetUtcNow();
-    return Visible(userId)
+    var unread = await Visible(userId)
       .Where(n => n.ReadAt == null)
-      .ExecuteUpdateAsync(set => set.SetProperty(n => n.ReadAt, now), cancellationToken);
+      .Select(n => n.Id)
+      .ToListAsync(cancellationToken)
+      .ConfigureAwait(false);
+    await context.Notifications
+      .Where(n => unread.Contains(n.Id))
+      .ExecuteUpdateAsync(set => set.SetProperty(n => n.ReadAt, now), cancellationToken)
+      .ConfigureAwait(false);
   }
 
   /// <summary>
-  /// Queries the user's reminders about ideas they are still responsible for.
+  /// Queries the user's notifications that still concern them.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <returns>The visible reminders.</returns>
   private IQueryable<Notification> Visible(string userId)
-    => context.Notifications.Where(n => n.UserId == userId && context.VisibleIdeas(userId).Any(i => i.Id == n.IdeaId && (i.OwnerId == userId || i.Members.Any(m => m.UserId == userId))));
+    => context.StillRelevant().Where(n => n.UserId == userId);
 }

@@ -14,6 +14,8 @@ internal sealed class ComponentConfiguration : IEntityTypeConfiguration<Componen
     builder.Property(c => c.Title).HasMaxLength(Component.TitleMaxLength);
     builder.Property(c => c.Notes).HasMaxLength(Component.NotesMaxLength);
     builder.HasOne(c => c.Idea).WithMany(i => i.Components).HasForeignKey(c => c.IdeaId).OnDelete(DeleteBehavior.Cascade);
+    builder.HasOne(c => c.Assignee).WithMany().HasForeignKey(c => c.AssigneeId).OnDelete(DeleteBehavior.SetNull);
     builder.HasIndex(c => new { c.IdeaId, c.Position });
+    builder.HasIndex(c => new { c.AssigneeId, c.DueDate });
   }
 }

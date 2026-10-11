@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Ideas;
+using Pouspourika.IdeaVerse.Api.Notifications;
 using Pouspourika.IdeaVerse.Api.Workspaces;
 
 /// <summary>
@@ -11,7 +12,8 @@ using Pouspourika.IdeaVerse.Api.Workspaces;
 /// </summary>
 /// <remarks>
 /// Everyone who can see an idea can read and post comments. Authors edit their own comments; authors and the workspace's
-/// owner and admins delete them. A deleted account's comments stay, without an author.
+/// owner and admins delete them. A deleted account's comments stay, without an author. A new comment notifies the idea's
+/// owner and team, except its author.
 /// </remarks>
 /// <param name="context">The database context.</param>
 /// <param name="timeProvider">Clock used for timestamps.</param>
@@ -69,6 +71,7 @@ public sealed class CommentService(IdeaVerseDbContext context, TimeProvider time
 
     var comment = new Comment { IdeaId = ideaId, AuthorId = userId, Body = request.Body.Trim(), CreatedAt = timeProvider.GetUtcNow() };
     context.Comments.Add(comment);
+    await NotifyTeamAsync(userId, ideaId, comment, cancellationToken).ConfigureAwait(false);
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     return new CommentResult(ChangeOutcome.Changed, await ProjectAsync(userId, comment.Id, canModerate.Value, cancellationToken).ConfigureAwait(false));
   }
@@ -140,6 +143,37 @@ public sealed class CommentService(IdeaVerseDbContext context, TimeProvider time
 
     await context.Comments.Where(c => c.Id == commentId).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
     return ChangeOutcome.Changed;
+  }
+
+  /// <summary>
+  /// Notifies the idea's owner and team, except the comment's author, that a comment was posted.
+  /// </summary>
+  /// <param name="authorId">The author's identifier.</param>
+  /// <param name="ideaId">The idea identifier.</param>
+  /// <param name="comment">The new comment.</param>
+  /// <param name="cancellationToken">Token to cancel the query.</param>
+  /// <returns>A task that completes when the notifications are added, to be saved with the comment.</returns>
+  private async Task NotifyTeamAsync(string authorId, Guid ideaId, Comment comment, CancellationToken cancellationToken)
+  {
+    var idea = await context.Ideas
+      .Where(i => i.Id == ideaId)
+      .Select(i => new { i.TargetDate, i.OwnerId, MemberIds = i.Members.Select(m => m.UserId).ToList() })
+      .SingleAsync(cancellationToken)
+      .ConfigureAwait(false);
+    var detail = comment.Body.Length <= Notification.DetailMaxLength ? comment.Body : $"{comment.Body[..(Notification.DetailMaxLength - 1)].TrimEnd()}…";
+    foreach (var recipient in idea.MemberIds.Prepend(idea.OwnerId).Distinct(StringComparer.Ordinal).Where(id => id != authorId))
+    {
+      context.Notifications.Add(new Notification
+      {
+        UserId = recipient,
+        IdeaId = ideaId,
+        ActorId = authorId,
+        Kind = ReminderKind.Commented,
+        TargetDate = idea.TargetDate,
+        Detail = detail,
+        CreatedAt = comment.CreatedAt,
+      });
+    }
   }
 
   /// <summary>

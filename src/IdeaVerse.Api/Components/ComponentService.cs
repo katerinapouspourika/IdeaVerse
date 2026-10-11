@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Pouspourika.IdeaVerse.Api.Activity;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Ideas;
+using Pouspourika.IdeaVerse.Api.Notifications;
+using Pouspourika.IdeaVerse.Api.Workspaces;
 
 /// <summary>
 /// Manages the components of ideas in the user's workspaces.
@@ -33,6 +35,7 @@ public sealed class ComponentService(IdeaVerseDbContext context, TimeProvider ti
 
     return await context.Components
       .AsNoTracking()
+      .Include(c => c.Assignee)
       .Where(c => c.IdeaId == ideaId)
       .OrderBy(c => c.Position)
       .ToListAsync(cancellationToken)
@@ -97,9 +100,33 @@ public sealed class ComponentService(IdeaVerseDbContext context, TimeProvider ti
       return await DeniedAsync(userId, ideaId, cancellationToken).ConfigureAwait(false);
     }
 
+    var assigneeId = string.IsNullOrWhiteSpace(request.AssigneeId) ? null : request.AssigneeId;
+    var now = timeProvider.GetUtcNow();
+    if (assigneeId != component.AssigneeId && assigneeId is not null)
+    {
+      var workspaceId = await context.Ideas.Where(i => i.Id == ideaId).Select(i => i.WorkspaceId).SingleAsync(cancellationToken).ConfigureAwait(false);
+      if (await context.RoleInAsync(assigneeId, workspaceId, cancellationToken).ConfigureAwait(false) is null)
+      {
+        return new ComponentChangeResult(ChangeOutcome.Invalid, Field: nameof(UpdateComponentRequest.AssigneeId), Message: "Choose someone in this idea's workspace.");
+      }
+
+      if (assigneeId != userId)
+      {
+        context.Notifications.Add(new Notification
+        {
+          UserId = assigneeId,
+          IdeaId = ideaId,
+          ComponentId = component.Id,
+          ActorId = userId,
+          Kind = ReminderKind.Assigned,
+          TargetDate = request.DueDate ?? await context.Ideas.Where(i => i.Id == ideaId).Select(i => i.TargetDate).SingleAsync(cancellationToken).ConfigureAwait(false),
+          CreatedAt = now,
+        });
+      }
+    }
+
     if (request.IsDone != component.IsDone)
     {
-      var now = timeProvider.GetUtcNow();
       component.CompletedAt = request.IsDone ? now : null;
       context.Record(ideaId, userId, request.IsDone ? ActivityKind.ComponentCompleted : ActivityKind.ComponentReopened, now, request.Title.Trim());
     }
@@ -107,7 +134,10 @@ public sealed class ComponentService(IdeaVerseDbContext context, TimeProvider ti
     component.Title = request.Title.Trim();
     component.Notes = Normalize(request.Notes);
     component.IsDone = request.IsDone;
+    component.AssigneeId = assigneeId;
+    component.DueDate = request.DueDate;
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    await context.Entry(component).Reference(c => c.Assignee).LoadAsync(cancellationToken).ConfigureAwait(false);
     return new ComponentChangeResult(ChangeOutcome.Changed, component);
   }
 

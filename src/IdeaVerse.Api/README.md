@@ -75,7 +75,7 @@ Statuses are `Planned`, `InProgress`, `Postponed`, and `Done`. Responses include
 | --- | --- | --- |
 | `GET` | `/api/v1/ideas/{ideaId}/components` | List an idea's components in order. |
 | `POST` | `/api/v1/ideas/{ideaId}/components` | Add a component to the end of the list. |
-| `PUT` | `/api/v1/ideas/{ideaId}/components/{componentId}` | Replace title, notes, and done flag. |
+| `PUT` | `/api/v1/ideas/{ideaId}/components/{componentId}` | Replace title, notes, done flag, `assigneeId` (someone in the workspace, else 400; `null` for nobody), and `dueDate`. Assigning someone else notifies them. |
 | `DELETE` | `/api/v1/ideas/{ideaId}/components/{componentId}` | Delete a component. |
 
 Validation errors return `400` with RFC 9457 problem details whose `errors` are keyed by camelCase field name.
@@ -109,7 +109,9 @@ A used-up allowance returns 429, and an AI failure returns 502.
 | `POST` | `/api/v1/notifications/{id}/read` | Mark one reminder read. |
 | `POST` | `/api/v1/notifications/read-all` | Mark all reminders read. |
 
-Reminders about ideas the user is no longer on the team of, or whose workspace they left, are hidden.
+Assigned components with a due date count down the same way for their assignee, whether or not they are on the idea's team. Teammates' actions also notify: being assigned a component, being added to an idea's team, and a comment on an idea you own or are on the team of (except your own). These are always on, appear under the bell, and are emailed unless the person turned reminder emails off.
+
+Notifications that no longer concern the user (they left the team or workspace, or were unassigned) are hidden.
 
 ## Configuration
 

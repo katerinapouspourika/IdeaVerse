@@ -1,5 +1,6 @@
 namespace Pouspourika.IdeaVerse.Api.Notifications;
 
+using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Ideas;
 
@@ -11,6 +12,11 @@ using Pouspourika.IdeaVerse.Api.Ideas;
 /// </remarks>
 public sealed class Notification
 {
+  /// <summary>
+  /// Maximum length of <see cref="Detail"/>.
+  /// </summary>
+  public const int DetailMaxLength = 200;
+
   /// <summary>
   /// Gets the identifier.
   /// </summary>
@@ -45,6 +51,32 @@ public sealed class Notification
   /// Gets the idea's target date when the reminder was raised.
   /// </summary>
   public DateOnly TargetDate { get; init; }
+
+  /// <summary>
+  /// Gets the identifier of the <see cref="Components.Component"/> the notification is about, if any: an assignment, or a
+  /// countdown stage of a component's due date.
+  /// </summary>
+  public Guid? ComponentId { get; init; }
+
+  /// <summary>
+  /// Gets the component.
+  /// </summary>
+  public Component? Component { get; init; }
+
+  /// <summary>
+  /// Gets the identifier of the <see cref="Data.User"/> whose action caused the notification, or <see langword="null"/> for countdown reminders.
+  /// </summary>
+  public string? ActorId { get; init; }
+
+  /// <summary>
+  /// Gets the person whose action caused the notification.
+  /// </summary>
+  public User? Actor { get; init; }
+
+  /// <summary>
+  /// Gets extra text, such as the start of a comment.
+  /// </summary>
+  public string? Detail { get; init; }
 
   /// <summary>
   /// Gets when the reminder was raised.

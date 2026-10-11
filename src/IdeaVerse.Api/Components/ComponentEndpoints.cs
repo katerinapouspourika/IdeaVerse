@@ -2,6 +2,7 @@ namespace Pouspourika.IdeaVerse.Api.Components;
 
 using System.Diagnostics;
 using System.Security.Claims;
+using System.Text.Json;
 
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -85,8 +86,8 @@ internal static class ComponentEndpoints
   /// <param name="user">The signed-in user.</param>
   /// <param name="service">The component service.</param>
   /// <param name="cancellationToken">Token to cancel the request.</param>
-  /// <returns>The updated component, 404, or 403 when the user cannot edit the idea.</returns>
-  private static async Task<Results<Ok<ComponentResponse>, NotFound, ProblemHttpResult>> UpdateAsync(
+  /// <returns>The updated component, 404, 403 when the user cannot edit the idea, or 400 for an assignee outside the workspace.</returns>
+  private static async Task<Results<Ok<ComponentResponse>, NotFound, ValidationProblem, ProblemHttpResult>> UpdateAsync(
     Guid ideaId,
     Guid componentId,
     UpdateComponentRequest request,
@@ -95,12 +96,14 @@ internal static class ComponentEndpoints
     CancellationToken cancellationToken)
   {
     var result = await service.UpdateAsync(user.GetUserId(), ideaId, componentId, request, cancellationToken).ConfigureAwait(false);
-    return result.Outcome switch
+    return result switch
     {
-      ChangeOutcome.Changed => TypedResults.Ok(ComponentResponse.From(result.Component!)),
-      ChangeOutcome.NotFound => TypedResults.NotFound(),
-      ChangeOutcome.Forbidden => Forbidden(),
-      ChangeOutcome.Invalid or ChangeOutcome.Conflict or _ => throw new UnreachableException($"Unhandled outcome {result.Outcome}."),
+      { Outcome: ChangeOutcome.Changed, Component: { } component } => TypedResults.Ok(ComponentResponse.From(component)),
+      { Outcome: ChangeOutcome.NotFound } => TypedResults.NotFound(),
+      { Outcome: ChangeOutcome.Forbidden } => Forbidden(),
+      { Outcome: ChangeOutcome.Invalid, Field: { } field, Message: { } message } => TypedResults.ValidationProblem(
+        new Dictionary<string, string[]>(StringComparer.Ordinal) { [JsonNamingPolicy.CamelCase.ConvertName(field)] = [message] }),
+      _ => throw new UnreachableException($"Unhandled outcome {result.Outcome}."),
     };
   }
 

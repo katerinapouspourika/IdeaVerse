@@ -106,7 +106,7 @@ public class NotificationEndpointsTests
     (await owner.DeleteAsync($"/api/v1/ideas/{idea.Id}/members/{added.UserId}")).Dispose();
     var after = await ReadAsync(member);
 
-    await Assert.That(before.UnreadCount).IsEqualTo(1);
+    await Assert.That(before.Items.Select(n => n.Kind)).IsEquivalentTo([ReminderKind.Tomorrow, ReminderKind.AddedToTeam]);
     await Assert.That(after.Items).IsEmpty();
     await Assert.That(after.UnreadCount).IsEqualTo(0);
   }
