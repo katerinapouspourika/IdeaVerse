@@ -16,6 +16,7 @@ import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
 import { TagInput } from '../components/TagInput';
+import { PriorityCard } from '../priority/PriorityCard';
 import { usePageMeta } from '../seo/usePageMeta';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { ActivitySection } from './ActivitySection';
@@ -118,6 +119,7 @@ function IdeaDetail({ idea }: { idea: Idea }) {
 
         <aside className="stack idea-side" aria-label="Idea details">
           <ScheduleCard idea={idea} />
+          <PriorityCard idea={idea} />
           <TeamSection idea={idea} />
         </aside>
       </div>

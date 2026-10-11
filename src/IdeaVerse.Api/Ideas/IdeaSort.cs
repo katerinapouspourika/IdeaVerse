@@ -24,4 +24,14 @@ public enum IdeaSort
   /// Newest first.
   /// </summary>
   Created,
+
+  /// <summary>
+  /// Most votes first.
+  /// </summary>
+  Votes,
+
+  /// <summary>
+  /// Best impact for the effort first; ideas missing a score last, by impact.
+  /// </summary>
+  Priority,
 }

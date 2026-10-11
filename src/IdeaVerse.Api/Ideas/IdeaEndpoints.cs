@@ -35,6 +35,9 @@ internal static class IdeaEndpoints
     group.MapGet("/{id:guid}", GetAsync).WithName(GetIdeaRouteName);
     group.MapPut("/{id:guid}", UpdateAsync).WithValidation<UpdateIdeaRequest>();
     group.MapPost("/{id:guid}/postpone", PostponeAsync).WithValidation<PostponeIdeaRequest>();
+    group.MapPut("/{id:guid}/priority", SetPriorityAsync).WithValidation<SetPriorityRequest>();
+    group.MapPut("/{id:guid}/vote", VoteAsync);
+    group.MapDelete("/{id:guid}/vote", WithdrawVoteAsync);
     group.MapPost("/{id:guid}/archive", ArchiveAsync);
     group.MapPost("/{id:guid}/restore", RestoreAsync);
     group.MapDelete("/{id:guid}", DeleteAsync);
@@ -166,6 +169,57 @@ internal static class IdeaEndpoints
     var result = await service.PostponeAsync(user.GetUserId(), id, request, cancellationToken).ConfigureAwait(false);
     return ToHttpResult(result);
   }
+
+  /// <summary>
+  /// Scores an idea's impact and effort.
+  /// </summary>
+  /// <param name="id">The idea identifier.</param>
+  /// <param name="request">The validated request.</param>
+  /// <param name="user">The signed-in user.</param>
+  /// <param name="service">The idea service.</param>
+  /// <param name="cancellationToken">Token to cancel the request.</param>
+  /// <returns>The scored idea, 404, 403 when the user is not on the idea's team, or a validation problem.</returns>
+  private static async Task<Results<Ok<IdeaResponse>, NotFound, ValidationProblem, ProblemHttpResult>> SetPriorityAsync(
+    Guid id,
+    SetPriorityRequest request,
+    ClaimsPrincipal user,
+    IdeaService service,
+    CancellationToken cancellationToken)
+    => ToHttpResult(await service.SetPriorityAsync(user.GetUserId(), id, request, cancellationToken).ConfigureAwait(false));
+
+  /// <summary>
+  /// Votes for an idea; voting again changes nothing.
+  /// </summary>
+  /// <param name="id">The idea identifier.</param>
+  /// <param name="user">The signed-in user.</param>
+  /// <param name="service">The idea service.</param>
+  /// <param name="cancellationToken">Token to cancel the request.</param>
+  /// <returns>The idea with its vote count, or 404.</returns>
+  private static async Task<Results<Ok<IdeaResponse>, NotFound>> VoteAsync(
+    Guid id,
+    ClaimsPrincipal user,
+    IdeaService service,
+    CancellationToken cancellationToken)
+    => await service.SetVoteAsync(user.GetUserId(), id, vote: true, cancellationToken).ConfigureAwait(false) is { } idea
+      ? TypedResults.Ok(idea)
+      : TypedResults.NotFound();
+
+  /// <summary>
+  /// Withdraws the user's vote for an idea.
+  /// </summary>
+  /// <param name="id">The idea identifier.</param>
+  /// <param name="user">The signed-in user.</param>
+  /// <param name="service">The idea service.</param>
+  /// <param name="cancellationToken">Token to cancel the request.</param>
+  /// <returns>The idea with its vote count, or 404.</returns>
+  private static async Task<Results<Ok<IdeaResponse>, NotFound>> WithdrawVoteAsync(
+    Guid id,
+    ClaimsPrincipal user,
+    IdeaService service,
+    CancellationToken cancellationToken)
+    => await service.SetVoteAsync(user.GetUserId(), id, vote: false, cancellationToken).ConfigureAwait(false) is { } idea
+      ? TypedResults.Ok(idea)
+      : TypedResults.NotFound();
 
   /// <summary>
   /// Archives an idea: it leaves the list and stops sending reminders, and can be restored.

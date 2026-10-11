@@ -3,6 +3,7 @@ namespace Pouspourika.IdeaVerse.Api.Ideas;
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Members;
+using Pouspourika.IdeaVerse.Api.Votes;
 using Pouspourika.IdeaVerse.Api.Workspaces;
 
 /// <summary>
@@ -19,6 +20,16 @@ public sealed class Idea
   /// Maximum length of <see cref="Description"/>.
   /// </summary>
   public const int DescriptionMaxLength = 4000;
+
+  /// <summary>
+  /// Lowest <see cref="Impact"/> or <see cref="Effort"/> score.
+  /// </summary>
+  public const int MinScore = 1;
+
+  /// <summary>
+  /// Highest <see cref="Impact"/> or <see cref="Effort"/> score.
+  /// </summary>
+  public const int MaxScore = 5;
 
   /// <summary>
   /// Maximum number of <see cref="Tags"/>.
@@ -89,6 +100,21 @@ public sealed class Idea
   /// Gets or sets when the idea was archived, or <see langword="null"/> while it is active. Archived ideas get no reminders.
   /// </summary>
   public DateTimeOffset? ArchivedAt { get; set; }
+
+  /// <summary>
+  /// Gets or sets how much the idea would help, from 1 to 5, or <see langword="null"/> while unscored.
+  /// </summary>
+  public int? Impact { get; set; }
+
+  /// <summary>
+  /// Gets or sets how much work the idea would take, from 1 to 5, or <see langword="null"/> while unscored.
+  /// </summary>
+  public int? Effort { get; set; }
+
+  /// <summary>
+  /// Gets the votes people in the workspace have cast for the idea.
+  /// </summary>
+  public ICollection<IdeaVote> Votes { get; init; } = [];
 
   /// <summary>
   /// Gets the things the idea needs before it can be implemented.

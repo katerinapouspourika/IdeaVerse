@@ -354,7 +354,8 @@ textarea:focus-visible,
   box-shadow: var(--shadow);
 }
 
-.button:disabled {
+.button:disabled,
+.button[aria-disabled='true'] {
   opacity: 0.6;
   cursor: default;
 }
@@ -2147,5 +2148,144 @@ a:focus-visible {
 @media (max-width: 860px) {
   .board {
     grid-template-columns: repeat(4, minmax(240px, 80vw));
+  }
+}
+
+/* Voting and the impact × effort matrix */
+
+.idea-item {
+  position: relative;
+}
+
+.idea-item .idea-card > .row:last-child {
+  padding-right: 72px;
+}
+
+.idea-item-vote {
+  position: absolute;
+  right: 20px;
+  bottom: 16px;
+}
+
+.vote-button {
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.vote-button.voted {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.priority-scores > .field {
+  flex: 1 1 120px;
+}
+
+.quadrant-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+}
+
+.quadrant-tag.QuickWin,
+.matrix-cell.QuickWin {
+  --quadrant: var(--ok);
+  --quadrant-soft: var(--ok-soft);
+}
+
+.quadrant-tag.BigBet,
+.matrix-cell.BigBet {
+  --quadrant: var(--accent);
+  --quadrant-soft: var(--accent-soft);
+}
+
+.quadrant-tag.NiceToHave,
+.matrix-cell.NiceToHave {
+  --quadrant: var(--muted);
+  --quadrant-soft: var(--bg-tint);
+}
+
+.quadrant-tag.TimeSink,
+.matrix-cell.TimeSink {
+  --quadrant: var(--warn);
+  --quadrant-soft: var(--warn-soft);
+}
+
+.quadrant-tag {
+  background: var(--quadrant-soft);
+  color: var(--quadrant);
+}
+
+.matrix {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  grid-template-rows: auto auto auto;
+  grid-template-areas:
+    'impact quick big'
+    'impact nice sink'
+    '. effort effort';
+  gap: 12px;
+}
+
+.matrix-cell {
+  border-top: 4px solid var(--quadrant);
+  min-height: 160px;
+}
+
+.matrix-cell h2 {
+  font-size: 1.05rem;
+}
+
+.matrix-cell.QuickWin {
+  grid-area: quick;
+}
+
+.matrix-cell.BigBet {
+  grid-area: big;
+}
+
+.matrix-cell.NiceToHave {
+  grid-area: nice;
+}
+
+.matrix-cell.TimeSink {
+  grid-area: sink;
+}
+
+.matrix-axis {
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.matrix-axis.impact {
+  grid-area: impact;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  align-self: center;
+}
+
+.matrix-axis.effort {
+  grid-area: effort;
+  justify-self: center;
+}
+
+.matrix-ideas {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+@media (max-width: 600px) {
+  .matrix {
+    grid-template-columns: 1fr;
+    grid-template-areas: 'quick' 'big' 'nice' 'sink';
+  }
+
+  .matrix-axis {
+    display: none;
   }
 }

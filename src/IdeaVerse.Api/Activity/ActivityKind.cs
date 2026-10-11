@@ -84,4 +84,9 @@ public enum ActivityKind
   /// The idea was brought back from the archive.
   /// </summary>
   Restored,
+
+  /// <summary>
+  /// The impact or effort score changed; the detail is the new scores, such as "Impact 4, effort 2" or "Impact 4, effort not scored", or empty when both were cleared.
+  /// </summary>
+  Rescored,
 }

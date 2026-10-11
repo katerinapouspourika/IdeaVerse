@@ -43,6 +43,8 @@ export function describeActivity(entry: ActivityEntry): string {
       return `${who} archived the idea`;
     case 'Restored':
       return `${who} restored the idea`;
+    case 'Rescored':
+      return detail ? `${who} scored it: ${detail.toLowerCase()}` : `${who} cleared its scores`;
   }
 }
 
