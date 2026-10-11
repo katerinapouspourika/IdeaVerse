@@ -1363,8 +1363,10 @@ h3 {
 
 .preview-logo {
   position: absolute;
-  bottom: -36px;
-  left: -28px;
+  width: 64px;
+  height: 64px;
+  bottom: -52px;
+  right: 40px;
   padding: 10px;
   border-radius: 24px;
   background: #ffffff;

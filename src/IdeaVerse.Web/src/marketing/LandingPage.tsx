@@ -150,7 +150,7 @@ function HeroPreview() {
           </span>
         </div>
       </div>
-      <img src="/logo.png" alt="" className="preview-logo" width="96" height="96" />
+      <img src="/logo.png" alt="" className="preview-logo" width="64" height="64" />
     </div>
   );
 }
