@@ -5,6 +5,8 @@
   --text: #16204a;
   --muted: #5b6585;
   --border: #dde5f2;
+  --input-border: #a9b6cf;
+  --input-bg: #ffffff;
   --navy: #232b8f;
   --sky: #2fb2e6;
   --sun: #ffc94a;
@@ -36,6 +38,8 @@
     --text: #eef1ff;
     --muted: #a7afd6;
     --border: #2a3270;
+    --input-border: #4a569a;
+    --input-bg: #10153a;
     --accent: #7ec8ff;
     --accent-text: #0e1230;
     --accent-soft: #1f2a66;
@@ -266,8 +270,8 @@ textarea {
   font: inherit;
   font-weight: 400;
   color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
   border-radius: var(--radius-small);
   padding: 10px 12px;
   min-width: 0;
@@ -1536,4 +1540,75 @@ h3 {
   .auth-layout .auth {
     padding: 24px 20px;
   }
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.6;
+}
+
+.idea-heading {
+  align-items: flex-start;
+}
+
+/* Tag editor: chips followed by a text box, framed together like one input. */
+.tag-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-small);
+}
+
+.tag-input:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.tag-input input {
+  flex: 1 1 160px;
+  border: 0;
+  padding: 4px 6px;
+  background: transparent;
+  min-height: 0;
+}
+
+.tag-input input:focus,
+.tag-input input:focus-visible {
+  box-shadow: none;
+  outline: none;
+}
+
+.tag.removable {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 2px;
+  font-size: 0.85rem;
+}
+
+.tag-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tag-remove:hover,
+.tag-remove:focus-visible {
+  background: var(--accent);
+  color: var(--accent-text);
+  outline: none;
 }

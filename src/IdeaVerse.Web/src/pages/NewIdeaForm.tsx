@@ -4,7 +4,7 @@ import { addDays, todayIso } from '../api/dates';
 import { useCreateIdea } from '../api/queries';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
-import { parseTags } from '../components/tagInput';
+import { TagInput } from '../components/TagInput';
 
 interface NewIdeaFormProps {
   workspaceId: string;
@@ -19,12 +19,12 @@ export function NewIdeaForm({ workspaceId, initial, onDone }: NewIdeaFormProps) 
   const [title, setTitle] = useState(initial?.title ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [targetDate, setTargetDate] = useState(addDays(today, 14));
-  const [tags, setTags] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     create.mutate(
-      { title, description: description || null, targetDate, tags: parseTags(tags) },
+      { title, description: description || null, targetDate, tags },
       { onSuccess: onDone },
     );
   };
@@ -47,8 +47,8 @@ export function NewIdeaForm({ workspaceId, initial, onDone }: NewIdeaFormProps) 
           <textarea {...props} rows={3} maxLength={4000} value={description} onChange={(e) => setDescription(e.target.value)} />
         )}
       </Field>
-      <Field label=<>Tags <span className="muted">(optional)</span></> hint="Separate tags with commas." error={fieldError(create.error, 'tags')}>
-        {(props) => <input {...props} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="e.g. marketing, q4" />}
+      <Field label=<>Tags <span className="muted">(optional)</span></> hint="Type a tag and press Enter to add it." error={fieldError(create.error, 'tags')}>
+        {(props) => <TagInput {...props} tags={tags} onChange={setTags} />}
       </Field>
       <ErrorMessage error={create.error} />
       <div className="row">
