@@ -1,10 +1,5 @@
 import { request } from './client';
 
-/** Confirms an account with the `userId` and `code` (and any `changedEmail`) from the confirmation email's link. */
-export function confirmEmail(query: string): Promise<void> {
-  return request('GET', `/api/v1/auth/confirmEmail${query.startsWith('?') ? query : `?${query}`}`);
-}
-
 /** Sends the confirmation email again. The API answers the same whether or not the account exists. */
 export function resendConfirmation(email: string): Promise<void> {
   return request('POST', '/api/v1/auth/resendConfirmationEmail', { email });
