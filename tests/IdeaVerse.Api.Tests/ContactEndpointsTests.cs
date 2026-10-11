@@ -80,6 +80,31 @@ public class ContactEndpointsTests
   }
 
   [Test]
+  public async Task Status_WithRecipient_SaysTheFormSendsAndGivesTheDirectAddress()
+  {
+    await using var factory = new IdeaVerseApiFactory(settings: new Dictionary<string, string?>(WithRecipient, StringComparer.Ordinal)
+    {
+      ["Contact:PublicEmail"] = "team@ideaverse.example",
+    });
+    using var client = factory.CreateClient();
+
+    var status = await client.GetFromJsonAsync<ContactStatusResponse>("/api/v1/contact", Json.Options);
+
+    await Assert.That(status).IsEqualTo(new ContactStatusResponse(true, "team@ideaverse.example"));
+  }
+
+  [Test]
+  public async Task Status_NoRecipientConfigured_SaysTheFormIsOff()
+  {
+    await using var factory = new IdeaVerseApiFactory(settings: new Dictionary<string, string?>(StringComparer.Ordinal) { ["Contact:PublicEmail"] = string.Empty });
+    using var client = factory.CreateClient();
+
+    var status = await client.GetFromJsonAsync<ContactStatusResponse>("/api/v1/contact", Json.Options);
+
+    await Assert.That(status).IsEqualTo(new ContactStatusResponse(false, null));
+  }
+
+  [Test]
   public async Task Send_MoreThanTheHourlyLimit_ReturnsTooManyRequests()
   {
     await using var factory = new IdeaVerseApiFactory(settings: WithRecipient);
