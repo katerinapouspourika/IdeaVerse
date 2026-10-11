@@ -38,6 +38,7 @@ internal static class WebAppExtensions
     "/people",
     "/invitations",
     "/workspaces/new",
+    "/workspaces/{id:guid}/invite",
     "/settings",
   ];
 

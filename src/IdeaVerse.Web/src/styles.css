@@ -3138,3 +3138,60 @@ a:focus-visible {
     margin: 4px 0 12px;
   }
 }
+
+/* Setting up a workspace: the steps, and a narrower column for the forms. */
+.setup {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.setup-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.setup-steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setup-step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 2px solid var(--border);
+  font-size: 0.8rem;
+}
+
+.setup-steps li.current {
+  color: var(--accent);
+}
+
+.setup-steps li.current .setup-step-number {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.setup-steps li.done {
+  color: var(--ok);
+}
+
+.setup-steps li.done .setup-step-number {
+  border-color: var(--ok);
+  background: var(--ok-soft);
+}
+
+.invite-row .icon-button {
+  margin-bottom: 4px;
+}

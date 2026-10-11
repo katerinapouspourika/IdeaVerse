@@ -154,12 +154,51 @@ describe('IdeasPage', () => {
       renderApp('/ideas');
 
       expect(await screen.findByRole('heading', { name: 'Welcome to IdeaVerse' })).toBeInTheDocument();
+      expect(screen.getByRole('list', { name: 'Setting up your workspace' })).toHaveTextContent('1Name your workspace2Invite your team');
       const form = screen.getByRole('form', { name: 'Create workspace' });
       await userEvent.type(within(form).getByLabelText('Workspace name'), 'Acme Marketing');
       await userEvent.click(within(form).getByRole('button', { name: 'Create workspace' }));
 
+      expect(await screen.findByRole('heading', { name: 'Invite your team to Acme Marketing' })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Skip for now' }));
+
       expect(await screen.findByRole('heading', { name: 'Ideas' })).toBeInTheDocument();
       expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ name: 'Acme Marketing' });
+    });
+
+    it('invites the team in the second step, keeping only the addresses that were refused', async () => {
+      const calls = fakeApi({
+        ...signedIn,
+        [ideasRoute]: { status: 200, body: [] },
+        'POST /api/v1/workspaces/ws-1/invitations': (body) =>
+          (body as { email: string }).email === 'kat@example.com'
+            ? { status: 400, body: { errors: { email: ['This person is already in the workspace.'] } } }
+            : { status: 201, body: {} },
+      });
+      const router = renderApp('/workspaces/ws-1/invite');
+
+      const form = await screen.findByRole('form', { name: 'Invite your team' });
+      await userEvent.type(within(form).getByLabelText('Email 1'), 'mia@example.com');
+      await userEvent.type(within(form).getByLabelText('Email 2'), 'kat@example.com');
+      await userEvent.selectOptions(within(form).getByLabelText('Invite them as'), 'Admin');
+      await userEvent.click(within(form).getByRole('button', { name: 'Send invitations' }));
+
+      expect(await screen.findByText('Invitation sent')).toBeInTheDocument();
+      expect(within(form).getByLabelText('Email 1')).toHaveValue('kat@example.com');
+      expect(within(form).getByLabelText('Email 1')).toHaveAccessibleDescription('This person is already in the workspace.');
+      expect(within(form).queryByLabelText('Email 2')).not.toBeInTheDocument();
+      expect(calls.filter((c) => c.method === 'POST').map((c) => c.body)).toEqual([
+        { email: 'mia@example.com', role: 'Admin' },
+        { email: 'kat@example.com', role: 'Admin' },
+      ]);
+      expect(router.state.location.pathname).toBe('/workspaces/ws-1/invite');
+    });
+
+    it('does not offer to invite to a workspace the user cannot manage', async () => {
+      fakeApi({ ...signedIn, 'GET /api/v1/workspaces': { status: 200, body: [aWorkspace({ role: 'Member' })] }, [ideasRoute]: { status: 200, body: [] } });
+      const router = renderApp('/workspaces/ws-1/invite');
+
+      await waitFor(() => expect(router.state.location.pathname).toBe('/ideas'));
     });
 
     it('joins a workspace they were invited to', async () => {
