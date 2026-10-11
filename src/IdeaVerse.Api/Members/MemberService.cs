@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Pouspourika.IdeaVerse.Api.Activity;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Ideas;
+using Pouspourika.IdeaVerse.Api.Notifications;
 
 /// <summary>
 /// Manages who is on an idea's team.
@@ -67,7 +68,7 @@ public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> 
 
     var idea = await context.ManagedIdeas(userId)
       .Where(i => i.Id == ideaId)
-      .Select(i => new { i.OwnerId, i.WorkspaceId })
+      .Select(i => new { i.OwnerId, i.WorkspaceId, i.TargetDate })
       .FirstOrDefaultAsync(cancellationToken)
       .ConfigureAwait(false);
     if (idea is null)
@@ -101,6 +102,19 @@ public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> 
     var member = new IdeaMember { IdeaId = ideaId, UserId = account.UserId, AddedAt = timeProvider.GetUtcNow() };
     context.IdeaMembers.Add(member);
     context.Record(ideaId, userId, ActivityKind.MemberAdded, member.AddedAt, account.DisplayName ?? account.Email);
+    if (account.UserId != userId)
+    {
+      context.Notifications.Add(new Notification
+      {
+        UserId = account.UserId,
+        IdeaId = ideaId,
+        ActorId = userId,
+        Kind = ReminderKind.AddedToTeam,
+        TargetDate = idea.TargetDate,
+        CreatedAt = member.AddedAt,
+      });
+    }
+
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     return MemberChangeResult.Changed(new MemberResponse(account.UserId, account.Email!, account.DisplayName, IdeaRole.Member, member.AddedAt));
   }

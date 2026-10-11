@@ -41,7 +41,8 @@ public sealed class User : IdentityUser
   public bool EmailReminders { get; set; } = true;
 
   /// <summary>
-  /// Gets or sets the reminder kinds the user turned off, one bit per <see cref="ReminderKind"/>; zero means all are on.
+  /// Gets or sets the countdown stages the user turned off, one bit per <see cref="ReminderKind"/>; zero means all are on.
+  /// Teammates' actions, such as assignments and comments, are always notified.
   /// </summary>
   public int MutedReminderKinds { get; set; }
 
@@ -51,7 +52,7 @@ public sealed class User : IdentityUser
   /// <param name="wanted">The kinds the user wants.</param>
   /// <returns>The bits for the kinds left out.</returns>
   public static int MuteAllBut(IEnumerable<ReminderKind> wanted)
-    => Enum.GetValues<ReminderKind>().Except(wanted).Aggregate(0, (bits, kind) => bits | Bit(kind));
+    => ReminderSchedule.Stages.Except(wanted).Aggregate(0, (bits, kind) => bits | Bit(kind));
 
   /// <summary>
   /// Returns whether a reminder kind is on in a set of <see cref="MutedReminderKinds"/> bits.
@@ -62,11 +63,11 @@ public sealed class User : IdentityUser
   public static bool Wants(int mutedKinds, ReminderKind kind) => (mutedKinds & Bit(kind)) == 0;
 
   /// <summary>
-  /// Gets the reminder kinds the user wants.
+  /// Gets the countdown stages the user wants.
   /// </summary>
-  /// <returns>The kinds that are on, in stage order.</returns>
+  /// <returns>The stages that are on, in order.</returns>
   public IReadOnlyList<ReminderKind> WantedReminderKinds()
-    => [.. Enum.GetValues<ReminderKind>().Where(kind => Wants(MutedReminderKinds, kind))];
+    => [.. ReminderSchedule.Stages.Where(kind => Wants(MutedReminderKinds, kind))];
 
   /// <summary>
   /// Gets the bit for a reminder kind in <see cref="MutedReminderKinds"/>.

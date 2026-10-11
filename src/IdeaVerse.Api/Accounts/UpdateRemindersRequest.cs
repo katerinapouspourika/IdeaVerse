@@ -14,7 +14,7 @@ public sealed record UpdateRemindersRequest(bool EmailReminders, [property: Requ
   /// <inheritdoc/>
   public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
   {
-    if (ReminderKinds?.Any(kind => !Enum.IsDefined(kind)) == true)
+    if (ReminderKinds?.Any(kind => !ReminderSchedule.Stages.Contains(kind)) == true)
     {
       yield return new ValidationResult("Choose from ComingUp, Tomorrow, Today, and Overdue.", [nameof(ReminderKinds)]);
     }

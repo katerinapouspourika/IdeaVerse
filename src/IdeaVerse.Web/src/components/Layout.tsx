@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router';
 
+import { useReceivedInvitations } from '../api/queries';
 import { personLabel } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { useWorkspace, WorkspaceProvider } from '../workspaces/WorkspaceContext';
@@ -42,6 +43,7 @@ function TopBar() {
             People
           </NavLink>
         )}
+        {account && <InvitationsLink />}
       </div>
       {account && (
         <div className="account">
@@ -55,5 +57,16 @@ function TopBar() {
         </div>
       )}
     </header>
+  );
+}
+
+/** Header link to the user's open invitations, shown only while they have some. */
+function InvitationsLink() {
+  const invitations = useReceivedInvitations();
+  const count = invitations.data?.length ?? 0;
+  return count === 0 ? null : (
+    <NavLink to="/invitations" className="nav-link">
+      Invitations ({count})
+    </NavLink>
   );
 }

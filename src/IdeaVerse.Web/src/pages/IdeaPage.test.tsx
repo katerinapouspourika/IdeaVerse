@@ -20,6 +20,10 @@ const budget: Component = {
   position: 0,
   createdAt: '2026-10-01T09:00:00Z',
   completedAt: null,
+  assigneeId: null,
+  assigneeEmail: null,
+  assigneeName: null,
+  dueDate: null,
 };
 
 const asMember: Partial<Idea> = { role: 'Member', canManage: false, ownerEmail: 'leo@example.com' };
@@ -102,7 +106,7 @@ describe('IdeaPage', () => {
 
     await waitFor(() => expect(checkbox).toBeChecked());
     await waitFor(() =>
-      expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ title: 'Budget sign-off', notes: null, isDone: true }),
+      expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ title: 'Budget sign-off', notes: null, isDone: true, assigneeId: null, dueDate: null }),
     );
   });
 
