@@ -57,6 +57,7 @@ public sealed partial class ReminderService(
       ReminderKind.Assigned => $"Assigned to you: {about}",
       ReminderKind.AddedToTeam => $"You're on the team: {content.IdeaTitle}",
       ReminderKind.Commented => $"New comment on {content.IdeaTitle}",
+      ReminderKind.Mentioned => $"You were mentioned on {content.IdeaTitle}",
       _ => throw new ArgumentOutOfRangeException(nameof(content), content.Kind, "Unknown notification kind."),
     };
   }

@@ -13,7 +13,8 @@ using Pouspourika.IdeaVerse.Api.Workspaces;
 /// <remarks>
 /// Everyone who can see an idea can read and post comments. Authors edit their own comments; authors and the workspace's
 /// owner and admins delete them. A deleted account's comments stay, without an author. A new comment notifies the idea's
-/// owner and team, except its author.
+/// owner and team, except its author. A comment can mention people in the workspace (see <see cref="Mentions"/>); each
+/// person it mentions, when it is posted or when an edit adds them, is notified instead.
 /// </remarks>
 /// <param name="context">The database context.</param>
 /// <param name="timeProvider">Clock used for timestamps.</param>
@@ -71,7 +72,7 @@ public sealed class CommentService(IdeaVerseDbContext context, TimeProvider time
 
     var comment = new Comment { IdeaId = ideaId, AuthorId = userId, Body = request.Body.Trim(), CreatedAt = timeProvider.GetUtcNow() };
     context.Comments.Add(comment);
-    await NotifyTeamAsync(userId, ideaId, comment, cancellationToken).ConfigureAwait(false);
+    await NotifyAsync(userId, ideaId, comment, alreadyMentioned: [], notifyTeam: true, cancellationToken).ConfigureAwait(false);
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     return new CommentResult(ChangeOutcome.Changed, await ProjectAsync(userId, comment.Id, canModerate.Value, cancellationToken).ConfigureAwait(false));
   }
@@ -105,8 +106,10 @@ public sealed class CommentService(IdeaVerseDbContext context, TimeProvider time
       return new CommentResult(ChangeOutcome.Forbidden);
     }
 
+    var alreadyMentioned = Mentions.UserIds(comment.Body);
     comment.Body = request.Body.Trim();
     comment.EditedAt = timeProvider.GetUtcNow();
+    await NotifyAsync(userId, ideaId, comment, alreadyMentioned, notifyTeam: false, cancellationToken).ConfigureAwait(false);
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     return new CommentResult(ChangeOutcome.Changed, await ProjectAsync(userId, comment.Id, canModerate, cancellationToken).ConfigureAwait(false));
   }
@@ -146,32 +149,58 @@ public sealed class CommentService(IdeaVerseDbContext context, TimeProvider time
   }
 
   /// <summary>
-  /// Notifies the idea's owner and team, except the comment's author, that a comment was posted.
+  /// Notifies the people a comment newly mentions, and, for a new comment, the rest of the idea's owner and team.
   /// </summary>
-  /// <param name="authorId">The author's identifier.</param>
+  /// <remarks>
+  /// Only mentions of people in the idea's workspace count; others are left as text. The author is never notified, and
+  /// someone mentioned gets that notification instead of the one about a new comment.
+  /// </remarks>
+  /// <param name="authorId">The comment's author.</param>
   /// <param name="ideaId">The idea identifier.</param>
-  /// <param name="comment">The new comment.</param>
+  /// <param name="comment">The comment, with its current text.</param>
+  /// <param name="alreadyMentioned">Who the comment mentioned before an edit, so they are not notified again.</param>
+  /// <param name="notifyTeam">Whether to tell the owner and team about a new comment.</param>
   /// <param name="cancellationToken">Token to cancel the query.</param>
-  /// <returns>A task that completes when the notifications are added, to be saved with the comment.</returns>
-  private async Task NotifyTeamAsync(string authorId, Guid ideaId, Comment comment, CancellationToken cancellationToken)
+  /// <returns>A task that completes once the notifications are added.</returns>
+  private async Task NotifyAsync(
+    string authorId,
+    Guid ideaId,
+    Comment comment,
+    IReadOnlyList<string> alreadyMentioned,
+    bool notifyTeam,
+    CancellationToken cancellationToken)
   {
     var idea = await context.Ideas
       .Where(i => i.Id == ideaId)
-      .Select(i => new { i.TargetDate, i.OwnerId, MemberIds = i.Members.Select(m => m.UserId).ToList() })
+      .Select(i => new { i.TargetDate, i.WorkspaceId, i.OwnerId, MemberIds = i.Members.Select(m => m.UserId).ToList() })
       .SingleAsync(cancellationToken)
       .ConfigureAwait(false);
-    var detail = comment.Body.Length <= Notification.DetailMaxLength ? comment.Body : $"{comment.Body[..(Notification.DetailMaxLength - 1)].TrimEnd()}…";
-    foreach (var recipient in idea.MemberIds.Prepend(idea.OwnerId).Distinct(StringComparer.Ordinal).Where(id => id != authorId))
+    var named = Mentions.UserIds(comment.Body).Where(id => id != authorId && !alreadyMentioned.Contains(id, StringComparer.Ordinal)).ToList();
+    var mentioned = named.Count == 0
+      ? []
+      : await context.WorkspaceMembers
+        .Where(m => m.WorkspaceId == idea.WorkspaceId && named.Contains(m.UserId))
+        .Select(m => m.UserId)
+        .ToListAsync(cancellationToken)
+        .ConfigureAwait(false);
+    var team = notifyTeam
+      ? idea.MemberIds.Prepend(idea.OwnerId).Distinct(StringComparer.Ordinal).Where(id => id != authorId && !mentioned.Contains(id, StringComparer.Ordinal))
+      : [];
+
+    var text = Mentions.ToPlainText(comment.Body);
+    var detail = text.Length <= Notification.DetailMaxLength ? text : $"{text[..(Notification.DetailMaxLength - 1)].TrimEnd()}…";
+    var now = comment.EditedAt ?? comment.CreatedAt;
+    foreach (var (recipient, kind) in mentioned.Select(id => (Recipient: id, Kind: ReminderKind.Mentioned)).Concat(team.Select(id => (Recipient: id, Kind: ReminderKind.Commented))))
     {
       context.Notifications.Add(new Notification
       {
         UserId = recipient,
         IdeaId = ideaId,
         ActorId = authorId,
-        Kind = ReminderKind.Commented,
+        Kind = kind,
         TargetDate = idea.TargetDate,
         Detail = detail,
-        CreatedAt = comment.CreatedAt,
+        CreatedAt = now,
       });
     }
   }

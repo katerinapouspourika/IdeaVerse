@@ -1,16 +1,20 @@
 import { useState, type FormEvent } from 'react';
 
 import { formatMoment } from '../api/dates';
-import { useAddComment, useComments, useDeleteComment, useEditComment } from '../api/queries';
+import { useAddComment, useComments, useDeleteComment, useEditComment, useWorkspaceMembers } from '../api/queries';
 import { personLabel, type Comment } from '../api/types';
+import { useAuth } from '../auth/AuthContext';
 import { useConfirm, useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
+import { MentionTextarea, type Mentionable } from '../mentions/MentionTextarea';
+import { segments, toBody, toEditable, type Mention } from '../mentions/mentions';
 
-/** The idea's comments, open to everyone in its workspace. */
-export function DiscussionSection({ ideaId }: { ideaId: string }) {
+/** The idea's comments, open to everyone in its workspace, who can mention each other with `@`. */
+export function DiscussionSection({ ideaId, workspaceId }: { ideaId: string; workspaceId: string }) {
   const comments = useComments(ideaId);
+  const people = useMentionable(workspaceId);
   const remove = useDeleteComment(ideaId);
   const confirm = useConfirm();
   const toast = useToast();
@@ -29,25 +33,52 @@ export function DiscussionSection({ ideaId }: { ideaId: string }) {
       {comments.data && comments.data.length > 0 && (
         <ol className="comments">
           {comments.data.map((comment) => (
-            <CommentItem key={comment.id} ideaId={ideaId} comment={comment} onDelete={() => void deleteComment(comment)} />
+            <CommentItem key={comment.id} ideaId={ideaId} comment={comment} people={people} onDelete={() => void deleteComment(comment)} />
           ))}
         </ol>
       )}
       <ErrorMessage error={comments.error ?? remove.error} />
-      <AddCommentForm ideaId={ideaId} />
+      <AddCommentForm ideaId={ideaId} people={people} />
     </section>
   );
 }
 
-function CommentItem({ ideaId, comment, onDelete }: { ideaId: string; comment: Comment; onDelete: () => void }) {
+/** The people in the workspace someone can mention: everyone but themselves. */
+function useMentionable(workspaceId: string): Mentionable[] {
+  const members = useWorkspaceMembers(workspaceId);
+  const { account } = useAuth();
+  return (members.data ?? [])
+    .filter((m) => m.email !== account?.email)
+    .map((m) => ({ userId: m.userId, name: personLabel(m.name, m.email), email: m.email }));
+}
+
+/** A comment's text, with its mentions marked. */
+function CommentBody({ body }: { body: string }) {
+  return (
+    <p className="description">
+      {segments(body).map((part, i) =>
+        'mention' in part ? (
+          <span key={i} className="mention">
+            @{part.mention.name}
+          </span>
+        ) : (
+          part.text
+        ),
+      )}
+    </p>
+  );
+}
+
+function CommentItem({ ideaId, comment, people, onDelete }: { ideaId: string; comment: Comment; people: Mentionable[]; onDelete: () => void }) {
   const edit = useEditComment(ideaId);
   const [editing, setEditing] = useState(false);
-  const [body, setBody] = useState(comment.body);
+  const [draft, setDraft] = useState(() => toEditable(comment.body));
+  const [mentions, setMentions] = useState<Mention[]>(draft.mentions);
   const author = comment.authorEmail ? personLabel(comment.authorName, comment.authorEmail) : 'A former member';
 
   const save = (event: FormEvent) => {
     event.preventDefault();
-    edit.mutate({ id: comment.id, body }, { onSuccess: () => setEditing(false) });
+    edit.mutate({ id: comment.id, body: toBody(draft.text, mentions) }, { onSuccess: () => setEditing(false) });
   };
 
   return (
@@ -62,7 +93,19 @@ function CommentItem({ ideaId, comment, onDelete }: { ideaId: string; comment: C
       {editing ? (
         <form className="stack" onSubmit={save} aria-label="Edit comment">
           <Field label="Comment" error={fieldError(edit.error, 'body')}>
-            {(props) => <textarea {...props} required rows={3} maxLength={4000} value={body} onChange={(e) => setBody(e.target.value)} />}
+            {(props) => (
+              <MentionTextarea
+                {...props}
+                required
+                rows={3}
+                maxLength={4000}
+                value={draft.text}
+                onChange={(text) => setDraft({ ...draft, text })}
+                mentions={mentions}
+                onMentionsChange={setMentions}
+                people={people}
+              />
+            )}
           </Field>
           <ErrorMessage error={edit.error} />
           <div className="row">
@@ -75,12 +118,21 @@ function CommentItem({ ideaId, comment, onDelete }: { ideaId: string; comment: C
           </div>
         </form>
       ) : (
-        <p className="description">{comment.body}</p>
+        <CommentBody body={comment.body} />
       )}
       {!editing && (comment.canEdit || comment.canDelete) && (
         <div className="row">
           {comment.canEdit && (
-            <button type="button" className="button ghost small" onClick={() => setEditing(true)}>
+            <button
+              type="button"
+              className="button ghost small"
+              onClick={() => {
+                const editable = toEditable(comment.body);
+                setDraft(editable);
+                setMentions(editable.mentions);
+                setEditing(true);
+              }}
+            >
               Edit
             </button>
           )}
@@ -95,19 +147,37 @@ function CommentItem({ ideaId, comment, onDelete }: { ideaId: string; comment: C
   );
 }
 
-function AddCommentForm({ ideaId }: { ideaId: string }) {
+function AddCommentForm({ ideaId, people }: { ideaId: string; people: Mentionable[] }) {
   const add = useAddComment(ideaId);
   const [body, setBody] = useState('');
+  const [mentions, setMentions] = useState<Mention[]>([]);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    add.mutate(body, { onSuccess: () => setBody('') });
+    add.mutate(toBody(body, mentions), {
+      onSuccess: () => {
+        setBody('');
+        setMentions([]);
+      },
+    });
   };
 
   return (
     <form className="stack" onSubmit={submit} aria-label="Add comment">
-      <Field label="Add a comment" error={fieldError(add.error, 'body')}>
-        {(props) => <textarea {...props} required rows={3} maxLength={4000} value={body} onChange={(e) => setBody(e.target.value)} />}
+      <Field label="Add a comment" hint="Type @ to mention someone in the workspace." error={fieldError(add.error, 'body')}>
+        {(props) => (
+          <MentionTextarea
+            {...props}
+            required
+            rows={3}
+            maxLength={4000}
+            value={body}
+            onChange={setBody}
+            mentions={mentions}
+            onMentionsChange={setMentions}
+            people={people}
+          />
+        )}
       </Field>
       <ErrorMessage error={add.error} />
       <div className="row">

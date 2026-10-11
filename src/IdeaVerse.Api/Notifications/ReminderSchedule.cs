@@ -72,6 +72,7 @@ public static class ReminderSchedule
       ReminderKind.Assigned => $"{actor} assigned “{content.ComponentTitle}” for {idea} to you.",
       ReminderKind.AddedToTeam => $"{actor} added you to the team of {idea}.",
       ReminderKind.Commented => $"{actor} commented on {idea}: “{content.Detail}”",
+      ReminderKind.Mentioned => $"{actor} mentioned you on {idea}: “{content.Detail}”",
       _ => throw new ArgumentOutOfRangeException(nameof(content), content.Kind, "Unknown notification kind."),
     };
   }
