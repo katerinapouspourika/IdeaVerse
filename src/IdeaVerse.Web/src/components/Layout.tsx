@@ -1,6 +1,6 @@
 import { Download, LogOut, Menu as MenuIcon, Settings, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet, ScrollRestoration, useLocation, useNavigate } from 'react-router';
+import { Link, NavLink, Outlet, ScrollRestoration, useLocation, useMatches, useNavigate } from 'react-router';
 
 import { useReceivedInvitations } from '../api/queries';
 import { personLabel } from '../api/types';
@@ -9,19 +9,25 @@ import { Commands } from '../commands/Commands';
 import { useWorkspace, WorkspaceProvider } from '../workspaces/WorkspaceContext';
 import { WorkspaceSwitcher } from '../workspaces/WorkspaceSwitcher';
 import { scrollKey } from '../freshLoadScroll';
+import { ExploreMenu } from './ExploreMenu';
 import { FeedbackProvider } from './Feedback';
 import { Menu } from './Menu';
 import { NotificationBell } from './NotificationBell';
 import { ThemeToggle } from './ThemeToggle';
 import { useInstallPrompt } from './useInstallPrompt';
 
-/** Pages that lay themselves out across the full width, such as the public home page. */
-const fullWidthPaths = ['/how-it-works', '/contact'];
+/** What a route can tell the layout about its page. */
+export interface PageHandle {
+  /** The page lays itself out across the full width, like the public pages, rather than in the content column. */
+  fullWidth?: boolean;
+}
 
 export function Layout() {
   const { account } = useAuth();
   const { pathname } = useLocation();
-  const fullWidth = fullWidthPaths.includes(pathname) || (pathname === '/' && !account);
+  const matches = useMatches();
+  // The home page is the full-width public landing page for visitors, and the dashboard once signed in.
+  const fullWidth = matches.some((match) => (match.handle as PageHandle | undefined)?.fullWidth) || (pathname === '/' && !account);
   const main = useFocusOnNavigation();
 
   return (
@@ -170,6 +176,7 @@ function PublicBar() {
         <NavLink to="/how-it-works" className="nav-link">
           How it works
         </NavLink>
+        <ExploreMenu inOpenMenu={menu.open} />
         <NavLink to="/pricing" className="nav-link">
           Pricing
         </NavLink>
@@ -191,20 +198,55 @@ function PublicBar() {
   );
 }
 
+/** The footer's links, grouped so each group reads as a short list. */
+const footerGroups = [
+  {
+    heading: 'Product',
+    links: [
+      { to: '/how-it-works', label: 'How it works' },
+      { to: '/pricing', label: 'Pricing' },
+    ],
+  },
+  {
+    heading: 'Explore',
+    links: [
+      { to: '/templates', label: 'Templates' },
+      { to: '/use-cases', label: 'Use cases' },
+      { to: '/compare', label: 'Compare' },
+    ],
+  },
+  {
+    heading: 'Company',
+    links: [
+      { to: '/contact', label: 'Contact' },
+      { to: '/privacy', label: 'Privacy' },
+      { to: '/terms', label: 'Terms' },
+    ],
+  },
+];
+
 function Footer() {
   return (
     <footer className="footer">
       <div className="footer-inner">
-        <span className="muted small">© {new Date().getFullYear()} IdeaVerse · Plan ideas, together, on time.</span>
-        <nav className="row wrap small" aria-label="Footer">
-          <Link to="/how-it-works">How it works</Link>
-          <Link to="/pricing">Pricing</Link>
-          <Link to="/templates">Templates</Link>
-          <Link to="/use-cases">Use cases</Link>
-          <Link to="/compare">Compare</Link>
-          <Link to="/contact">Contact us</Link>
-          <Link to="/privacy">Privacy</Link>
-          <Link to="/terms">Terms</Link>
+        <div className="footer-brand">
+          <Brand />
+          <p className="muted small">Plan ideas, together, on time.</p>
+          <p className="muted small">© {new Date().getFullYear()} IdeaVerse</p>
+        </div>
+        <nav className="footer-links" aria-label="Footer">
+          {footerGroups.map((group) => (
+            <div key={group.heading} className="footer-group">
+              <h2 className="footer-heading">{group.heading}</h2>
+              <ul>
+                {group.links.map((link) => (
+                  <li key={link.to}>
+                    <Link to={link.to}>{link.label}</Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </nav>
       </div>
     </footer>

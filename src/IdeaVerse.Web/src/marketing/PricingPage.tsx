@@ -11,7 +11,7 @@ const included = [
   'Components, assignments, due dates, and reminders by email',
   'Discussions with @mentions, votes, and impact × effort scoring',
   'AI help to brainstorm, plan, and improve ideas, where it’s switched on',
-  'Works on any device, and installs like an app',
+  'Works on phones, tablets, and computers, with nothing to download',
 ];
 
 /** What IdeaVerse costs (nothing, during early access) and the questions people ask before signing up. */
