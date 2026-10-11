@@ -169,6 +169,9 @@ function PublicBar() {
         <NavLink to="/how-it-works" className="nav-link">
           How it works
         </NavLink>
+        <NavLink to="/pricing" className="nav-link">
+          Pricing
+        </NavLink>
         <NavLink to="/contact" className="nav-link">
           Contact
         </NavLink>
@@ -194,10 +197,13 @@ function Footer() {
         <span className="muted small">© {new Date().getFullYear()} IdeaVerse · Plan ideas, together, on time.</span>
         <nav className="row wrap small" aria-label="Footer">
           <Link to="/how-it-works">How it works</Link>
+          <Link to="/pricing">Pricing</Link>
           <Link to="/templates">Templates</Link>
           <Link to="/use-cases">Use cases</Link>
           <Link to="/compare">Compare</Link>
           <Link to="/contact">Contact us</Link>
+          <Link to="/privacy">Privacy</Link>
+          <Link to="/terms">Terms</Link>
         </nav>
       </div>
     </footer>

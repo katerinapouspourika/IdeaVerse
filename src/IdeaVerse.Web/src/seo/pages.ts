@@ -15,6 +15,8 @@ export interface PageMeta {
   /** The page's own title; `null` for the home page, whose title is the site's. */
   title: string | null;
   description: string;
+  /** `false` keeps a public page out of search engines and the sitemap, as for drafts. */
+  index?: boolean;
 }
 
 /**
@@ -35,6 +37,21 @@ export const publicPages = {
   '/contact': {
     title: 'Contact us',
     description: 'Questions, feedback, or ideas for IdeaVerse itself? Send the IdeaVerse team a message and we’ll reply by email.',
+  },
+  '/pricing': {
+    title: 'Pricing',
+    description: 'IdeaVerse is free while in early access: every feature, unlimited ideas and teammates, and no credit card needed. Answers to common questions.',
+  },
+  // Drafts until a lawyer has reviewed them, so search engines are asked to leave them out.
+  '/privacy': {
+    title: 'Privacy Policy',
+    description: 'What information IdeaVerse keeps about you, why, who else sees it, and the choices you have.',
+    index: false,
+  },
+  '/terms': {
+    title: 'Terms of Service',
+    description: 'The agreement between you and IdeaVerse for using the app.',
+    index: false,
   },
   '/templates': {
     title: 'Templates',
