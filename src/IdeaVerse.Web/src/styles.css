@@ -2668,3 +2668,81 @@ a:focus-visible {
 .mention-option.active {
   background: var(--accent-soft);
 }
+
+/* Pricing and legal pages */
+
+.pricing {
+  display: flex;
+  justify-content: center;
+}
+
+.pricing-plan {
+  width: min(480px, 100%);
+}
+
+.faq {
+  max-width: 760px;
+}
+
+.center-text {
+  text-align: center;
+}
+
+.faq-item summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.faq-item p {
+  margin: 10px 0 0;
+}
+
+.legal {
+  max-width: 760px;
+}
+
+.legal-draft {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--warn) 25%, transparent);
+  border-radius: var(--radius-small);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.legal-draft svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.legal-contents ol {
+  margin: 0;
+  padding-left: 20px;
+  columns: 2;
+}
+
+.legal h2 {
+  font-size: 1.25rem;
+  scroll-margin-top: 80px;
+}
+
+@media (max-width: 600px) {
+  .legal-contents ol {
+    columns: 1;
+  }
+}
+
+.legal p,
+.legal ul {
+  margin: 0;
+}
+
+.legal ul {
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

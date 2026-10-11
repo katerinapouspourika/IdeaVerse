@@ -23,7 +23,7 @@ The OpenAPI document is served at `/openapi/v1.json` in Development.
 
 The API also serves the web app (`src/IdeaVerse.Web`) from `wwwroot` when one is present, as in the Docker image (`Web/WebAppExtensions.cs`):
 
-- The public pages, prerendered by the web build, come from their own files: `/` from `index.html`, `/how-it-works` from `how-it-works.html`, `/contact` from `contact.html`.
+- The public pages, prerendered by the web build, come from their own files: `/` from `index.html`, `/how-it-works` from `how-it-works.html`, `/contact` from `contact.html`, `/pricing` from `pricing.html`, `/privacy` from `privacy.html`, and `/terms` from `terms.html`.
 - The app's own routes (`AppRoutes`: `/login`, `/ideas`, `/ideas/{id}`, `/settings`, …) get the empty app shell `app.html`. Keep that list in step with `src/IdeaVerse.Web/src/routes.tsx`.
 - Unknown `/api` routes return 404. Any other unknown address, including malformed idea ids and the built `.html` files themselves, returns `404.html` with status 404, so made-up URLs are not indexed; a missing file such as an image gets the usual problem-details 404.
 - Pages are served as UTF-8 HTML. The web app's files are compressed (Brotli or gzip); API responses (under `/api` in any casing) are not, since compressing secrets next to attacker-controlled text over HTTPS can leak them (BREACH).
