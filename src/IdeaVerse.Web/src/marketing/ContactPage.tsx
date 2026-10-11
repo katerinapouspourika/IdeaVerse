@@ -5,25 +5,27 @@ import { useSendContactMessage } from '../api/queries';
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { publicPages } from '../seo/pages';
+import { usePageMeta } from '../seo/usePageMeta';
 
 /** The public contact form; messages are emailed to the IdeaVerse team. */
 export function ContactPage() {
-  const { account, isLoading } = useAuth();
-
-  if (isLoading) {
-    return <p className="muted">Loading…</p>;
-  }
-
-  return <ContactForm name={account?.displayName ?? ''} email={account?.email ?? ''} />;
-}
-
-function ContactForm(initial: { name: string; email: string }) {
+  usePageMeta(publicPages['/contact'].title, { description: publicPages['/contact'].description });
+  const { account } = useAuth();
   const send = useSendContactMessage();
-  const [name, setName] = useState(initial.name);
-  const [email, setEmail] = useState(initial.email);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [prefilled, setPrefilled] = useState(false);
   const [message, setMessage] = useState('');
   const [website, setWebsite] = useState('');
   const thanks = useRef<HTMLHeadingElement>(null);
+
+  // The form shows straight away (and is prerendered); a signed-in user's name and email fill in once the account loads.
+  if (account && !prefilled) {
+    setPrefilled(true);
+    setName((current) => current || account.displayName || '');
+    setEmail((current) => current || account.email);
+  }
 
   // The form is replaced by the thank-you note, so move focus there for keyboard and screen reader users.
   useEffect(() => {
@@ -61,6 +63,9 @@ function ContactForm(initial: { name: string; email: string }) {
             </div>
           ) : (
             <form className="card stack" onSubmit={submit} aria-label="Contact us">
+              <noscript>
+                <p className="error">Sending a message needs JavaScript. Please turn it on and reload the page.</p>
+              </noscript>
               <div className="row wrap">
                 <Field label="Your name" className="grow" error={fieldError(send.error, 'name')}>
                   {(props) => <input {...props} required maxLength={100} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />}

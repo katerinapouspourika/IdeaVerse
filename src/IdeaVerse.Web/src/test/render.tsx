@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 
-import { routes } from '../App';
+import { routes } from '../routes';
 import { AuthProvider } from '../auth/AuthContext';
 
 /** Renders the whole app at `path`, with a fresh query cache. */

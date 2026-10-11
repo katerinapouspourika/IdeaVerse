@@ -1,10 +1,13 @@
 import { Link } from 'react-router';
 
 import { useAuth } from '../auth/AuthContext';
+import { publicPages } from '../seo/pages';
+import { usePageMeta } from '../seo/usePageMeta';
 import { walkthroughs } from './walkthroughs';
 
 /** Short recorded walkthroughs of the real app, one per step of working with ideas. */
 export function HowItWorksPage() {
+  usePageMeta(publicPages['/how-it-works'].title, { description: publicPages['/how-it-works'].description });
   const { account } = useAuth();
 
   return (
@@ -22,7 +25,8 @@ export function HowItWorksPage() {
           {walkthroughs.map((w, i) => (
             <li key={w.slug} className="walkthrough">
               <div className="walkthrough-video">
-                <video controls muted loop playsInline preload="metadata" poster={`/how-it-works/${w.slug}.png`} aria-label={`Video: ${w.title}`}>
+                <video controls muted loop playsInline preload="metadata" width={1024} height={640} poster={`/how-it-works/${w.slug}.webp`} aria-label={`Video: ${w.title}`}>
+                  <source src={`/how-it-works/${w.slug}.mp4`} type="video/mp4" />
                   <source src={`/how-it-works/${w.slug}.webm`} type="video/webm" />
                 </video>
               </div>

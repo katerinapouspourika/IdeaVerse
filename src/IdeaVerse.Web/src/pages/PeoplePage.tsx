@@ -17,10 +17,12 @@ import { personLabel, type Workspace, type WorkspaceMember, type WorkspaceRole }
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { usePageMeta } from '../seo/usePageMeta';
 import { canManageWorkspace, useWorkspace } from '../workspaces/WorkspaceContext';
 
 /** The current workspace's people and invitations; owners and admins manage them here. */
 export function PeoplePage() {
+  usePageMeta('People', { index: false });
   const { current, isLoading } = useWorkspace();
 
   if (isLoading) {

@@ -35,7 +35,7 @@ describe('PeoplePage', () => {
 
     expect(await screen.findByRole('heading', { name: 'People in Acme Marketing' })).toBeInTheDocument();
     const members = within(screen.getByRole('region', { name: 'Members' }));
-    expect(members.getByText('Owner')).toBeInTheDocument();
+    expect(await members.findByText('Owner')).toBeInTheDocument();
     expect(members.getByRole('combobox', { name: 'Role of mia@example.com' })).toHaveValue('Member');
     expect(within(screen.getByRole('region', { name: 'Waiting to join' })).getByText('new@example.com')).toBeInTheDocument();
   });

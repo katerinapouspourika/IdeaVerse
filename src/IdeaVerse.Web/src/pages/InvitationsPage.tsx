@@ -1,7 +1,9 @@
+import { usePageMeta } from '../seo/usePageMeta';
 import { ReceivedInvitations } from '../workspaces/ReceivedInvitations';
 
 /** The page invitation emails link to. */
 export function InvitationsPage() {
+  usePageMeta('Invitations', { index: false });
   return (
     <div className="stack">
       <h1>Invitations</h1>

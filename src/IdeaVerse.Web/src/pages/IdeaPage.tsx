@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 
 import { ImproveIdea } from '../ai/ImproveIdea';
@@ -12,6 +12,7 @@ import { Progress } from '../components/Progress';
 import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
 import { TagInput } from '../components/TagInput';
+import { usePageMeta } from '../seo/usePageMeta';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { ActivitySection } from './ActivitySection';
 import { ComponentsSection } from './ComponentsSection';
@@ -21,6 +22,7 @@ import { TeamSection } from './TeamSection';
 export function IdeaPage() {
   const { id = '' } = useParams();
   const idea = useIdea(id);
+  usePageMeta(idea.data?.title ?? 'Idea', { index: false });
 
   if (idea.isLoading) {
     return <p className="muted">Loading idea…</p>;
@@ -46,13 +48,18 @@ function IdeaDetail({ idea }: { idea: Idea }) {
   const [editing, setEditing] = useState(false);
   const { all, current, select } = useWorkspace();
   const ideaWorkspaceId = idea.workspaceId;
-  const switchTo = current?.id !== ideaWorkspaceId && all.some((w) => w.id === ideaWorkspaceId) ? ideaWorkspaceId : null;
+  const matchedIdea = useRef<string | null>(null);
 
+  // Opening an idea from another workspace switches the header to it, once; switching away afterwards is the user's choice.
   useEffect(() => {
-    if (switchTo) {
-      select(switchTo);
+    if (matchedIdea.current === idea.id || !all.some((w) => w.id === ideaWorkspaceId)) {
+      return;
     }
-  }, [switchTo, select]);
+    matchedIdea.current = idea.id;
+    if (current?.id !== ideaWorkspaceId) {
+      select(ideaWorkspaceId);
+    }
+  }, [idea.id, ideaWorkspaceId, all, current, select]);
 
   return (
     <div className="stack">

@@ -1612,3 +1612,12 @@ textarea:disabled {
   color: var(--accent-text);
   outline: none;
 }
+
+.not-found {
+  max-width: 560px;
+  margin: 24px auto;
+}
+
+.not-found .logo {
+  margin: 0 auto;
+}

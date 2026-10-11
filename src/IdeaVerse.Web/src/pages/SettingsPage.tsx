@@ -7,6 +7,7 @@ import type { Account, ReminderKind } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { usePageMeta } from '../seo/usePageMeta';
 
 /** Every IANA time zone the browser knows, with UTC, sorted by name. */
 function timeZones(current: string): string[] {
@@ -23,6 +24,7 @@ const reminderChoices: { kind: ReminderKind; label: string; hint: string }[] = [
 
 /** The signed-in user's settings: their time zone and reminders. */
 export function SettingsPage() {
+  usePageMeta('Settings', { index: false });
   const { account } = useAuth();
 
   return (

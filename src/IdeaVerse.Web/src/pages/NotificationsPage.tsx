@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from '../api/queries';
 import type { Notification, ReminderKind } from '../api/types';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { usePageMeta } from '../seo/usePageMeta';
 
 const kindLabels: Record<ReminderKind, string> = {
   ComingUp: 'Coming up',
@@ -15,6 +16,7 @@ const kindLabels: Record<ReminderKind, string> = {
 };
 
 export function NotificationsPage() {
+  usePageMeta('Reminders', { index: false });
   const notifications = useNotifications();
   const markAll = useMarkAllNotificationsRead();
   const unread = notifications.data?.unreadCount ?? 0;
