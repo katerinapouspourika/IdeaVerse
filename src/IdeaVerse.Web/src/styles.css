@@ -15,7 +15,12 @@
   --accent: #2b35b0;
   --accent-text: #ffffff;
   --accent-soft: #e8ebff;
-  --gradient: linear-gradient(135deg, #232b8f 0%, #2f6fd6 55%, #2fb2e6 100%);
+  /* Buttons and panels carry white text, so every stop keeps at least 4.5:1 against it. */
+  --gradient: linear-gradient(135deg, #232b8f 0%, #2f6fd6 55%, #1677ad 100%);
+  /* Gradient-filled headline words. */
+  --gradient-text: var(--gradient);
+  /* Small labels above headings; the brighter sky is too faint on light backgrounds. */
+  --eyebrow: #0a6c99;
   --gradient-soft: linear-gradient(135deg, #eef0ff 0%, #e6f6fd 100%);
   --danger: #c8323a;
   --danger-soft: #fdecee;
@@ -44,7 +49,9 @@
     --accent: #7ec8ff;
     --accent-text: #0e1230;
     --accent-soft: #1f2a66;
-    --gradient: linear-gradient(135deg, #3a44c9 0%, #2f86e0 55%, #36c0ef 100%);
+    --gradient: linear-gradient(135deg, #3a44c9 0%, #2f6fd6 55%, #1677ad 100%);
+    --gradient-text: linear-gradient(135deg, #7c86ff 0%, #2f86e0 55%, #36c0ef 100%);
+    --eyebrow: #2fb2e6;
     --gradient-soft: linear-gradient(135deg, #171d48 0%, #132a52 100%);
     --danger: #ff8a8f;
     --danger-soft: #3d1d2b;
@@ -70,7 +77,9 @@
   --accent: #7ec8ff;
   --accent-text: #0e1230;
   --accent-soft: #1f2a66;
-  --gradient: linear-gradient(135deg, #3a44c9 0%, #2f86e0 55%, #36c0ef 100%);
+  --gradient: linear-gradient(135deg, #3a44c9 0%, #2f6fd6 55%, #1677ad 100%);
+  --gradient-text: linear-gradient(135deg, #7c86ff 0%, #2f86e0 55%, #36c0ef 100%);
+  --eyebrow: #2fb2e6;
   --gradient-soft: linear-gradient(135deg, #171d48 0%, #132a52 100%);
   --danger: #ff8a8f;
   --danger-soft: #3d1d2b;
@@ -1217,7 +1226,14 @@ h3 {
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--sky);
+  color: var(--eyebrow);
+}
+
+/* On the gradient panels, which carry white text. */
+.auth-aside .eyebrow,
+.cta-band .eyebrow,
+.hero-card .eyebrow {
+  color: rgb(255 255 255 / 0.85);
 }
 
 .button.light {
@@ -1399,7 +1415,7 @@ h3 {
 }
 
 .highlight {
-  background: var(--gradient);
+  background: var(--gradient-text);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
