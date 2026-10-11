@@ -2483,3 +2483,145 @@ a:focus-visible {
     padding: 0;
   }
 }
+
+/* Timeline: each idea as a bar from when it was added to its target date */
+
+.timeline {
+  padding: 12px 0;
+}
+
+.timeline-scroll {
+  overflow-x: auto;
+}
+
+.timeline-grid {
+  padding: 0 16px;
+}
+
+.timeline-scale,
+.timeline-row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.timeline-scale {
+  height: 46px;
+  border-bottom: 1px solid var(--border);
+}
+
+.timeline-track {
+  position: relative;
+  height: 100%;
+}
+
+.timeline-month {
+  position: absolute;
+  top: 2px;
+  padding-left: 6px;
+  border-left: 1px solid var(--border);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.timeline-today {
+  position: absolute;
+  bottom: 3px;
+  transform: translateX(-50%);
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--coral);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.timeline-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.timeline-row {
+  min-height: 52px;
+  border-bottom: 1px solid var(--border);
+}
+
+.timeline-row:last-child {
+  border-bottom: none;
+}
+
+.timeline-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 6px 0;
+}
+
+.timeline-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.timeline-title:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.timeline-row .timeline-track {
+  height: 52px;
+}
+
+.timeline-today-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 2px dashed color-mix(in srgb, var(--coral) 60%, transparent);
+}
+
+.timeline-bar {
+  position: absolute;
+  top: 16px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--sky);
+}
+
+.timeline-bar.status-planned {
+  background: color-mix(in srgb, var(--accent) 55%, var(--surface));
+}
+
+.timeline-bar.status-inprogress {
+  background: var(--sky);
+}
+
+.timeline-bar.status-postponed {
+  background: var(--sun);
+}
+
+.timeline-bar.status-done {
+  background: var(--ok);
+}
+
+.timeline-bar.is-overdue {
+  background: var(--danger);
+}
+
+.timeline-bar.clipped {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+@media (max-width: 600px) {
+  .timeline-scale,
+  .timeline-row {
+    grid-template-columns: 140px 1fr;
+  }
+}
