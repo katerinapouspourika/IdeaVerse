@@ -90,7 +90,7 @@ It needs an ffmpeg with libx264, libvpx-vp9 and libwebp (set `FFMPEG` when it is
 > "Today" follows the account's time zone (the browser's until the account has one), matching the API's notion of "today" and "overdue".
 
 > [!NOTE]
-> The look is "bright and friendly": colours, radii, and shadows are CSS variables at the top of `src/styles.css`, built from the logo's navy and sky blue with a warm yellow accent, and redefined for dark mode. The font is Nunito, bundled from `@fontsource-variable/nunito` rather than loaded from Google.
+> The look is "bright and friendly": colours, radii, and shadows are CSS variables at the top of `src/styles.css`, built from the logo's navy and sky blue with a warm yellow accent, and redefined for dark mode. In light mode the page is a warm linen (`--bg`) with white cards (`--surface`), so each card stands apart from the page. The font is Nunito, bundled from `@fontsource-variable/nunito` rather than loaded from Google.
 
 > [!NOTE]
 > The logo in `public/` (`logo.png`, `favicon.ico`, `apple-touch-icon.png`) is cut from the original at `branding/ideaverse-logo.png`, with its white background made transparent. Regenerate all three from that file when the logo changes. In dark mode the logo sits on a white tile, because the navy lines do not show on a dark background.
