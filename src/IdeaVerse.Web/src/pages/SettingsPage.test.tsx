@@ -6,7 +6,7 @@ import { fakeApi, ideasRoute, signedIn, signedInAccount } from '../test/fakeApi'
 import { renderApp } from '../test/render';
 
 describe('SettingsPage', () => {
-  it('opens from the email in the header and saves a new time zone', async () => {
+  it('opens from the account menu and saves a new time zone', async () => {
     const calls = fakeApi({
       ...signedIn,
       [ideasRoute]: { status: 200, body: [] },
@@ -14,7 +14,8 @@ describe('SettingsPage', () => {
     });
     renderApp('/');
 
-    await userEvent.click(await screen.findByRole('link', { name: 'kat@example.com' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Account: kat@example.com' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Settings' }));
     const form = await screen.findByRole('form', { name: 'Time zone' });
     const select = within(form).getByLabelText('Your time zone');
     expect(select).toHaveValue('UTC');

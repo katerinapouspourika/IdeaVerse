@@ -17,6 +17,8 @@ import { personLabel, type Workspace, type WorkspaceMember, type WorkspaceRole }
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { useConfirm, useToast } from '../components/Feedback';
+import { Skeleton } from '../components/Skeleton';
 import { usePageMeta } from '../seo/usePageMeta';
 import { canManageWorkspace, useWorkspace } from '../workspaces/WorkspaceContext';
 
@@ -26,7 +28,7 @@ export function PeoplePage() {
   const { current, isLoading } = useWorkspace();
 
   if (isLoading) {
-    return <p className="muted">Loading…</p>;
+    return <Skeleton variant="page" lines={4} />;
   }
 
   if (!current) {
@@ -63,14 +65,22 @@ function DangerZone({ workspace }: { workspace: Workspace }) {
   const remove = useDeleteWorkspace(workspace.id);
   const navigate = useNavigate();
   const [successor, setSuccessor] = useState('');
+  const confirm = useConfirm();
+  const toast = useToast();
   const [confirmName, setConfirmName] = useState('');
   const others = (members.data ?? []).filter((m) => m.role !== 'Owner');
 
-  const handOver = (event: FormEvent) => {
+  const handOver = async (event: FormEvent) => {
     event.preventDefault();
     const person = others.find((m) => m.userId === successor);
-    if (person && window.confirm(`Make ${personLabel(person.name, person.email)} the owner of ${workspace.name}? You will stay as an admin.`)) {
-      transfer.mutate(successor, { onSuccess: () => setSuccessor('') });
+    const name = person && personLabel(person.name, person.email);
+    if (person && (await confirm({ title: `Make ${name} the owner?`, message: `${name} will own ${workspace.name}. You will stay as an admin.`, confirmLabel: 'Hand over' }))) {
+      transfer.mutate(successor, {
+        onSuccess: () => {
+          setSuccessor('');
+          toast({ message: `${name} now owns ${workspace.name}` });
+        },
+      });
     }
   };
 
@@ -82,7 +92,7 @@ function DangerZone({ workspace }: { workspace: Workspace }) {
   return (
     <section className="card danger stack" aria-labelledby="danger-heading">
       <h2 id="danger-heading">Danger zone</h2>
-      <form className="stack" onSubmit={handOver} aria-label="Transfer ownership">
+      <form className="stack" onSubmit={(event) => void handOver(event)} aria-label="Transfer ownership">
         <p className="muted small">Hand the workspace to someone else in it. You stay on as an admin and can then leave.</p>
         {others.length === 0 ? (
           <p className="muted small">Invite someone first; there is nobody to hand it to yet.</p>
@@ -172,20 +182,32 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
   const remove = useRemoveWorkspaceMember(workspace.id);
   const { account } = useAuth();
   const navigate = useNavigate();
+  const confirm = useConfirm();
+  const toast = useToast();
 
-  const removeMember = (member: WorkspaceMember, leaving: boolean) => {
-    const question = leaving
-      ? `Leave ${workspace.name}? You will no longer see its ideas, and you will be taken off their teams.`
-      : `Remove ${personLabel(member.name, member.email)} from ${workspace.name}? They will be taken off the teams of its ideas.`;
-    if (window.confirm(question)) {
-      remove.mutate(member.userId, { onSuccess: () => (leaving ? void navigate('/') : undefined) });
+  const removeMember = async (member: WorkspaceMember, leaving: boolean) => {
+    const name = personLabel(member.name, member.email);
+    const ok = await confirm(
+      leaving
+        ? { title: `Leave ${workspace.name}?`, message: 'You will no longer see its ideas, and you will be taken off their teams.', confirmLabel: 'Leave workspace', danger: true }
+        : { title: `Remove ${name}?`, message: `They will lose access to ${workspace.name} and be taken off the teams of its ideas.`, confirmLabel: 'Remove', danger: true },
+    );
+    if (ok) {
+      remove.mutate(member.userId, {
+        onSuccess: () => {
+          toast({ message: leaving ? `You left ${workspace.name}` : `Removed ${name}` });
+          if (leaving) {
+            void navigate('/');
+          }
+        },
+      });
     }
   };
 
   return (
     <section className="card stack" aria-labelledby="members-heading">
       <h2 id="members-heading">Members</h2>
-      {members.isLoading && <p className="muted">Loading…</p>}
+      {members.isLoading && <Skeleton lines={3} />}
       {members.data && (
         <ul className="team">
           {members.data.map((member) => {
@@ -217,7 +239,7 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
                       type="button"
                       className="button ghost small"
                       aria-label={isMe ? 'Leave workspace' : `Remove ${personLabel(member.name, member.email)}`}
-                      onClick={() => removeMember(member, isMe)}
+                      onClick={() => void removeMember(member, isMe)}
                     >
                       {isMe ? 'Leave' : 'Remove'}
                     </button>

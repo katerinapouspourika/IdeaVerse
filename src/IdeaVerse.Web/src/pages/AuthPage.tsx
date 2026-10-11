@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { AlarmClock, Lightbulb, Puzzle, Users } from 'lucide-react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 
 import { ApiError } from '../api/client';
@@ -155,10 +156,18 @@ function AuthAside() {
         <h2 className="section-title">Bright ideas deserve a plan.</h2>
       </div>
       <ul>
-        <li>💡 Capture ideas with a date to make them real</li>
-        <li>🧩 Line up everything they need</li>
-        <li>👥 Share the work with your team</li>
-        <li>⏰ Get reminded before anything slips</li>
+        <li>
+          <Lightbulb aria-hidden="true" size={20} /> Capture ideas with a date to make them real
+        </li>
+        <li>
+          <Puzzle aria-hidden="true" size={20} /> Line up everything they need
+        </li>
+        <li>
+          <Users aria-hidden="true" size={20} /> Share the work with your team
+        </li>
+        <li>
+          <AlarmClock aria-hidden="true" size={20} /> Get reminded before anything slips
+        </li>
       </ul>
       <p className="small">Free to start. No credit card needed.</p>
     </aside>

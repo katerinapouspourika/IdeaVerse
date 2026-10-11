@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from '../api/queries';
 import type { Notification, ReminderKind } from '../api/types';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { Skeleton } from '../components/Skeleton';
 import { usePageMeta } from '../seo/usePageMeta';
 
 const kindLabels: Record<ReminderKind, string> = {
@@ -16,7 +17,7 @@ const kindLabels: Record<ReminderKind, string> = {
 };
 
 export function NotificationsPage() {
-  usePageMeta('Reminders', { index: false });
+  usePageMeta('Notifications', { index: false });
   const notifications = useNotifications();
   const markAll = useMarkAllNotificationsRead();
   const unread = notifications.data?.unreadCount ?? 0;
@@ -24,7 +25,7 @@ export function NotificationsPage() {
   return (
     <div className="stack">
       <div className="row spread wrap">
-        <h1>Reminders</h1>
+        <h1>Notifications</h1>
         {unread > 0 && (
           <button type="button" className="button" onClick={() => markAll.mutate()} disabled={markAll.isPending}>
             Mark all as read
@@ -32,13 +33,13 @@ export function NotificationsPage() {
         )}
       </div>
       <p className="muted small">
-        You get a reminder a week before, the day before, and on the day an idea is due, and once if it becomes overdue. Reminders are also emailed.
+        Reminders arrive a week before, the day before, and on the day an idea or task is due, and once if it becomes overdue. You also hear when you’re added to a team, given a task, or someone comments. Change what you get in Settings.
       </p>
-      {notifications.isLoading && <p className="muted">Loading reminders…</p>}
+      {notifications.isLoading && <Skeleton variant="cards" />}
       <ErrorMessage error={notifications.error ?? markAll.error} />
       {notifications.data?.items.length === 0 && (
         <div className="card empty">
-          <p>No reminders yet. They appear here as your ideas’ dates get close.</p>
+          <p>Nothing yet. Reminders and updates about your ideas appear here.</p>
         </div>
       )}
       {notifications.data && notifications.data.items.length > 0 && (

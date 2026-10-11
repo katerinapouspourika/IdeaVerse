@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 
 import type { ActivityEntry, Comment } from '../api/types';
 import { anIdea, fakeApi, signedIn } from '../test/fakeApi';
+import { confirmDialog } from '../test/dialog';
 import { renderApp } from '../test/render';
 import { describeActivity } from './ActivitySection';
 
@@ -58,7 +59,6 @@ describe('Discussion', () => {
       'PUT /api/v1/ideas/idea-1/comments/c-1': (body) => ({ status: 200, body: { ...mine, ...(body as object), editedAt: '2026-10-10T10:00:00Z' } }),
       'DELETE /api/v1/ideas/idea-1/comments/c-1': { status: 204 },
     });
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderApp('/ideas/idea-1');
 
     const discussion = await screen.findByRole('region', { name: 'Discussion' });
@@ -71,6 +71,7 @@ describe('Discussion', () => {
     await userEvent.type(within(edit).getByLabelText('Comment'), 'First idea');
     await userEvent.click(within(edit).getByRole('button', { name: 'Save' }));
     await userEvent.click(within(discussion).getByRole('button', { name: 'Delete comment by kat@example.com' }));
+    await confirmDialog('Delete comment');
 
     await waitFor(() => expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ body: 'First idea' }));
     await waitFor(() => expect(calls.some((c) => c.method === 'DELETE')).toBe(true));

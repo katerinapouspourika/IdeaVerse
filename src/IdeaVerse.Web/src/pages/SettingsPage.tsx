@@ -7,6 +7,7 @@ import type { Account, ReminderKind } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { useConfirm } from '../components/Feedback';
 import { usePageMeta } from '../seo/usePageMeta';
 
 /** Every IANA time zone the browser knows, with UTC, sorted by name. */
@@ -308,13 +309,20 @@ function PasswordForm() {
 
 function DeleteAccountForm() {
   const { deleteAccount } = useAuth();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const save = useSave();
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!window.confirm('Delete your IdeaVerse account? This cannot be undone.')) {
+    const ok = await confirm({
+      title: 'Delete your IdeaVerse account?',
+      message: 'Your account and the workspaces only you are in are deleted for good. This cannot be undone.',
+      confirmLabel: 'Delete account',
+      danger: true,
+    });
+    if (!ok) {
       return;
     }
     void save.run(async () => {
@@ -324,7 +332,7 @@ function DeleteAccountForm() {
   };
 
   return (
-    <form className="card danger stack" onSubmit={submit} aria-label="Delete account">
+    <form className="card danger stack" onSubmit={(event) => void submit(event)} aria-label="Delete account">
       <h2>Delete account</h2>
       <p className="muted small">
         Workspaces only you are in are deleted with everything in them. Ideas you own in other workspaces pass to each workspace’s owner.

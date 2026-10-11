@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 
 import type { Component, Idea, Member, WorkspaceMember } from '../api/types';
 import { anIdea, aWorkspace, fakeApi, signedIn } from '../test/fakeApi';
+import { confirmDialog } from '../test/dialog';
 import { renderApp } from '../test/render';
 
 const owner: Member = { userId: 'u-kat', email: 'kat@example.com', name: null, role: 'Owner', addedAt: '2026-10-01T09:00:00Z' };
@@ -48,8 +49,36 @@ describe('IdeaPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Black Friday teaser' })).toBeInTheDocument();
     expect(await screen.findByRole('form', { name: 'Add team member' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete idea' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'More actions' }));
+    expect(screen.getByRole('menuitem', { name: 'Archive idea' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Delete idea' })).toBeInTheDocument();
+  });
+
+  it('deletes the idea after confirming, and returns to the list', async () => {
+    const calls = fakeApi({ ...ideaRoutes({}, [owner]), 'DELETE /api/v1/ideas/idea-1': { status: 204 }, 'GET /api/v1/workspaces/ws-1/ideas': { status: 200, body: [] } });
+    const router = renderApp('/ideas/idea-1');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'More actions' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Delete idea' }));
+    expect(screen.getByRole('alertdialog', { name: 'Delete “Black Friday teaser”?' })).toBeInTheDocument();
+    await confirmDialog('Delete idea');
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/ideas'));
+    expect(calls.some((c) => c.method === 'DELETE')).toBe(true);
+    expect(await screen.findByText('Deleted “Black Friday teaser”')).toBeInTheDocument();
+  });
+
+  it('keeps the idea when the deletion is cancelled', async () => {
+    const calls = fakeApi(ideaRoutes({}, [owner]));
+    renderApp('/ideas/idea-1');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'More actions' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Delete idea' }));
+    await confirmDialog('Cancel');
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(calls.some((c) => c.method === 'DELETE')).toBe(false);
   });
 
   it('hides management from a team member but lets them edit and leave', async () => {
@@ -58,7 +87,7 @@ describe('IdeaPage', () => {
     renderApp('/ideas/idea-1');
 
     expect(await screen.findByText('Only the idea’s owner and the workspace’s admins can add or remove team members.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Delete idea' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit details' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Leave' })).toBeInTheDocument();
   });
@@ -74,7 +103,7 @@ describe('IdeaPage', () => {
     expect(screen.queryByRole('form', { name: 'Postpone idea' })).not.toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'Add component' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Delete idea' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
   });
 
   it('switches the header to the idea’s workspace when opened from another one', async () => {
@@ -132,12 +161,13 @@ describe('IdeaPage', () => {
     renderApp('/ideas/idea-1');
 
     const form = await screen.findByRole('form', { name: 'Postpone idea' });
-    const date = within(form).getByLabelText('New date');
+    const date = within(form).getByLabelText('Not the right time? Move it to');
     await userEvent.clear(date);
     await userEvent.type(date, '2099-12-31');
     await userEvent.click(within(form).getByRole('button', { name: 'Postpone' }));
 
     await waitFor(() => expect(calls.find((c) => c.path.endsWith('/postpone'))?.body).toEqual({ targetDate: '2099-12-31' }));
+    expect(await screen.findByText(/^Postponed to /)).toBeInTheDocument();
   });
 
   it('explains when the idea is missing or in another workspace', async () => {

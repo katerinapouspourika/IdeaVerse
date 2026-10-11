@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Archive, ArchiveRestore, ArrowLeft, CalendarClock, Ellipsis, Pencil, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 
 import { ImproveIdea } from '../ai/ImproveIdea';
@@ -6,9 +7,12 @@ import { ApiError } from '../api/client';
 import { addDays, describeDue, formatDate, todayIso } from '../api/dates';
 import { useArchiveIdea, useDeleteIdea, useIdea, usePostponeIdea, useUpdateIdea } from '../api/queries';
 import { personLabel, statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
+import { useConfirm, useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
+import { Menu } from '../components/Menu';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { Progress } from '../components/Progress';
+import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
 import { TagInput } from '../components/TagInput';
@@ -25,7 +29,7 @@ export function IdeaPage() {
   usePageMeta(idea.data?.title ?? 'Idea', { index: false });
 
   if (idea.isLoading) {
-    return <p className="muted">Loading idea…</p>;
+    return <Skeleton variant="page" lines={5} />;
   }
 
   if (idea.error instanceof ApiError && idea.error.status === 404) {
@@ -63,61 +67,141 @@ function IdeaDetail({ idea }: { idea: Idea }) {
 
   return (
     <div className="stack">
-      <Link to="/ideas" className="small">
-        ← All ideas
-      </Link>
+      <nav aria-label="Breadcrumb" className="breadcrumb small">
+        <Link to="/ideas">
+          <ArrowLeft aria-hidden="true" size={16} /> All ideas
+        </Link>
+      </nav>
       {idea.archivedAt && <ArchivedBanner idea={idea} />}
 
-      {editing ? (
-        <EditIdeaForm idea={idea} onDone={() => setEditing(false)} />
-      ) : (
-        <section className="card stack">
-          <div className="row spread wrap idea-heading">
-            <div className="row wrap">
-              <h1>{idea.title}</h1>
-              <StatusBadge idea={idea} />
-            </div>
-            {idea.canEdit && (
-              <button type="button" className="button primary small" onClick={() => setEditing(true)}>
-                <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 20h9" />
-                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                </svg>
-                Edit details
-              </button>
-            )}
-          </div>
-          <p>
-            Implement by <strong>{formatDate(idea.targetDate)}</strong>{' '}
-            <span className={idea.isOverdue ? 'overdue-text' : 'muted'}>({describeDue(idea.targetDate)})</span>
-            {idea.postponeCount > 0 && <span className="muted"> · postponed {idea.postponeCount}×</span>}
-          </p>
-          <Tags tags={idea.tags} />
-          {idea.description && <p className="description">{idea.description}</p>}
-          <Progress done={idea.completedComponentCount} total={idea.componentCount} />
-          {idea.canEdit ? (
-            <ImproveIdea idea={idea} />
+      <div className="idea-layout">
+        <div className="stack idea-main">
+          {editing ? (
+            <EditIdeaForm idea={idea} onDone={() => setEditing(false)} />
           ) : (
-            <p className="muted small">
-              {personLabel(idea.ownerName, idea.ownerEmail)}’s idea. You can follow it here; only its team and the workspace’s admins can change it.
-            </p>
+            <section className="card stack">
+              <div className="row spread wrap idea-heading">
+                <div className="row wrap">
+                  <h1>{idea.title}</h1>
+                  <StatusBadge idea={idea} />
+                </div>
+                <div className="row">
+                  {idea.canEdit && (
+                    <button type="button" className="button primary small" onClick={() => setEditing(true)}>
+                      <Pencil aria-hidden="true" size={16} />
+                      Edit details
+                    </button>
+                  )}
+                  {idea.canManage && <IdeaActions idea={idea} />}
+                </div>
+              </div>
+              <p className="small">
+                Implement by <strong>{formatDate(idea.targetDate)}</strong>{' '}
+                <span className={idea.isOverdue ? 'overdue-text' : 'muted'}>({describeDue(idea.targetDate)})</span>
+              </p>
+              <Tags tags={idea.tags} />
+              {idea.description ? <p className="description">{idea.description}</p> : <p className="muted">No description yet.</p>}
+              <Progress done={idea.completedComponentCount} total={idea.componentCount} />
+              {idea.canEdit ? (
+                <ImproveIdea idea={idea} />
+              ) : (
+                <p className="muted small">
+                  {personLabel(idea.ownerName, idea.ownerEmail)}’s idea. You can follow it here; only its team and the workspace’s admins can change it.
+                </p>
+              )}
+            </section>
           )}
-        </section>
-      )}
+          <ComponentsSection ideaId={idea.id} workspaceId={idea.workspaceId} canEdit={idea.canEdit} />
+          <DiscussionSection ideaId={idea.id} />
+          <ActivitySection ideaId={idea.id} />
+        </div>
 
-      {idea.canEdit && idea.status !== 'Done' && !idea.archivedAt && <PostponeForm idea={idea} />}
-      <ComponentsSection ideaId={idea.id} workspaceId={idea.workspaceId} canEdit={idea.canEdit} />
-      <TeamSection idea={idea} />
-      <DiscussionSection ideaId={idea.id} />
-      <ActivitySection ideaId={idea.id} />
-      {idea.canManage && !idea.archivedAt && <ArchiveIdea idea={idea} />}
-      {idea.canManage && <DeleteIdea idea={idea} />}
+        <aside className="stack idea-side" aria-label="Idea details">
+          <ScheduleCard idea={idea} />
+          <TeamSection idea={idea} />
+        </aside>
+      </div>
     </div>
+  );
+}
+
+/** When the idea is due, who owns it, and, for its team, a quick way to postpone it. */
+function ScheduleCard({ idea }: { idea: Idea }) {
+  const canPostpone = idea.canEdit && idea.status !== 'Done' && !idea.archivedAt;
+  return (
+    <section className="card stack" aria-labelledby="schedule-heading">
+      <h2 id="schedule-heading">Schedule</h2>
+      <dl className="facts">
+        <dt>Implement by</dt>
+        <dd>
+          <strong>{formatDate(idea.targetDate)}</strong>{' '}
+          <span className={idea.isOverdue ? 'overdue-text small' : 'muted small'}>({describeDue(idea.targetDate)})</span>
+        </dd>
+        {idea.postponeCount > 0 && (
+          <>
+            <dt>Postponed</dt>
+            <dd>{idea.postponeCount === 1 ? 'Once' : `${idea.postponeCount} times`}</dd>
+          </>
+        )}
+        <dt>Owner</dt>
+        <dd>{personLabel(idea.ownerName, idea.ownerEmail)}</dd>
+        <dt>Created</dt>
+        <dd>{formatDate(idea.createdAt.slice(0, 10))}</dd>
+      </dl>
+      {canPostpone && <PostponeForm idea={idea} />}
+    </section>
+  );
+}
+
+/** The idea's less frequent actions, for its owner and the workspace's admins: archive or restore, and delete. */
+function IdeaActions({ idea }: { idea: Idea }) {
+  const archive = useArchiveIdea(idea.id);
+  const remove = useDeleteIdea(idea.id);
+  const navigate = useNavigate();
+  const confirm = useConfirm();
+  const toast = useToast();
+
+  const setArchived = (archived: boolean) =>
+    archive.mutate(archived, {
+      onSuccess: () => toast({ message: archived ? 'Idea archived' : 'Idea restored', undo: () => archive.mutate(!archived) }),
+      onError: (error) => toast({ message: error.message, tone: 'error' }),
+    });
+
+  const deleteIdea = async () => {
+    const ok = await confirm({
+      title: `Delete “${idea.title}”?`,
+      message: 'This removes its components, team, and discussion, and cannot be undone. Archive it instead to keep it out of the way.',
+      confirmLabel: 'Delete idea',
+      danger: true,
+    });
+    if (ok) {
+      remove.mutate(undefined, {
+        onSuccess: () => {
+          toast({ message: `Deleted “${idea.title}”` });
+          void navigate('/ideas');
+        },
+        onError: (error) => toast({ message: error.message, tone: 'error' }),
+      });
+    }
+  };
+
+  return (
+    <Menu
+      label="More actions"
+      trigger={<Ellipsis aria-hidden="true" size={20} />}
+      items={[
+        idea.archivedAt
+          ? { label: 'Restore idea', icon: <ArchiveRestore aria-hidden="true" size={16} />, onSelect: () => setArchived(false) }
+          : { label: 'Archive idea', icon: <Archive aria-hidden="true" size={16} />, onSelect: () => setArchived(true) },
+        { label: 'Delete idea', icon: <Trash2 aria-hidden="true" size={16} />, onSelect: () => void deleteIdea(), danger: true },
+      ]}
+    />
   );
 }
 
 function EditIdeaForm({ idea, onDone }: { idea: Idea; onDone: () => void }) {
   const update = useUpdateIdea(idea.id);
+  const toast = useToast();
   const [title, setTitle] = useState(idea.title);
   const [description, setDescription] = useState(idea.description ?? '');
   const [targetDate, setTargetDate] = useState(idea.targetDate);
@@ -126,7 +210,15 @@ function EditIdeaForm({ idea, onDone }: { idea: Idea; onDone: () => void }) {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    update.mutate({ title, description: description || null, targetDate, status, tags }, { onSuccess: onDone });
+    update.mutate(
+      { title, description: description || null, targetDate, status, tags },
+      {
+        onSuccess: () => {
+          toast({ message: 'Changes saved' });
+          onDone();
+        },
+      },
+    );
   };
 
   return (
@@ -178,29 +270,27 @@ function EditIdeaForm({ idea, onDone }: { idea: Idea; onDone: () => void }) {
 
 function PostponeForm({ idea }: { idea: Idea }) {
   const postpone = usePostponeIdea(idea.id);
+  const toast = useToast();
   const today = todayIso();
   const earliest = idea.targetDate >= today ? addDays(idea.targetDate, 1) : today;
   const [targetDate, setTargetDate] = useState(addDays(earliest, 6));
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    postpone.mutate(targetDate);
+    postpone.mutate(targetDate, { onSuccess: () => toast({ message: `Postponed to ${formatDate(targetDate)}` }) });
   };
 
   return (
-    <form className="card stack" onSubmit={submit} aria-label="Postpone idea">
-      <h2>Not the right time?</h2>
-      <p className="muted small">Move it to a later date instead of letting it slip. It stays on your list.</p>
-      <div className="row wrap end">
-        <Field label="New date" error={fieldError(postpone.error, 'targetDate')}>
-          {(props) => (
-            <input {...props} type="date" required min={earliest} value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
-          )}
-        </Field>
-        <button type="submit" className="button" disabled={postpone.isPending}>
-          {postpone.isPending ? 'Postponing…' : 'Postpone'}
-        </button>
-      </div>
+    <form className="stack tight postpone-form" onSubmit={submit} aria-label="Postpone idea">
+      <Field label="Not the right time? Move it to" error={fieldError(postpone.error, 'targetDate')}>
+        {(props) => (
+          <input {...props} type="date" required min={earliest} value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+        )}
+      </Field>
+      <button type="submit" className="button small" disabled={postpone.isPending}>
+        <CalendarClock aria-hidden="true" size={16} />
+        {postpone.isPending ? 'Postponing…' : 'Postpone'}
+      </button>
       <ErrorMessage error={postpone.error} />
     </form>
   );
@@ -208,59 +298,19 @@ function PostponeForm({ idea }: { idea: Idea }) {
 
 function ArchivedBanner({ idea }: { idea: Idea }) {
   const restore = useArchiveIdea(idea.id);
+  const toast = useToast();
 
   return (
     <div className="archived-banner stack" role="status">
       <div className="row spread wrap">
         <span>This idea is archived. It’s hidden from the list and sends no reminders.</span>
         {idea.canManage && (
-          <button type="button" className="button small" onClick={() => restore.mutate(false)} disabled={restore.isPending}>
+          <button type="button" className="button small" onClick={() => restore.mutate(false, { onSuccess: () => toast({ message: 'Idea restored' }) })} disabled={restore.isPending}>
             Restore
           </button>
         )}
       </div>
       <ErrorMessage error={restore.error} />
     </div>
-  );
-}
-
-function ArchiveIdea({ idea }: { idea: Idea }) {
-  const archive = useArchiveIdea(idea.id);
-
-  return (
-    <section className="card stack">
-      <h2>Archive idea</h2>
-      <p className="muted small">Set it aside without losing anything. It leaves the list, stops sending reminders, and can be restored any time.</p>
-      <ErrorMessage error={archive.error} />
-      <div className="row">
-        <button type="button" className="button" onClick={() => archive.mutate(true)} disabled={archive.isPending}>
-          Archive idea
-        </button>
-      </div>
-    </section>
-  );
-}
-
-function DeleteIdea({ idea }: { idea: Idea }) {
-  const remove = useDeleteIdea(idea.id);
-  const navigate = useNavigate();
-
-  const confirmAndDelete = () => {
-    if (window.confirm(`Delete “${idea.title}”? This removes its components and team, and cannot be undone.`)) {
-      remove.mutate(undefined, { onSuccess: () => void navigate('/ideas') });
-    }
-  };
-
-  return (
-    <section className="card danger stack">
-      <h2>Delete idea</h2>
-      <p className="muted small">Only the idea’s owner and the workspace’s admins can delete it.</p>
-      <ErrorMessage error={remove.error} />
-      <div className="row">
-        <button type="button" className="button danger" onClick={confirmAndDelete} disabled={remove.isPending}>
-          Delete idea
-        </button>
-      </div>
-    </section>
   );
 }

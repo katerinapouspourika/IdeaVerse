@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 
 import type { Invitation, WorkspaceMember } from '../api/types';
 import { aWorkspace, fakeApi, ideasRoute, signedIn } from '../test/fakeApi';
+import { confirmDialog } from '../test/dialog';
 import { renderApp } from '../test/render';
 
 const kat: WorkspaceMember = { userId: 'u-kat', email: 'kat@example.com', name: null, role: 'Owner', joinedAt: '2026-10-01T09:00:00Z' };
@@ -92,7 +93,6 @@ describe('PeoplePage', () => {
       ...peopleRoutes('Member', [owner, me]),
       'DELETE /api/v1/workspaces/ws-1/members/u-me': { status: 204 },
     });
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderApp('/people');
 
     expect(await screen.findByText('Only the workspace’s owner and admins can invite people.')).toBeInTheDocument();
@@ -102,6 +102,7 @@ describe('PeoplePage', () => {
     expect(calls.some((c) => c.path.endsWith('/invitations') && c.path.includes('ws-1'))).toBe(false);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Leave workspace' }));
+    await confirmDialog('Leave workspace');
 
     await waitFor(() => expect(calls.some((c) => c.method === 'DELETE' && c.path === '/api/v1/workspaces/ws-1/members/u-me')).toBe(true));
   });
@@ -111,12 +112,12 @@ describe('PeoplePage', () => {
       ...peopleRoutes('Owner', [kat, mia]),
       'POST /api/v1/workspaces/ws-1/transfer': { status: 200, body: aWorkspace({ role: 'Admin' }) },
     });
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderApp('/people');
 
     const form = await screen.findByRole('form', { name: 'Transfer ownership' });
     await userEvent.selectOptions(await within(form).findByLabelText('New owner'), 'mia@example.com');
     await userEvent.click(within(form).getByRole('button', { name: 'Transfer ownership' }));
+    await confirmDialog('Hand over');
 
     await waitFor(() => expect(calls.find((c) => c.path.endsWith('/transfer'))?.body).toEqual({ userId: 'u-mia' }));
   });

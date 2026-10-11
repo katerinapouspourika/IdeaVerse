@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router';
 
 import { useAuth } from '../auth/AuthContext';
+import { Skeleton } from './Skeleton';
 
 /** Shows its routes only to signed-in users; everyone else goes to the login page. */
 export function RequireAuth() {
@@ -8,7 +9,7 @@ export function RequireAuth() {
   const location = useLocation();
 
   if (isLoading) {
-    return <p className="muted">Loading…</p>;
+    return <Skeleton variant="page" lines={4} />;
   }
 
   if (!account) {

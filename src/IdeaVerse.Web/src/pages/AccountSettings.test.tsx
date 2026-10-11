@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { anIdea, fakeApi, ideasRoute, signedIn, signedInAccount } from '../test/fakeApi';
+import { confirmDialog } from '../test/dialog';
 import { renderApp } from '../test/render';
 
 describe('Account settings', () => {
@@ -16,7 +17,7 @@ describe('Account settings', () => {
     await userEvent.type(within(form).getByLabelText('Your name'), 'Katerina');
     await userEvent.click(within(form).getByRole('button', { name: 'Save' }));
 
-    expect(await screen.findByRole('link', { name: 'Katerina' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Account: Katerina' })).toBeInTheDocument();
     expect(calls.find((c) => c.path === '/api/v1/account/profile')?.body).toEqual({ displayName: 'Katerina' });
   });
 
@@ -60,24 +61,24 @@ describe('Account settings', () => {
       ...signedIn,
       'POST /api/v1/account/delete': { status: 409, body: { detail: 'You own Acme Marketing, which other people use. Hand it over first.' } },
     });
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderApp('/settings');
 
     const form = await screen.findByRole('form', { name: 'Delete account' });
     await userEvent.type(within(form).getByLabelText('Password'), 'Passw0rd!');
     await userEvent.click(within(form).getByRole('button', { name: 'Delete my account' }));
+    await confirmDialog('Delete account');
 
     expect(await within(form).findByRole('alert')).toHaveTextContent('You own Acme Marketing');
   });
 
   it('deletes the account and returns to the sign-in page', async () => {
     const calls = fakeApi({ ...signedIn, 'POST /api/v1/account/delete': { status: 204 } });
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     const router = renderApp('/settings');
 
     const form = await screen.findByRole('form', { name: 'Delete account' });
     await userEvent.type(within(form).getByLabelText('Password'), 'Passw0rd!');
     await userEvent.click(within(form).getByRole('button', { name: 'Delete my account' }));
+    await confirmDialog('Delete account');
 
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));

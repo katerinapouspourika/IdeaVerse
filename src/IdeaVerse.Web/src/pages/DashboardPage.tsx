@@ -1,3 +1,4 @@
+import { PartyPopper } from 'lucide-react';
 import { Link } from 'react-router';
 
 import { daysUntil, describeDue, formatDate } from '../api/dates';
@@ -5,9 +6,11 @@ import { useAssignments, useIdeas, useNotifications } from '../api/queries';
 import type { Assignment, Idea, Workspace } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
 import { usePageMeta } from '../seo/usePageMeta';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
+import { GettingStarted } from './GettingStarted';
 import { WelcomePage } from './WelcomePage';
 
 /** How many items each dashboard list shows before linking to the full page. */
@@ -19,7 +22,7 @@ export function DashboardPage() {
   const { current, isLoading, error } = useWorkspace();
 
   if (isLoading) {
-    return <p className="muted">Loading…</p>;
+    return <Skeleton variant="page" lines={4} />;
   }
 
   if (!current) {
@@ -61,6 +64,8 @@ function WorkspaceDashboard({ workspace }: { workspace: Workspace }) {
 
       <ErrorMessage error={ideas.error ?? assignments.error} />
 
+      {account && ideas.data && <GettingStarted workspace={workspace} ideas={ideas.data} account={account} />}
+
       <section className="stats" aria-label="At a glance">
         <Stat label="Overdue" value={overdue.length} tone="danger" />
         <Stat label="Due this week" value={dueThisWeek.length} tone="warn" />
@@ -76,8 +81,10 @@ function WorkspaceDashboard({ workspace }: { workspace: Workspace }) {
               See all
             </Link>
           </div>
-          {ideas.isLoading && <p className="muted">Loading…</p>}
-          {ideas.data && attention.length === 0 && <p className="muted">Nothing overdue or due this week. Nice work! 🎉</p>}
+          {ideas.isLoading && <Skeleton />}
+          {ideas.data && attention.length === 0 && <p className="muted row">
+              <PartyPopper aria-hidden="true" size={18} /> Nothing overdue or due this week. Nice work!
+            </p>}
           {attention.length > 0 && (
             <ul className="mini-list">
               {attention.map((idea) => (
@@ -89,7 +96,7 @@ function WorkspaceDashboard({ workspace }: { workspace: Workspace }) {
 
         <section className="card stack" aria-labelledby="tasks-heading">
           <h2 id="tasks-heading">Your tasks</h2>
-          {assignments.isLoading && <p className="muted">Loading…</p>}
+          {assignments.isLoading && <Skeleton />}
           {assignments.data?.length === 0 && <p className="muted">Nothing assigned to you right now.</p>}
           {assignments.data && assignments.data.length > 0 && (
             <ul className="mini-list">

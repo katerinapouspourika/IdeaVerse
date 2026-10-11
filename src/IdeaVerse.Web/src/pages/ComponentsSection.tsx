@@ -4,20 +4,51 @@ import { SuggestComponents } from '../ai/SuggestComponents';
 import { formatDate, todayIso } from '../api/dates';
 import { useAddComponent, useComponents, useDeleteComponent, useUpdateComponent, useWorkspaceMembers } from '../api/queries';
 import { personLabel, type Component } from '../api/types';
+import { useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { Skeleton } from '../components/Skeleton';
 
 /** The idea's checklist; without `canEdit` it is read-only. */
 export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: string; workspaceId: string; canEdit: boolean }) {
   const components = useComponents(ideaId);
   const update = useUpdateComponent(ideaId);
   const remove = useDeleteComponent(ideaId);
+  const add = useAddComponent(ideaId);
+  const toast = useToast();
+
+  /** Removes a component straight away, offering Undo, which adds it back with its assignment, due date, and done state. */
+  const removeComponent = (component: Component) =>
+    remove.mutate(component.id, {
+      onSuccess: () =>
+        toast({
+          message: `Removed “${component.title}”`,
+          undo: () =>
+            add.mutate(
+              { title: component.title, notes: component.notes },
+              {
+                onSuccess: (created) => {
+                  if (component.isDone || component.assigneeId || component.dueDate) {
+                    update.mutate({
+                      id: created.id,
+                      title: component.title,
+                      notes: component.notes,
+                      isDone: component.isDone,
+                      assigneeId: component.assigneeId,
+                      dueDate: component.dueDate,
+                    });
+                  }
+                },
+              },
+            ),
+        }),
+    });
 
   return (
     <section className="card stack" aria-labelledby="components-heading">
       <h2 id="components-heading">What it needs</h2>
       <p className="muted small">Components are the things that must be in place before this idea can happen.</p>
-      {components.isLoading && <p className="muted">Loading…</p>}
+      {components.isLoading && <Skeleton />}
       {components.data?.length === 0 && <p className="muted">Nothing listed yet.</p>}
       {components.data && components.data.length > 0 && (
         <ul className="checklist">
@@ -34,7 +65,7 @@ export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: st
                   { onSettled },
                 )
               }
-              onRemove={() => remove.mutate(component.id)}
+              onRemove={() => removeComponent(component)}
             />
           ))}
         </ul>

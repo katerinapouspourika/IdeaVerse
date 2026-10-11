@@ -163,9 +163,12 @@ describe('Archiving an idea', () => {
     const calls = fakeApi({ ...ideaRoutes(null), 'POST /api/v1/ideas/idea-1/archive': { status: 200, body: launch } });
     renderApp('/ideas/idea-1');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Archive idea' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'More actions' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Archive idea' }));
 
     await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.path.endsWith('/archive'))).toBe(true));
+    expect(await screen.findByText('Idea archived')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument();
   });
 
   it('marks an archived idea and restores it', async () => {
@@ -173,7 +176,9 @@ describe('Archiving an idea', () => {
     renderApp('/ideas/idea-1');
 
     expect(await screen.findByText(/This idea is archived/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Archive idea' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'More actions' }));
+    expect(screen.queryByRole('menuitem', { name: 'Archive idea' })).not.toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
     expect(screen.queryByRole('form', { name: 'Postpone idea' })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Restore' }));
 
