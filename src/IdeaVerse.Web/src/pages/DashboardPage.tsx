@@ -6,6 +6,7 @@ import type { Assignment, Idea, Workspace } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { StatusBadge } from '../components/StatusBadge';
+import { usePageMeta } from '../seo/usePageMeta';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { WelcomePage } from './WelcomePage';
 
@@ -14,6 +15,7 @@ const listSize = 5;
 
 /** The signed-in home page: what needs attention in the current workspace. */
 export function DashboardPage() {
+  usePageMeta('Home', { index: false });
   const { current, isLoading, error } = useWorkspace();
 
   if (isLoading) {

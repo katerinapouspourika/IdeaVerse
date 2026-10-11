@@ -4,8 +4,10 @@ import { Link } from 'react-router';
 import { forgotPassword } from '../api/account';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { Field } from '../components/Field';
+import { usePageMeta } from '../seo/usePageMeta';
 
 export function ForgotPasswordPage() {
+  usePageMeta('Forgot your password', { index: false });
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [pending, setPending] = useState(false);

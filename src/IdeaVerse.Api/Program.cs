@@ -65,6 +65,7 @@ builder.Services.AddOptions<AiOptions>().BindConfiguration(AiOptions.SectionName
 builder.Services.AddScoped<AiService>();
 builder.Services.AddHostedService<ReminderWorker>();
 builder.Services.AddContactForm();
+builder.Services.AddWebAppCompression();
 
 var app = builder.Build();
 

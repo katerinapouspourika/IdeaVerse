@@ -1,4 +1,6 @@
 import { Link } from 'react-router';
+import { publicPages } from '../seo/pages';
+import { usePageMeta } from '../seo/usePageMeta';
 
 const features = [
   { icon: '💡', title: 'Capture every idea', text: 'Give each idea a title, a description, tags, and a date to make it real by.' },
@@ -17,6 +19,7 @@ const steps = [
 
 /** The public home page for visitors who are not signed in. */
 export function LandingPage() {
+  usePageMeta(publicPages['/'].title, { description: publicPages['/'].description });
   return (
     <div className="landing">
       <section className="landing-hero">

@@ -4,6 +4,7 @@ import { createContext, use, useEffect, type ReactNode } from 'react';
 import { ApiError, request } from '../api/client';
 import { browserTimeZone, setTimeZone } from '../api/dates';
 import type { Account, ReminderSettings } from '../api/types';
+import { rememberSession } from './sessionHint';
 
 interface Auth {
   account: Account | null;
@@ -70,6 +71,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /** Drops cached data from the previous session, keeping the account query its observers are attached to. */
   const forgetOtherData = () => client.removeQueries({ predicate: (query) => query.queryKey[0] !== accountKey[0] });
+
+  useEffect(() => {
+    if (data !== undefined) {
+      rememberSession(data !== null);
+    }
+  }, [data]);
 
   useEffect(() => {
     if (data && data.timeZone === null) {

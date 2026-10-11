@@ -4,9 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#232b8f" />
+    <meta name="description" content="IdeaVerse helps teams capture ideas, plan what each one needs, share the work, and get reminded before dates slip." />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <title>IdeaVerse</title>
+    <!-- Returning users skip the prerendered public home page while their dashboard loads (see src/auth/sessionHint.ts). -->
+    <script>
+      try {
+        if (localStorage.getItem('ideaverse.session') === '1') document.documentElement.classList.add('has-session');
+      } catch {}
+    </script>
+    <style>
+      .has-session .prerendered {
+        visibility: hidden;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

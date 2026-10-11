@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router';
 import { resetPassword } from '../api/account';
 import { ApiError } from '../api/client';
 import { Field } from '../components/Field';
+import { usePageMeta } from '../seo/usePageMeta';
 
 /** Turns a reset failure into one readable message. */
 function describe(error: unknown): string {
@@ -21,6 +22,7 @@ function describe(error: unknown): string {
 
 /** Opened from the password reset email; sets a new password with the link's code. */
 export function ResetPasswordPage() {
+  usePageMeta('Choose a new password', { index: false });
   const [params] = useSearchParams();
   const email = params.get('email') ?? '';
   const code = params.get('code') ?? '';

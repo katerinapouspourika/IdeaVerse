@@ -5,10 +5,13 @@
 // The script signs up two demo accounts and confirms them through the emails Mailpit caught.
 //
 // Settings (environment variables): BASE_URL (default http://localhost:5173, the dev server), MAILPIT_URL (default
-// http://localhost:8025), and CHROMIUM_PATH (a Chromium binary, when Playwright cannot find its own).
+// http://localhost:8025), CHROMIUM_PATH (a Chromium binary, when Playwright cannot find its own), and FFMPEG (an ffmpeg
+// with libx264, libvpx-vp9, and libwebp, default `ffmpeg` on the PATH), which turns each recording into MP4 (H.264) and WebM (VP9),
+// for browsers without H.264, and its poster into WebP.
 // The walkthroughs build on each other in order (later ones open the idea the first creates), so they are always recorded together.
-// Each walkthrough is written to public/how-it-works/<slug>.webm, with a poster image <slug>.png.
-import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
+// Each walkthrough is written to public/how-it-works/<slug>.mp4 and <slug>.webm, with a poster image <slug>.webp.
+import { execFileSync } from 'node:child_process';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,6 +32,16 @@ const isoIn = (days) => {
   date.setDate(date.getDate() + days);
   return date.toLocaleDateString('en-CA');
 };
+
+const ffmpeg = process.env.FFMPEG || 'ffmpeg';
+try {
+  execFileSync(ffmpeg, ['-version'], { stdio: 'ignore' });
+} catch {
+  throw new Error(`ffmpeg not found at "${ffmpeg}"; install it or set FFMPEG.`);
+}
+
+/** Converts with ffmpeg, quietly, overwriting the output. */
+const convert = (...args) => execFileSync(ffmpeg, ['-loglevel', 'error', '-y', ...args]);
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
 
@@ -216,9 +229,14 @@ for (const [slug, record] of Object.entries(walkthroughs)) {
   const image = await record(page);
   const video = page.video();
   await context.close();
-  await rename(await video.path(), join(out, `${slug}.webm`));
+  // Re-encoded, both are several times smaller than the WebM Playwright records.
+  const recording = await video.path();
+  convert('-i', recording, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '28', '-preset', 'slow', '-movflags', '+faststart', '-an', join(out, `${slug}.mp4`));
+  convert('-i', recording, '-c:v', 'libvpx-vp9', '-crf', '42', '-b:v', '0', '-row-mt', '1', '-an', join(out, `${slug}.webm`));
+  const png = join(videoDir, 'poster.png');
+  await writeFile(png, image);
+  convert('-i', png, '-c:v', 'libwebp', '-quality', '80', join(out, `${slug}.webp`));
   await rm(videoDir, { recursive: true, force: true });
-  await writeFile(join(out, `${slug}.png`), image);
   console.log(`recorded ${slug}`);
 }
 

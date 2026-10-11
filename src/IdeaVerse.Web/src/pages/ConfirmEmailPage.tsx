@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 
 import { confirmEmail } from '../api/account';
+import { usePageMeta } from '../seo/usePageMeta';
 
 type State = 'confirming' | 'confirmed' | 'failed';
 
 /** Opened from the confirmation email; confirms the account with the link's code. */
 export function ConfirmEmailPage() {
+  usePageMeta('Confirm your email', { index: false });
   const { search } = useLocation();
   const [state, setState] = useState<State>('confirming');
   const started = useRef(false);

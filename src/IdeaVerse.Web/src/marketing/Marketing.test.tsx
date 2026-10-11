@@ -23,7 +23,7 @@ describe('Public pages', () => {
 
     for (const walkthrough of walkthroughs) {
       const video = await screen.findByLabelText(`Video: ${walkthrough.title}`);
-      expect(video.querySelector('source')).toHaveAttribute('src', `/how-it-works/${walkthrough.slug}.webm`);
+      expect(video.querySelector('source')).toHaveAttribute('src', `/how-it-works/${walkthrough.slug}.mp4`);
       expect(screen.getByRole('heading', { name: walkthrough.title })).toBeInTheDocument();
     }
   });

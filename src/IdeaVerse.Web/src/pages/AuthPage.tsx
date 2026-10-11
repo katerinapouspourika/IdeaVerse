@@ -5,6 +5,7 @@ import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
 import { ResendConfirmation } from '../components/ResendConfirmation';
+import { usePageMeta } from '../seo/usePageMeta';
 
 type Mode = 'login' | 'register';
 
@@ -40,6 +41,7 @@ function describe(error: unknown, mode: Mode): string {
 }
 
 export function AuthPage({ mode }: { mode: Mode }) {
+  usePageMeta(mode === 'login' ? 'Sign in' : 'Create your account', { index: mode === 'register' });
   const { account, login, register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

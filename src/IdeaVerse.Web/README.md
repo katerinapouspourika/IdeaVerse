@@ -37,7 +37,7 @@ Open `http://localhost:5173`. The dev server forwards `/api` to the API, so the 
 | Script | Purpose |
 | --- | --- |
 | `npm run dev` | Dev server on port 5173 with hot reload. |
-| `npm run build` | Type-check and build to `dist/`. |
+| `npm run build` | Type-check, build to `dist/`, and prerender the public pages (see Search engines below). Set `SITE_URL` to the public address for production builds. |
 | `npm run lint` | ESLint. |
 | `npm run typecheck` | TypeScript, without emitting. |
 | `npm test` | Vitest and Testing Library, against a fake API. |
@@ -53,14 +53,23 @@ docker compose up --build
 
 ### Recording the walkthroughs
 
-`scripts/record-walkthroughs.mjs` signs up two demo accounts, confirms them through the emails Mailpit caught, and records one short video (WebM, 1024×640) and poster image per walkthrough listed in `src/marketing/walkthroughs.ts`. The walkthroughs build on each other, so they are always recorded together. Re-record after visible changes to the app:
+`scripts/record-walkthroughs.mjs` signs up two demo accounts, confirms them through the emails Mailpit caught, and records one short video per walkthrough (1024×640, saved as H.264 MP4 and as VP9 WebM for browsers without H.264) with a WebP poster image, for each walkthrough listed in `src/marketing/walkthroughs.ts`. The walkthroughs build on each other, so they are always recorded together. Re-record after visible changes to the app:
 
 ```bash
 docker compose up --build -d
 BASE_URL=http://localhost:8080 npm run record:walkthroughs
 ```
 
-Set `CHROMIUM_PATH` when Playwright has no browser of its own installed, and `MAILPIT_URL` when Mailpit is not at `http://localhost:8025`.
+It needs an ffmpeg with libx264, libvpx-vp9 and libwebp (set `FFMPEG` when it is not on the PATH). Set `CHROMIUM_PATH` when Playwright has no browser of its own installed, and `MAILPIT_URL` when Mailpit is not at `http://localhost:8025`. After recording, update `walkthroughsRecordedOn` in `src/marketing/walkthroughs.ts`, which the videos' structured data reports.
+
+### Search engines and link previews
+
+- Every page sets its browser title, description, and `robots` tag with `usePageMeta` (`src/seo/`). Signed-in and account pages are `noindex`.
+- The public pages are listed in `src/seo/pages.ts`. After `vite build`, `scripts/prerender.mjs` renders each of them, and a "not found" page, to static HTML through `src/prerender.tsx` (a `vite build --ssr` entry), as a signed-out visitor sees them. Search engines, AI crawlers, and link previews get real content, a canonical URL, Open Graph and Twitter tags with `public/og-image.png` (1200×630), and structured data: Organization and WebSite on the home page, a VideoObject per walkthrough on How it works.
+- The build writes `index.html`, `how-it-works.html`, `contact.html`, `404.html`, the empty app shell `app.html`, `sitemap.xml`, and `robots.txt`; the API serves each for its routes. Absolute URLs use `SITE_URL` (default `http://localhost:8080`; `compose.yaml` and the Dockerfile pass it as a build argument).
+- In the browser, the app renders over the prerendered HTML. Returning users skip the public home page while their dashboard loads: `src/auth/sessionHint.ts` remembers a signed-in visit in `localStorage`, and a script in `index.html` hides the prerendered content for them.
+- Signed-in pages are loaded on demand (`src/routes.tsx`), so visitors to the public pages download only what those pages need.
+- To add a public page: add it to `publicPages` in `src/seo/pages.ts` and to `routes.tsx`, and add its route and file to `PublicPages` in the API's `WebAppExtensions.cs`. A new signed-in page goes in `routes.tsx` and the API's `AppRoutes`.
 
 ## Recommendations
 

@@ -89,12 +89,14 @@ RUN if ls *.json 1>/dev/null 2>&1; then \
 
 FROM node:lts-alpine AS web-build
 ARG WEB_PROJECT
+# The public address the web app is served from, for canonical URLs, link previews, and the sitemap.
+ARG SITE_URL=http://localhost:8080
 WORKDIR /web
 COPY --link src/${WEB_PROJECT}/ ./
 RUN --mount=type=cache,target=/root/.npm \
   mkdir -p /web-dist && \
   if [ -n "${WEB_PROJECT}" ]; then \
-  npm ci && npm run build && cp -r dist/. /web-dist/; \
+  npm ci && SITE_URL="${SITE_URL}" npm run build && cp -r dist/. /web-dist/; \
   else \
   echo "No WEB_PROJECT set, skipping web build"; \
   fi

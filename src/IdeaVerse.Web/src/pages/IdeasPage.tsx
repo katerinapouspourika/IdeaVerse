@@ -10,12 +10,14 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { Progress } from '../components/Progress';
 import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
+import { usePageMeta } from '../seo/usePageMeta';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { IdeaCalendar } from './IdeaCalendar';
 import { NewIdeaForm } from './NewIdeaForm';
 import { WelcomePage } from './WelcomePage';
 
 export function IdeasPage() {
+  usePageMeta('Ideas', { index: false });
   const { current, isLoading, error } = useWorkspace();
 
   if (isLoading) {
