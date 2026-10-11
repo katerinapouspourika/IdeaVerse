@@ -14,13 +14,12 @@ internal static class IdeaTags
 
   /// <summary>
   /// Trims and lower-cases <paramref name="tags"/>, collapsing inner spaces and dropping blanks and duplicates while keeping their order.
-  /// The request's <c>MaxLength</c> already caps how many there are.
   /// </summary>
   /// <param name="tags">The submitted tags.</param>
   /// <param name="normalized">The normalized tags, when they are valid.</param>
   /// <param name="error">Why the tags are invalid, when they are.</param>
   /// <returns>Whether the tags are valid.</returns>
-  public static bool TryNormalize(IEnumerable<string> tags, out IReadOnlyList<string> normalized, out string? error)
+  public static bool TryNormalize(IEnumerable<string> tags, out IReadOnlyList<string> normalized, [NotNullWhen(false)] out string? error)
   {
     normalized = [.. tags
       .Where(t => !string.IsNullOrWhiteSpace(t))
@@ -28,11 +27,13 @@ internal static class IdeaTags
       .Distinct(StringComparer.Ordinal),
     ];
 
-    error = normalized.Any(t => t.Length > Idea.TagMaxLength)
-      ? $"Tags can be at most {Idea.TagMaxLength} characters long."
-      : normalized.Any(t => t.Contains(',', StringComparison.Ordinal))
-        ? "Tags cannot contain commas."
-        : null;
+    error = normalized.Count > Idea.MaxTags
+      ? $"An idea can have at most {Idea.MaxTags} tags."
+      : normalized.Any(t => t.Length > Idea.TagMaxLength)
+        ? $"Tags can be at most {Idea.TagMaxLength} characters long."
+        : normalized.Any(t => t.Contains(',', StringComparison.Ordinal))
+          ? "Tags cannot contain commas."
+          : null;
     return error is null;
   }
 

@@ -145,7 +145,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
 
     if (!IdeaTags.TryNormalize(request.Tags ?? [], out var tags, out var tagError))
     {
-      return IdeaChangeResult.Invalid(IdeaTags.MemberName, tagError!);
+      return IdeaChangeResult.Invalid(IdeaTags.MemberName, tagError);
     }
 
     var now = timeProvider.GetUtcNow();
@@ -192,7 +192,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
     var tags = idea.Tags;
     if (request.Tags is not null && !IdeaTags.TryNormalize(request.Tags, out tags, out var tagError))
     {
-      return IdeaChangeResult.Invalid(IdeaTags.MemberName, tagError!);
+      return IdeaChangeResult.Invalid(IdeaTags.MemberName, tagError);
     }
 
     var now = timeProvider.GetUtcNow();

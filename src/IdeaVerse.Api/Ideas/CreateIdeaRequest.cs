@@ -13,4 +13,4 @@ public sealed record CreateIdeaRequest(
   [property: Required(AllowEmptyStrings = false), MaxLength(Idea.TitleMaxLength)] string Title,
   [property: MaxLength(Idea.DescriptionMaxLength)] string? Description,
   DateOnly TargetDate,
-  [property: MaxLength(Idea.MaxTags)] IReadOnlyList<string>? Tags = null);
+  IReadOnlyList<string>? Tags = null);

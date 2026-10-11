@@ -18,4 +18,4 @@ public sealed record UpdateIdeaRequest(
   [property: MaxLength(Idea.DescriptionMaxLength)] string? Description,
   DateOnly TargetDate,
   IdeaStatus Status,
-  [property: MaxLength(Idea.MaxTags)] IReadOnlyList<string>? Tags = null);
+  IReadOnlyList<string>? Tags = null);

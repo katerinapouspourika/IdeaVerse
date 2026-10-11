@@ -220,7 +220,7 @@ public sealed partial class ReminderService(
   /// </summary>
   /// <remarks>
   /// A failed email is logged and left for the next run; one failure does not stop the rest.
-  /// Notifications that no longer concern their recipient (see <see cref="NotificationAccess.StillRelevant"/>), or for people
+  /// Notifications that no longer concern their recipient (see <see cref="NotificationAccess.StillRelevant"/>), about archived ideas, or for people
   /// who turned reminder emails off, are not emailed.
   /// </remarks>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
@@ -232,7 +232,7 @@ public sealed partial class ReminderService(
     var oldest = now - settings.EmailRetryWindow;
 
     var pending = await context.StillRelevant()
-      .Where(n => n.EmailedAt == null && n.CreatedAt >= oldest && n.User!.EmailReminders)
+      .Where(n => n.EmailedAt == null && n.CreatedAt >= oldest && n.User!.EmailReminders && n.Idea!.ArchivedAt == null)
       .Select(n => new
       {
         Notification = n,

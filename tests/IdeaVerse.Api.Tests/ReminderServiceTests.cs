@@ -275,6 +275,37 @@ public class ReminderServiceTests
     await Assert.That(result.Emailed).IsEqualTo(0);
   }
 
+  [Test]
+  public async Task RunAsync_ArchivedOverdueIdea_RaisesNothing()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(1))).ReadIdeaAsync();
+    (await owner.PostAsync($"/api/v1/ideas/{idea.Id}/archive", null)).Dispose();
+    factory.Time.Advance(TimeSpan.FromDays(3));
+
+    var run = await factory.RunRemindersAsync();
+
+    await Assert.That(run).IsEqualTo(new ReminderRunResult(0, 0));
+  }
+
+  [Test]
+  public async Task RunAsync_EmailFailedThenIdeaArchived_DoesNotRetryTheEmail()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    factory.Mail.Fail = true;
+    await factory.RunRemindersAsync();
+    factory.Mail.Fail = false;
+    (await owner.PostAsync($"/api/v1/ideas/{idea.Id}/archive", null)).Dispose();
+
+    var retry = await factory.RunRemindersAsync();
+
+    await Assert.That(retry.Emailed).IsEqualTo(0);
+    await Assert.That(factory.Mail.Sent).IsEmpty();
+  }
+
   private static async Task SetRemindersAsync(HttpClient client, bool email, params ReminderKind[] kinds)
   {
     using var response = await client.PutAsJsonAsync("/api/v1/account/reminders", new Accounts.UpdateRemindersRequest(email, kinds), Json.Options);

@@ -84,6 +84,22 @@ public class AssignmentTests
   }
 
   [Test]
+  public async Task RunReminders_AssignedComponentOfArchivedIdea_RaisesNothing()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var viewer = await factory.CreateSignedInClientAsync("viewer@example.com");
+    await factory.JoinAsync(owner, viewer, "viewer@example.com");
+    var (ideaId, component) = await IdeaWithComponentAsync(owner, Today.AddDays(30));
+    (await owner.UpdateComponentAsync(ideaId, component.Id, new UpdateComponentRequest("Budget", null, IsDone: false, await UserIdAsync(owner, "viewer@example.com"), Today.AddDays(1)))).Dispose();
+    (await owner.PostAsync($"/api/v1/ideas/{ideaId}/archive", null)).Dispose();
+
+    var run = await factory.RunRemindersAsync();
+
+    await Assert.That(run).IsEqualTo(new ReminderRunResult(0, 0));
+  }
+
+  [Test]
   public async Task RunReminders_ComponentDoneOrStageTurnedOff_RaisesNothing()
   {
     await using var factory = new IdeaVerseApiFactory();
