@@ -1,7 +1,7 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { fakeApi, signedOut } from '../test/fakeApi';
+import { fakeApi, ideasRoute, signedIn, signedOut } from '../test/fakeApi';
 import { renderApp } from '../test/render';
 
 describe('Registration and confirmation', () => {
@@ -36,17 +36,47 @@ describe('Registration and confirmation', () => {
     expect(calls.find((c) => c.path === '/api/v1/auth/resendConfirmationEmail')?.body).toEqual({ email: 'new@example.com' });
   });
 
-  it('confirms the account with the code from the email link', async () => {
-    const calls = fakeApi({ ...signedOut, 'GET /api/v1/auth/confirmEmail?userId=u1&code=abc': { status: 200 } });
+  it('confirms a new account from the email link and signs it in', async () => {
+    let confirmed = false;
+    const calls = fakeApi({
+      ...signedIn,
+      [ideasRoute]: { status: 200, body: [] },
+      'GET /api/v1/account': () => (confirmed ? signedIn['GET /api/v1/account'] : { status: 401 }),
+      'POST /api/v1/auth/confirm': () => {
+        confirmed = true;
+        return { status: 200, body: { signedIn: true } };
+      },
+    });
+
+    const router = renderApp('/confirm-email?userId=u1&code=abc');
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/ideas'));
+    expect(await screen.findByText('Email confirmed. Welcome to IdeaVerse!')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Ideas' })).toBeInTheDocument();
+    expect(calls.filter((c) => c.path === '/api/v1/auth/confirm')).toHaveLength(1);
+    expect(calls.find((c) => c.path === '/api/v1/auth/confirm')?.body).toEqual({ userId: 'u1', code: 'abc', changedEmail: null });
+  });
+
+  it('asks to sign in when the address was already confirmed', async () => {
+    fakeApi({ ...signedOut, 'POST /api/v1/auth/confirm': { status: 200, body: { signedIn: false } } });
 
     renderApp('/confirm-email?userId=u1&code=abc');
 
     expect(await screen.findByRole('heading', { name: 'Email confirmed' })).toBeInTheDocument();
-    expect(calls.filter((c) => c.path.startsWith('/api/v1/auth/confirmEmail'))).toHaveLength(1);
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
+  });
+
+  it('says a link without its code is incomplete, without calling the API', async () => {
+    const calls = fakeApi(signedOut);
+
+    renderApp('/confirm-email');
+
+    expect(await screen.findByRole('heading', { name: 'This link is incomplete' })).toBeInTheDocument();
+    expect(calls.some((c) => c.path === '/api/v1/auth/confirm')).toBe(false);
   });
 
   it('says when a confirmation link no longer works', async () => {
-    fakeApi({ ...signedOut, 'GET /api/v1/auth/confirmEmail?userId=u1&code=old': { status: 401 } });
+    fakeApi({ ...signedOut, 'POST /api/v1/auth/confirm': { status: 401 } });
 
     renderApp('/confirm-email?userId=u1&code=old');
 
