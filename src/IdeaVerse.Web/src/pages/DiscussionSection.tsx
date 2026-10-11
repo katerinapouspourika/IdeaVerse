@@ -9,7 +9,7 @@ import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
 import { MentionTextarea, type Mentionable } from '../mentions/MentionTextarea';
-import { segments, toBody, toEditable, type Mention } from '../mentions/mentions';
+import { maxBodyLength, mentionLabels, segments, toBody, toEditable, type Mention } from '../mentions/mentions';
 
 /** The idea's comments, open to everyone in its workspace, who can mention each other with `@`. */
 export function DiscussionSection({ ideaId, workspaceId }: { ideaId: string; workspaceId: string }) {
@@ -43,14 +43,17 @@ export function DiscussionSection({ ideaId, workspaceId }: { ideaId: string; wor
   );
 }
 
-/** The people in the workspace someone can mention: everyone but themselves. */
+/** The people in the workspace someone can mention, everyone but themselves, named as the API names them. */
 function useMentionable(workspaceId: string): Mentionable[] {
   const members = useWorkspaceMembers(workspaceId);
   const { account } = useAuth();
+  const labels = mentionLabels(members.data ?? []);
   return (members.data ?? [])
     .filter((m) => m.email !== account?.email)
-    .map((m) => ({ userId: m.userId, name: personLabel(m.name, m.email), email: m.email }));
+    .map((m) => ({ userId: m.userId, name: labels.get(m.userId) ?? m.email, email: m.email }));
 }
+
+const tooLong = 'This comment is too long once its mentions are saved. Shorten it a little.';
 
 /** A comment's text, with its mentions marked. */
 function CommentBody({ body }: { body: string }) {
@@ -76,9 +79,15 @@ function CommentItem({ ideaId, comment, people, onDelete }: { ideaId: string; co
   const [mentions, setMentions] = useState<Mention[]>(draft.mentions);
   const author = comment.authorEmail ? personLabel(comment.authorName, comment.authorEmail) : 'A former member';
 
+  const [lengthError, setLengthError] = useState<string | null>(null);
+
   const save = (event: FormEvent) => {
     event.preventDefault();
-    edit.mutate({ id: comment.id, body: toBody(draft.text, mentions) }, { onSuccess: () => setEditing(false) });
+    const body = toBody(draft.text, mentions);
+    setLengthError(body.length > maxBodyLength ? tooLong : null);
+    if (body.length <= maxBodyLength) {
+      edit.mutate({ id: comment.id, body }, { onSuccess: () => setEditing(false) });
+    }
   };
 
   return (
@@ -92,7 +101,7 @@ function CommentItem({ ideaId, comment, people, onDelete }: { ideaId: string; co
       </div>
       {editing ? (
         <form className="stack" onSubmit={save} aria-label="Edit comment">
-          <Field label="Comment" error={fieldError(edit.error, 'body')}>
+          <Field label="Comment" error={lengthError ?? fieldError(edit.error, 'body')}>
             {(props) => (
               <MentionTextarea
                 {...props}
@@ -151,10 +160,16 @@ function AddCommentForm({ ideaId, people }: { ideaId: string; people: Mentionabl
   const add = useAddComment(ideaId);
   const [body, setBody] = useState('');
   const [mentions, setMentions] = useState<Mention[]>([]);
+  const [lengthError, setLengthError] = useState<string | null>(null);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    add.mutate(toBody(body, mentions), {
+    const saved = toBody(body, mentions);
+    setLengthError(saved.length > maxBodyLength ? tooLong : null);
+    if (saved.length > maxBodyLength) {
+      return;
+    }
+    add.mutate(saved, {
       onSuccess: () => {
         setBody('');
         setMentions([]);
@@ -164,7 +179,7 @@ function AddCommentForm({ ideaId, people }: { ideaId: string; people: Mentionabl
 
   return (
     <form className="stack" onSubmit={submit} aria-label="Add comment">
-      <Field label="Add a comment" hint="Type @ to mention someone in the workspace." error={fieldError(add.error, 'body')}>
+      <Field label="Add a comment" hint="Type @ to mention someone in the workspace." error={lengthError ?? fieldError(add.error, 'body')}>
         {(props) => (
           <MentionTextarea
             {...props}

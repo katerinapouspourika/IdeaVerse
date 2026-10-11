@@ -66,8 +66,8 @@ internal static class CommentEndpoints
   /// <param name="user">The signed-in user.</param>
   /// <param name="service">The comment service.</param>
   /// <param name="cancellationToken">Token to cancel the request.</param>
-  /// <returns>201 with the comment, or 404.</returns>
-  private static async Task<Results<Created<CommentResponse>, NotFound>> CreateAsync(
+  /// <returns>201 with the comment, 404, or a validation problem when its mentions make it too long.</returns>
+  private static async Task<Results<Created<CommentResponse>, NotFound, ValidationProblem>> CreateAsync(
     Guid ideaId,
     CommentRequest request,
     ClaimsPrincipal user,
@@ -75,9 +75,12 @@ internal static class CommentEndpoints
     CancellationToken cancellationToken)
   {
     var result = await service.CreateAsync(user.GetUserId(), ideaId, request, cancellationToken).ConfigureAwait(false);
-    return result is { Outcome: ChangeOutcome.Changed, Comment: { } comment }
-      ? TypedResults.Created($"/api/v1/ideas/{ideaId}/comments/{comment.Id}", comment)
-      : TypedResults.NotFound();
+    return result switch
+    {
+      { Outcome: ChangeOutcome.Changed, Comment: { } comment } => TypedResults.Created($"/api/v1/ideas/{ideaId}/comments/{comment.Id}", comment),
+      { Outcome: ChangeOutcome.Invalid, Message: { } message } => BodyProblem(message),
+      _ => TypedResults.NotFound(),
+    };
   }
 
   /// <summary>
@@ -89,8 +92,8 @@ internal static class CommentEndpoints
   /// <param name="user">The signed-in user.</param>
   /// <param name="service">The comment service.</param>
   /// <param name="cancellationToken">Token to cancel the request.</param>
-  /// <returns>The edited comment, 404, or 403 for someone else's comment.</returns>
-  private static async Task<Results<Ok<CommentResponse>, NotFound, ProblemHttpResult>> UpdateAsync(
+  /// <returns>The edited comment, 404, 403 for someone else's comment, or a validation problem when its mentions make it too long.</returns>
+  private static async Task<Results<Ok<CommentResponse>, NotFound, ProblemHttpResult, ValidationProblem>> UpdateAsync(
     Guid ideaId,
     Guid commentId,
     CommentRequest request,
@@ -103,9 +106,18 @@ internal static class CommentEndpoints
     {
       { Outcome: ChangeOutcome.Changed, Comment: { } comment } => TypedResults.Ok(comment),
       { Outcome: ChangeOutcome.Forbidden } => TypedResults.Problem(detail: "You can only edit your own comments.", statusCode: StatusCodes.Status403Forbidden),
+      { Outcome: ChangeOutcome.Invalid, Message: { } message } => BodyProblem(message),
       _ => TypedResults.NotFound(),
     };
   }
+
+  /// <summary>
+  /// Builds the validation problem for a comment's text.
+  /// </summary>
+  /// <param name="message">Why the text was refused.</param>
+  /// <returns>The problem, on the <c>body</c> field.</returns>
+  private static ValidationProblem BodyProblem(string message)
+    => TypedResults.ValidationProblem(new Dictionary<string, string[]>(StringComparer.Ordinal) { ["body"] = [message] });
 
   /// <summary>
   /// Deletes a comment.

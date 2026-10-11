@@ -43,8 +43,35 @@ export function toEditable(body: string): { text: string; mentions: Mention[] } 
 
 /** A name as a mention can hold it: no brackets or line breaks, at most 100 characters. */
 export function mentionName(name: string): string {
-  return name.replace(/[[\]\r\n]/g, ' ').trim().slice(0, 100);
+  return name
+    .split(/[[\]\r\n]/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(' ')
+    .slice(0, 100)
+    .trimEnd();
 }
+
+/**
+ * Names the people in a workspace as mentions show them, as the API does: their display name, or their email when they
+ * have none, and the name followed by the email when two people share a name.
+ */
+export function mentionLabels(people: { userId: string; name: string | null; email: string }[]): Map<string, string> {
+  const counts = new Map<string, number>();
+  for (const p of people) {
+    const key = (p.name ?? p.email).toLowerCase();
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return new Map(
+    people.map((p) => {
+      const shared = p.name !== null && (counts.get(p.name.toLowerCase()) ?? 0) > 1;
+      return [p.userId, mentionName(shared ? `${p.name} (${p.email})` : (p.name ?? p.email))];
+    }),
+  );
+}
+
+/** How long a comment may be once its mentions are written out, as the API allows. */
+export const maxBodyLength = 4000;
 
 /**
  * Writes editable text back as a comment, turning each `@Name` of a chosen person into a mention. A chosen person whose
@@ -55,7 +82,8 @@ export function toBody(text: string, mentions: Mention[]): string {
   // Longer names first, so "@Mia Chen" isn't taken as "@Mia" followed by " Chen".
   for (const mention of [...mentions].sort((a, b) => b.name.length - a.name.length)) {
     const escaped = mention.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    body = body.replace(new RegExp(`@${escaped}(?![\\p{L}\\p{N}])`, 'gu'), `@[${mention.name}](${mention.userId})`);
+    // A function, so a `$` in a name is taken literally rather than as a replacement pattern.
+    body = body.replace(new RegExp(`@${escaped}(?![\\p{L}\\p{N}])`, 'gu'), () => `@[${mention.name}](${mention.userId})`);
   }
   return body;
 }

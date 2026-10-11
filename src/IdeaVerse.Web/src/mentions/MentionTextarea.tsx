@@ -85,7 +85,8 @@ export function MentionTextarea({ value, onChange, mentions, onMentionsChange, p
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (!open) {
+    // Enter while composing text with an input method confirms that text, not a mention.
+    if (!open || event.nativeEvent.isComposing) {
       return;
     }
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -136,7 +137,9 @@ export function MentionTextarea({ value, onChange, mentions, onMentionsChange, p
         </ul>
       )}
       <p className="visually-hidden" aria-live="polite">
-        {open ? `${suggestions.length} ${suggestions.length === 1 ? 'person matches' : 'people match'}. Use the arrow keys and Enter to mention.` : ''}
+        {open
+          ? `${suggestions[selected]!.name}, ${selected + 1} of ${suggestions.length}. Use the arrow keys to choose and Enter to mention.`
+          : ''}
       </p>
     </div>
   );
