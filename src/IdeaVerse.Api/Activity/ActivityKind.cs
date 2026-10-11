@@ -69,4 +69,19 @@ public enum ActivityKind
   /// The person acting left the team.
   /// </summary>
   MemberLeft,
+
+  /// <summary>
+  /// The tags changed; the detail is the new tags, comma separated, or empty when they were all removed.
+  /// </summary>
+  TagsChanged,
+
+  /// <summary>
+  /// The idea was archived.
+  /// </summary>
+  Archived,
+
+  /// <summary>
+  /// The idea was brought back from the archive.
+  /// </summary>
+  Restored,
 }

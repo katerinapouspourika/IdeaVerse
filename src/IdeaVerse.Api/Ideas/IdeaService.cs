@@ -27,33 +27,81 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
   private const string NotOnTeamMessage = "Only the idea's team and the workspace's admins can change this idea.";
 
   /// <summary>
-  /// Lists a workspace's ideas, soonest target date first.
+  /// Lists a workspace's ideas, filtered and ordered as <paramref name="filter"/> asks.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="workspaceId">The workspace identifier.</param>
-  /// <param name="status">Optional status to filter by.</param>
+  /// <param name="filter">Filters and order.</param>
   /// <param name="cancellationToken">Token to cancel the query.</param>
   /// <returns>The ideas, or <see langword="null"/> when the user is not in the workspace.</returns>
-  public async Task<IReadOnlyList<IdeaResponse>?> ListAsync(string userId, Guid workspaceId, IdeaStatus? status, CancellationToken cancellationToken)
+  public async Task<IReadOnlyList<IdeaResponse>?> ListAsync(string userId, Guid workspaceId, IdeaListQuery filter, CancellationToken cancellationToken)
   {
+    ArgumentNullException.ThrowIfNull(filter);
+
     if (await context.RoleInAsync(userId, workspaceId, cancellationToken).ConfigureAwait(false) is null)
     {
       return null;
     }
 
     var today = await calendar.TodayAsync(userId, cancellationToken).ConfigureAwait(false);
-    var query = context.VisibleIdeas(userId).Where(i => i.WorkspaceId == workspaceId);
-    if (status is { } filter)
+    var query = context.VisibleIdeas(userId)
+      .Where(i => i.WorkspaceId == workspaceId)
+      .Where(i => (i.ArchivedAt != null) == filter.Archived);
+    if (filter.Status is { } status)
     {
-      query = query.Where(i => i.Status == filter);
+      query = query.Where(i => i.Status == status);
     }
 
+    if (!string.IsNullOrWhiteSpace(filter.Search))
+    {
+      var term = filter.Search.Trim().ToUpperInvariant();
+
+      // EF Core translates ToUpper() to SQL UPPER(); the culture and comparison overloads the analyzers ask for do not translate.
+#pragma warning disable CA1304, CA1311, CA1862
+      query = query.Where(i => i.Title.ToUpper().Contains(term) || (i.Description != null && i.Description.ToUpper().Contains(term)));
+#pragma warning restore CA1304, CA1311, CA1862
+    }
+
+    if (!string.IsNullOrWhiteSpace(filter.Tag))
+    {
+      var tag = IdeaTags.Normalize(filter.Tag);
+      query = query.Where(i => i.Tags.Contains(tag));
+    }
+
+    query = filter.Sort switch
+    {
+      IdeaSort.Title => query.OrderBy(i => i.Title).ThenBy(i => i.TargetDate),
+      IdeaSort.Updated => query.OrderByDescending(i => i.UpdatedAt).ThenBy(i => i.Title),
+      IdeaSort.Created => query.OrderByDescending(i => i.CreatedAt).ThenBy(i => i.Title),
+      IdeaSort.TargetDate or _ => query.OrderBy(i => i.TargetDate).ThenBy(i => i.Title),
+    };
+
     return await query
-      .OrderBy(i => i.TargetDate)
-      .ThenBy(i => i.Title)
       .Select(IdeaResponse.Projection(context, today, userId))
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
+  }
+
+  /// <summary>
+  /// Lists the tags used by a workspace's ideas, alphabetically.
+  /// </summary>
+  /// <param name="userId">The signed-in user's identifier.</param>
+  /// <param name="workspaceId">The workspace identifier.</param>
+  /// <param name="cancellationToken">Token to cancel the query.</param>
+  /// <returns>The tags, or <see langword="null"/> when the user is not in the workspace.</returns>
+  public async Task<IReadOnlyList<string>?> ListTagsAsync(string userId, Guid workspaceId, CancellationToken cancellationToken)
+  {
+    if (await context.RoleInAsync(userId, workspaceId, cancellationToken).ConfigureAwait(false) is null)
+    {
+      return null;
+    }
+
+    var tags = await context.VisibleIdeas(userId)
+      .Where(i => i.WorkspaceId == workspaceId)
+      .Select(i => i.Tags)
+      .ToListAsync(cancellationToken)
+      .ConfigureAwait(false);
+    return [.. tags.SelectMany(t => t).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
   }
 
   /// <summary>
@@ -95,6 +143,11 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
       return IdeaChangeResult.Invalid(TargetDateRules.MemberName, TargetDateRules.NotInPastMessage);
     }
 
+    if (!IdeaTags.TryNormalize(request.Tags ?? [], out var tags, out var tagError))
+    {
+      return IdeaChangeResult.Invalid(IdeaTags.MemberName, tagError!);
+    }
+
     var now = timeProvider.GetUtcNow();
     var idea = new Idea
     {
@@ -103,6 +156,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
       Title = request.Title.Trim(),
       Description = Normalize(request.Description),
       TargetDate = request.TargetDate,
+      Tags = tags,
       CreatedAt = now,
       UpdatedAt = now,
     };
@@ -135,6 +189,12 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
       return IdeaChangeResult.Invalid(TargetDateRules.MemberName, TargetDateRules.NotInPastMessage);
     }
 
+    var tags = idea.Tags;
+    if (request.Tags is not null && !IdeaTags.TryNormalize(request.Tags, out tags, out var tagError))
+    {
+      return IdeaChangeResult.Invalid(IdeaTags.MemberName, tagError!);
+    }
+
     var now = timeProvider.GetUtcNow();
     var title = request.Title.Trim();
     var description = Normalize(request.Description);
@@ -158,8 +218,14 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
       context.Record(idea.Id, userId, ActivityKind.StatusChanged, now, request.Status.ToString());
     }
 
+    if (!tags.SequenceEqual(idea.Tags, StringComparer.Ordinal))
+    {
+      context.Record(idea.Id, userId, ActivityKind.TagsChanged, now, string.Join(", ", tags));
+    }
+
     idea.Title = title;
     idea.Description = description;
+    idea.Tags = tags;
     idea.TargetDate = request.TargetDate;
     idea.Status = request.Status;
     return await SaveAsync(userId, idea, cancellationToken).ConfigureAwait(false);
@@ -202,6 +268,35 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
     idea.Status = IdeaStatus.Postponed;
     idea.PostponeCount++;
     context.Record(idea.Id, userId, ActivityKind.Postponed, timeProvider.GetUtcNow(), request.TargetDate.ToString("O", CultureInfo.InvariantCulture));
+    return await SaveAsync(userId, idea, cancellationToken).ConfigureAwait(false);
+  }
+
+  /// <summary>
+  /// Archives or restores an idea. Only its owner and the workspace's owner and admins may do so.
+  /// </summary>
+  /// <param name="userId">The signed-in user's identifier.</param>
+  /// <param name="id">The idea identifier.</param>
+  /// <param name="archive"><see langword="true"/> to archive the idea, <see langword="false"/> to restore it.</param>
+  /// <param name="cancellationToken">Token to cancel the operation.</param>
+  /// <returns>The outcome, carrying the idea: conflict when it is already archived, or already active.</returns>
+  public async Task<IdeaChangeResult> SetArchivedAsync(string userId, Guid id, bool archive, CancellationToken cancellationToken)
+  {
+    var idea = await context.ManagedIdeas(userId).FirstOrDefaultAsync(i => i.Id == id, cancellationToken).ConfigureAwait(false);
+    if (idea is null)
+    {
+      return IdeaChangeResult.Denied(
+        await context.DenialAsync(userId, id, cancellationToken).ConfigureAwait(false),
+        "Only the idea's owner and the workspace's admins can archive or restore it.");
+    }
+
+    if ((idea.ArchivedAt is not null) == archive)
+    {
+      return IdeaChangeResult.Conflict(archive ? "The idea is already archived." : "The idea is not archived.");
+    }
+
+    var now = timeProvider.GetUtcNow();
+    idea.ArchivedAt = archive ? now : null;
+    context.Record(idea.Id, userId, archive ? ActivityKind.Archived : ActivityKind.Restored, now);
     return await SaveAsync(userId, idea, cancellationToken).ConfigureAwait(false);
   }
 

@@ -79,6 +79,8 @@ export function anIdea(overrides: Partial<Idea> = {}): Idea {
     completedComponentCount: 0,
     createdAt: '2026-10-01T09:00:00Z',
     updatedAt: '2026-10-01T09:00:00Z',
+    tags: [],
+    archivedAt: null,
     ...overrides,
   };
 }

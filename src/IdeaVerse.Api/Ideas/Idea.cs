@@ -21,6 +21,16 @@ public sealed class Idea
   public const int DescriptionMaxLength = 4000;
 
   /// <summary>
+  /// Maximum number of <see cref="Tags"/>.
+  /// </summary>
+  public const int MaxTags = 10;
+
+  /// <summary>
+  /// Maximum length of a single tag.
+  /// </summary>
+  public const int TagMaxLength = 30;
+
+  /// <summary>
   /// Gets the identifier.
   /// </summary>
   public Guid Id { get; init; } = Guid.CreateVersion7();
@@ -69,6 +79,16 @@ public sealed class Idea
   /// Gets or sets how many times the idea has been postponed.
   /// </summary>
   public int PostponeCount { get; set; }
+
+  /// <summary>
+  /// Gets or sets the idea's tags: trimmed, lower case, and distinct.
+  /// </summary>
+  public IReadOnlyList<string> Tags { get; set; } = [];
+
+  /// <summary>
+  /// Gets or sets when the idea was archived, or <see langword="null"/> while it is active. Archived ideas get no reminders.
+  /// </summary>
+  public DateTimeOffset? ArchivedAt { get; set; }
 
   /// <summary>
   /// Gets the things the idea needs before it can be implemented.

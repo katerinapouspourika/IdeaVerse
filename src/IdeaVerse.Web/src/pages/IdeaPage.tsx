@@ -4,12 +4,14 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { ImproveIdea } from '../ai/ImproveIdea';
 import { ApiError } from '../api/client';
 import { addDays, describeDue, formatDate, todayIso } from '../api/dates';
-import { useDeleteIdea, useIdea, usePostponeIdea, useUpdateIdea } from '../api/queries';
+import { useArchiveIdea, useDeleteIdea, useIdea, usePostponeIdea, useUpdateIdea } from '../api/queries';
 import { personLabel, statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { Progress } from '../components/Progress';
 import { StatusBadge } from '../components/StatusBadge';
+import { Tags } from '../components/Tags';
+import { formatTags, parseTags } from '../components/tagInput';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { ActivitySection } from './ActivitySection';
 import { ComponentsSection } from './ComponentsSection';
@@ -57,6 +59,7 @@ function IdeaDetail({ idea }: { idea: Idea }) {
       <Link to="/" className="small">
         ← All ideas
       </Link>
+      {idea.archivedAt && <ArchivedBanner idea={idea} />}
 
       {editing ? (
         <EditIdeaForm idea={idea} onDone={() => setEditing(false)} />
@@ -71,6 +74,7 @@ function IdeaDetail({ idea }: { idea: Idea }) {
             <span className={idea.isOverdue ? 'overdue-text' : 'muted'}>({describeDue(idea.targetDate)})</span>
             {idea.postponeCount > 0 && <span className="muted"> · postponed {idea.postponeCount}×</span>}
           </p>
+          <Tags tags={idea.tags} />
           {idea.description && <p className="description">{idea.description}</p>}
           <Progress done={idea.completedComponentCount} total={idea.componentCount} />
           {idea.canEdit ? (
@@ -90,11 +94,12 @@ function IdeaDetail({ idea }: { idea: Idea }) {
         </section>
       )}
 
-      {idea.canEdit && idea.status !== 'Done' && <PostponeForm idea={idea} />}
+      {idea.canEdit && idea.status !== 'Done' && !idea.archivedAt && <PostponeForm idea={idea} />}
       <ComponentsSection ideaId={idea.id} workspaceId={idea.workspaceId} canEdit={idea.canEdit} />
       <TeamSection idea={idea} />
       <DiscussionSection ideaId={idea.id} />
       <ActivitySection ideaId={idea.id} />
+      {idea.canManage && !idea.archivedAt && <ArchiveIdea idea={idea} />}
       {idea.canManage && <DeleteIdea idea={idea} />}
     </div>
   );
@@ -106,10 +111,11 @@ function EditIdeaForm({ idea, onDone }: { idea: Idea; onDone: () => void }) {
   const [description, setDescription] = useState(idea.description ?? '');
   const [targetDate, setTargetDate] = useState(idea.targetDate);
   const [status, setStatus] = useState<IdeaStatus>(idea.status);
+  const [tags, setTags] = useState(formatTags(idea.tags));
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    update.mutate({ title, description: description || null, targetDate, status }, { onSuccess: onDone });
+    update.mutate({ title, description: description || null, targetDate, status, tags: parseTags(tags) }, { onSuccess: onDone });
   };
 
   return (
@@ -142,6 +148,9 @@ function EditIdeaForm({ idea, onDone }: { idea: Idea; onDone: () => void }) {
         {(props) => (
           <textarea {...props} rows={4} maxLength={4000} value={description} onChange={(e) => setDescription(e.target.value)} />
         )}
+      </Field>
+      <Field label="Tags" hint="Separate tags with commas." error={fieldError(update.error, 'tags')}>
+        {(props) => <input {...props} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="e.g. marketing, q4" />}
       </Field>
       <ErrorMessage error={update.error} />
       <div className="row">
@@ -183,6 +192,41 @@ function PostponeForm({ idea }: { idea: Idea }) {
       </div>
       <ErrorMessage error={postpone.error} />
     </form>
+  );
+}
+
+function ArchivedBanner({ idea }: { idea: Idea }) {
+  const restore = useArchiveIdea(idea.id);
+
+  return (
+    <div className="archived-banner stack" role="status">
+      <div className="row spread wrap">
+        <span>This idea is archived. It’s hidden from the list and sends no reminders.</span>
+        {idea.canManage && (
+          <button type="button" className="button small" onClick={() => restore.mutate(false)} disabled={restore.isPending}>
+            Restore
+          </button>
+        )}
+      </div>
+      <ErrorMessage error={restore.error} />
+    </div>
+  );
+}
+
+function ArchiveIdea({ idea }: { idea: Idea }) {
+  const archive = useArchiveIdea(idea.id);
+
+  return (
+    <section className="card stack">
+      <h2>Archive idea</h2>
+      <p className="muted small">Set it aside without losing anything. It leaves the list, stops sending reminders, and can be restored any time.</p>
+      <ErrorMessage error={archive.error} />
+      <div className="row">
+        <button type="button" className="button" onClick={() => archive.mutate(true)} disabled={archive.isPending}>
+          Archive idea
+        </button>
+      </div>
+    </section>
   );
 }
 

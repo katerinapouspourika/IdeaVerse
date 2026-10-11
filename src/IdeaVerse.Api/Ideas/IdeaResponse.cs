@@ -14,7 +14,7 @@ using Pouspourika.IdeaVerse.Api.Data;
 /// <param name="TargetDate">The date the idea should be implemented by.</param>
 /// <param name="Status">The lifecycle status.</param>
 /// <param name="PostponeCount">How many times the idea has been postponed.</param>
-/// <param name="IsOverdue">Whether the target date has passed without the idea being done.</param>
+/// <param name="IsOverdue">Whether the target date has passed without the idea being done or archived.</param>
 /// <param name="Role">The signed-in user's relationship to the idea.</param>
 /// <param name="CanEdit">Whether the signed-in user may edit the idea, postpone it, and change its components.</param>
 /// <param name="CanManage">Whether the signed-in user may delete the idea and manage its team.</param>
@@ -25,6 +25,8 @@ using Pouspourika.IdeaVerse.Api.Data;
 /// <param name="CompletedComponentCount">How many of those components are done.</param>
 /// <param name="CreatedAt">When the idea was created.</param>
 /// <param name="UpdatedAt">When the idea was last changed.</param>
+/// <param name="Tags">The idea's tags.</param>
+/// <param name="ArchivedAt">When the idea was archived, or <see langword="null"/> while it is active.</param>
 public sealed record IdeaResponse(
   Guid Id,
   Guid WorkspaceId,
@@ -43,7 +45,9 @@ public sealed record IdeaResponse(
   int ComponentCount,
   int CompletedComponentCount,
   DateTimeOffset CreatedAt,
-  DateTimeOffset UpdatedAt)
+  DateTimeOffset UpdatedAt,
+  IReadOnlyList<string> Tags,
+  DateTimeOffset? ArchivedAt)
 {
   /// <summary>
   /// Builds a query projection from <see cref="Idea"/> to its response, counting components and checking access in the database.
@@ -61,7 +65,7 @@ public sealed record IdeaResponse(
       i.TargetDate,
       i.Status,
       i.PostponeCount,
-      i.Status != IdeaStatus.Done && i.TargetDate < today,
+      i.Status != IdeaStatus.Done && i.ArchivedAt == null && i.TargetDate < today,
       i.OwnerId == userId ? IdeaRole.Owner : i.Members.Any(m => m.UserId == userId) ? IdeaRole.Member : IdeaRole.Viewer,
       context.EditableIdeas(userId).Any(e => e.Id == i.Id),
       context.ManagedIdeas(userId).Any(e => e.Id == i.Id),
@@ -71,5 +75,7 @@ public sealed record IdeaResponse(
       i.Components.Count,
       i.Components.Count(c => c.IsDone),
       i.CreatedAt,
-      i.UpdatedAt);
+      i.UpdatedAt,
+      i.Tags,
+      i.ArchivedAt);
 }

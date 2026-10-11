@@ -101,7 +101,7 @@ public sealed partial class ReminderService(
   {
     var ideas = await context.Ideas
       .AsNoTracking()
-      .Where(i => i.Status != IdeaStatus.Done && i.TargetDate <= horizon)
+      .Where(i => i.Status != IdeaStatus.Done && i.ArchivedAt == null && i.TargetDate <= horizon)
       .AsSplitQuery()
       .Select(i => new
       {
@@ -146,7 +146,7 @@ public sealed partial class ReminderService(
   {
     var components = await context.Components
       .AsNoTracking()
-      .Where(c => !c.IsDone && c.AssigneeId != null && c.DueDate != null && c.DueDate <= horizon && c.Idea!.Status != IdeaStatus.Done)
+      .Where(c => !c.IsDone && c.AssigneeId != null && c.DueDate != null && c.DueDate <= horizon && c.Idea!.Status != IdeaStatus.Done && c.Idea.ArchivedAt == null)
       .Where(c => context.WorkspaceMembers.Any(w => w.WorkspaceId == c.Idea!.WorkspaceId && w.UserId == c.AssigneeId))
       .Select(c => new { c.Id, c.IdeaId, AssigneeId = c.AssigneeId!, DueDate = c.DueDate!.Value })
       .ToListAsync(cancellationToken)

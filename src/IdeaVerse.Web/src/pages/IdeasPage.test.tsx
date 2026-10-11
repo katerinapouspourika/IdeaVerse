@@ -52,7 +52,7 @@ describe('IdeasPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Done' }));
 
-    expect(await screen.findByText('No ideas with this status.')).toBeInTheDocument();
+    expect(await screen.findByText('No ideas match.')).toBeInTheDocument();
     expect(calls.some((c) => c.path === '/api/v1/workspaces/ws-1/ideas?status=Done')).toBe(true);
   });
 

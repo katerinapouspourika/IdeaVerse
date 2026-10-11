@@ -68,12 +68,37 @@ export interface Idea {
   completedComponentCount: number;
   createdAt: string;
   updatedAt: string;
+  /** Lower case, in the order they were given. */
+  tags: string[];
+  /** When it was archived; `null` while it is active. */
+  archivedAt: string | null;
 }
 
 export interface IdeaInput {
   title: string;
   description: string | null;
   targetDate: string;
+  /** Omit to leave an idea's tags as they are. */
+  tags?: string[];
+}
+
+export type IdeaSort = 'TargetDate' | 'Title' | 'Updated' | 'Created';
+
+export const sortLabels: Record<IdeaSort, string> = {
+  TargetDate: 'Target date',
+  Title: 'Title',
+  Updated: 'Recently changed',
+  Created: 'Newest',
+};
+
+/** What to show of a workspace's ideas; every part is optional. */
+export interface IdeaFilter {
+  status?: IdeaStatus;
+  search?: string;
+  tag?: string;
+  sort?: IdeaSort;
+  /** Show the archive instead of the active ideas. */
+  archived?: boolean;
 }
 
 export interface IdeaUpdate extends IdeaInput {
@@ -221,7 +246,10 @@ export type ActivityKind =
   | 'ComponentRemoved'
   | 'MemberAdded'
   | 'MemberRemoved'
-  | 'MemberLeft';
+  | 'MemberLeft'
+  | 'TagsChanged'
+  | 'Archived'
+  | 'Restored';
 
 export interface ActivityEntry {
   id: string;
