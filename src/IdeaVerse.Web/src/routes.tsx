@@ -2,6 +2,7 @@ import type { RouteObject } from 'react-router';
 
 import { Layout } from './components/Layout';
 import { RequireAuth } from './components/RequireAuth';
+import { Skeleton } from './components/Skeleton';
 import { ContactPage } from './marketing/ContactPage';
 import { HomePage } from './marketing/HomePage';
 import { HowItWorksPage } from './marketing/HowItWorksPage';
@@ -27,7 +28,7 @@ const signedIn: RouteObject[] = [
 
 /** Shown while a signed-in page's code downloads on first load. */
 function Loading() {
-  return <p className="muted">Loading…</p>;
+  return <Skeleton variant="page" lines={4} />;
 }
 
 export const routes: RouteObject[] = [

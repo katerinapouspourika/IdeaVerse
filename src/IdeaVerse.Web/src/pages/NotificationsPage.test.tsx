@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { Notification } from '../api/types';
@@ -29,13 +29,16 @@ function routes(items: Notification[], unreadCount: number) {
   return { ...signedIn, 'GET /api/v1/notifications': { status: 200, body: { items, unreadCount } } };
 }
 
-describe('Reminders', () => {
-  it('shows the unread count on the header bell', async () => {
+describe('Notifications', () => {
+  it('shows the unread count on the header bell and previews the latest', async () => {
     fakeApi({ ...routes([tomorrow, comingUp], 1), [ideasRoute]: { status: 200, body: [] } });
 
     renderApp('/');
 
-    expect(await screen.findByRole('link', { name: 'Reminders, 1 unread' })).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }));
+    const preview = screen.getByRole('region', { name: 'Latest notifications' });
+    expect(within(preview).getAllByRole('link')[0]).toHaveTextContent('is due tomorrow');
+    expect(within(preview).getByRole('link', { name: 'See all notifications' })).toHaveAttribute('href', '/notifications');
   });
 
   it('lists reminders newest first with their stage', async () => {
@@ -84,12 +87,12 @@ describe('Reminders', () => {
     expect(calls.some((c) => c.path === '/api/v1/notifications/n-2/read')).toBe(true);
   });
 
-  it('explains when there are no reminders yet', async () => {
+  it('explains when there are no notifications yet', async () => {
     fakeApi(routes([], 0));
 
     renderApp('/notifications');
 
-    expect(await screen.findByText(/No reminders yet/)).toBeInTheDocument();
+    expect(await screen.findByText(/Reminders and updates about your ideas appear here/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Mark all as read' })).not.toBeInTheDocument();
   });
 });

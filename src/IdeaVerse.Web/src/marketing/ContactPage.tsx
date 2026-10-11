@@ -1,3 +1,4 @@
+import { MailCheck } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { ApiError } from '../api/client';
@@ -54,7 +55,7 @@ export function ContactPage() {
           {send.isSuccess ? (
             <div className="card stack center" role="status">
               <span className="feature-icon big" aria-hidden="true">
-                💌
+                <MailCheck size={36} />
               </span>
               <h2 ref={thanks} tabIndex={-1}>
                 Thanks, your message is on its way!

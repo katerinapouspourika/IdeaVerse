@@ -1,14 +1,15 @@
+import { AlarmClock, ArrowRight, CalendarDays, Lightbulb, Puzzle, Sparkles, Users } from 'lucide-react';
 import { Link } from 'react-router';
 import { publicPages } from '../seo/pages';
 import { usePageMeta } from '../seo/usePageMeta';
 
 const features = [
-  { icon: '💡', title: 'Capture every idea', text: 'Give each idea a title, a description, tags, and a date to make it real by.' },
-  { icon: '🧩', title: 'Plan what it needs', text: 'Break ideas into components and tick them off. Progress shows at a glance.' },
-  { icon: '👥', title: 'Work as a team', text: 'Shared workspaces, idea teams, comments, and tasks with owners and due dates.' },
-  { icon: '⏰', title: 'Never miss a date', text: 'Reminders a week before, the day before, and on the day — in your own time zone.' },
-  { icon: '🗓️', title: 'See the big picture', text: 'Search, filter by tag, and switch to a month calendar of everything that’s coming.' },
-  { icon: '✨', title: 'AI help when you want it', text: 'Brainstorm new ideas, suggest what an idea needs, and sharpen how it’s written.' },
+  { icon: <Lightbulb size={24} />, title: 'Capture every idea', text: 'Give each idea a title, a description, tags, and a date to make it real by.' },
+  { icon: <Puzzle size={24} />, title: 'Plan what it needs', text: 'Break ideas into components and tick them off. Progress shows at a glance.' },
+  { icon: <Users size={24} />, title: 'Work as a team', text: 'Shared workspaces, idea teams, comments, and tasks with owners and due dates.' },
+  { icon: <AlarmClock size={24} />, title: 'Never miss a date', text: 'Reminders a week before, the day before, and on the day — in your own time zone.' },
+  { icon: <CalendarDays size={24} />, title: 'See the big picture', text: 'Search, filter by tag, and switch to a month calendar of everything that’s coming.' },
+  { icon: <Sparkles size={24} />, title: 'AI help when you want it', text: 'Brainstorm new ideas, suggest what an idea needs, and sharpen how it’s written.' },
 ];
 
 const steps = [
@@ -83,7 +84,7 @@ export function LandingPage() {
           </ol>
           <p className="center">
             <Link to="/how-it-works" className="button">
-              Watch the walkthroughs →
+              Watch the walkthroughs <ArrowRight aria-hidden="true" size={18} />
             </Link>
           </p>
         </div>
@@ -147,7 +148,7 @@ function HeroPreview() {
           <span className="badge status-done">Done</span>
         </div>
         <div className="row spread small">
-          <span className="muted">Finished on time 🎉</span>
+          <span className="muted">Finished on time</span>
           <span className="progress-track">
             <span className="progress-fill" style={{ width: '100%' }} />
           </span>

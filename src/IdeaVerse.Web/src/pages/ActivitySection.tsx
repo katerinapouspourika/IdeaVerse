@@ -4,6 +4,7 @@ import { formatDate, formatMoment } from '../api/dates';
 import { useActivity } from '../api/queries';
 import { personLabel, statusLabels, type ActivityEntry, type IdeaStatus } from '../api/types';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { Skeleton } from '../components/Skeleton';
 
 /** Turns a history entry into a sentence, such as "Mia ticked off “Budget”". */
 export function describeActivity(entry: ActivityEntry): string {
@@ -58,7 +59,7 @@ export function ActivitySection({ ideaId }: { ideaId: string }) {
           {open ? 'Hide' : 'Show'}
         </button>
       </div>
-      {open && activity.isLoading && <p className="muted">Loading…</p>}
+      {open && activity.isLoading && <Skeleton />}
       {open && activity.data && (
         <ol className="activity">
           {activity.data.map((entry) => (

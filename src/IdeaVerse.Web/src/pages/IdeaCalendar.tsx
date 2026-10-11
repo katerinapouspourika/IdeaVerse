@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 
@@ -24,11 +25,11 @@ export function IdeaCalendar({ ideas }: { ideas: Idea[] }) {
     <section className="card stack" aria-labelledby="calendar-heading">
       <div className="row spread">
         <button type="button" className="button ghost" onClick={() => setMonth(shiftMonth(month, -1))}>
-          ← Previous month
+          <ChevronLeft aria-hidden="true" size={18} /> Previous month
         </button>
         <h2 id="calendar-heading">{title}</h2>
         <button type="button" className="button ghost" onClick={() => setMonth(shiftMonth(month, 1))}>
-          Next month →
+          Next month <ChevronRight aria-hidden="true" size={18} />
         </button>
       </div>
       <table className="calendar">

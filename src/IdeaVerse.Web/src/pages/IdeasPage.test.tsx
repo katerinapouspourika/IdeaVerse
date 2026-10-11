@@ -39,6 +39,8 @@ describe('IdeasPage', () => {
     renderApp('/ideas');
 
     expect(await screen.findByText(/No ideas yet/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Add your first idea' }));
+    expect(screen.getByRole('form', { name: 'New idea' })).toBeInTheDocument();
   });
 
   it('filters by status through the API', async () => {
@@ -52,7 +54,8 @@ describe('IdeasPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Done' }));
 
-    expect(await screen.findByText('No ideas match.')).toBeInTheDocument();
+    expect(await screen.findByText('No ideas match these filters.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
     expect(calls.some((c) => c.path === '/api/v1/workspaces/ws-1/ideas?status=Done')).toBe(true);
   });
 

@@ -3,28 +3,35 @@ import { useState, type FormEvent } from 'react';
 import { useAddMember, useMembers, useRemoveMember, useWorkspaceMembers } from '../api/queries';
 import { personLabel, type Idea, type Member } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
+import { useConfirm, useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { Skeleton } from '../components/Skeleton';
 
 export function TeamSection({ idea }: { idea: Idea }) {
   const members = useMembers(idea.id);
   const remove = useRemoveMember(idea.id);
   const { account } = useAuth();
+  const confirm = useConfirm();
+  const toast = useToast();
 
-  const removeMember = (member: Member) => {
+  const removeMember = async (member: Member) => {
     const leaving = member.email === account?.email;
-    const question = leaving
-      ? `Leave the team of “${idea.title}”? You will still see it, but no longer get its reminders.`
-      : `Remove ${personLabel(member.name, member.email)} from this idea’s team?`;
-    if (window.confirm(question)) {
-      remove.mutate(member.userId);
+    const name = personLabel(member.name, member.email);
+    const ok = await confirm(
+      leaving
+        ? { title: 'Leave this team?', message: `You will still see “${idea.title}”, but no longer get its reminders.`, confirmLabel: 'Leave team', danger: true }
+        : { title: `Remove ${name} from the team?`, message: `They will still see “${idea.title}”, but no longer change it.`, confirmLabel: 'Remove', danger: true },
+    );
+    if (ok) {
+      remove.mutate(member.userId, { onSuccess: () => toast({ message: leaving ? 'You left the team' : `Removed ${name} from the team` }) });
     }
   };
 
   return (
     <section className="card stack" aria-labelledby="team-heading">
       <h2 id="team-heading">Team</h2>
-      {members.isLoading && <p className="muted">Loading…</p>}
+      {members.isLoading && <Skeleton lines={2} />}
       {members.data && (
         <ul className="team">
           {members.data.map((member) => {
@@ -40,7 +47,7 @@ export function TeamSection({ idea }: { idea: Idea }) {
                 <span className="row">
                   <span className="badge">{member.role}</span>
                   {canRemove && (
-                    <button type="button" className="button ghost small" onClick={() => removeMember(member)}>
+                    <button type="button" className="button ghost small" onClick={() => void removeMember(member)}>
                       {isMe ? 'Leave' : 'Remove'}
                     </button>
                   )}

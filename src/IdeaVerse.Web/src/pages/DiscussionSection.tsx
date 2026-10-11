@@ -3,29 +3,33 @@ import { useState, type FormEvent } from 'react';
 import { formatMoment } from '../api/dates';
 import { useAddComment, useComments, useDeleteComment, useEditComment } from '../api/queries';
 import { personLabel, type Comment } from '../api/types';
+import { useConfirm, useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { Skeleton } from '../components/Skeleton';
 
 /** The idea's comments, open to everyone in its workspace. */
 export function DiscussionSection({ ideaId }: { ideaId: string }) {
   const comments = useComments(ideaId);
   const remove = useDeleteComment(ideaId);
+  const confirm = useConfirm();
+  const toast = useToast();
 
-  const deleteComment = (comment: Comment) => {
-    if (window.confirm('Delete this comment?')) {
-      remove.mutate(comment.id);
+  const deleteComment = async (comment: Comment) => {
+    if (await confirm({ title: 'Delete this comment?', message: 'This cannot be undone.', confirmLabel: 'Delete comment', danger: true })) {
+      remove.mutate(comment.id, { onSuccess: () => toast({ message: 'Comment deleted' }) });
     }
   };
 
   return (
     <section className="card stack" aria-labelledby="discussion-heading">
       <h2 id="discussion-heading">Discussion</h2>
-      {comments.isLoading && <p className="muted">Loading…</p>}
+      {comments.isLoading && <Skeleton lines={2} />}
       {comments.data?.length === 0 && <p className="muted">No comments yet. Share a thought, a question, or a link.</p>}
       {comments.data && comments.data.length > 0 && (
         <ol className="comments">
           {comments.data.map((comment) => (
-            <CommentItem key={comment.id} ideaId={ideaId} comment={comment} onDelete={() => deleteComment(comment)} />
+            <CommentItem key={comment.id} ideaId={ideaId} comment={comment} onDelete={() => void deleteComment(comment)} />
           ))}
         </ol>
       )}

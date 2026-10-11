@@ -1,12 +1,16 @@
-import { useEffect, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { LogOut, Menu as MenuIcon, Settings, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Link, NavLink, Outlet, ScrollRestoration, useLocation, useNavigate } from 'react-router';
 
 import { useReceivedInvitations } from '../api/queries';
 import { personLabel } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { useWorkspace, WorkspaceProvider } from '../workspaces/WorkspaceContext';
 import { WorkspaceSwitcher } from '../workspaces/WorkspaceSwitcher';
+import { FeedbackProvider } from './Feedback';
+import { Menu } from './Menu';
 import { NotificationBell } from './NotificationBell';
+import { ThemeToggle } from './ThemeToggle';
 
 /** Pages that lay themselves out across the full width, such as the public home page. */
 const fullWidthPaths = ['/how-it-works', '/contact'];
@@ -15,18 +19,42 @@ export function Layout() {
   const { account } = useAuth();
   const { pathname } = useLocation();
   const fullWidth = fullWidthPaths.includes(pathname) || (pathname === '/' && !account);
+  const main = useFocusOnNavigation();
 
   return (
     <WorkspaceProvider>
-      <div className="shell">
-        {account ? <AppBar /> : <PublicBar />}
-        <main className={fullWidth ? 'content full' : pathname === '/' ? 'content wide' : 'content'}>
-          <Outlet />
-        </main>
-        <Footer />
-      </div>
+      <FeedbackProvider>
+        <div className="shell">
+          <a href="#main" className="skip-link">
+            Skip to content
+          </a>
+          {account ? <AppBar /> : <PublicBar />}
+          <main id="main" ref={main} tabIndex={-1} className={fullWidth ? 'content full' : account ? 'content wide' : 'content'}>
+            <Outlet />
+          </main>
+          <Footer />
+        </div>
+        <ScrollRestoration />
+      </FeedbackProvider>
     </WorkspaceProvider>
   );
+}
+
+/** Moves focus to the page after each navigation, so keyboard and screen reader users start at its content. */
+function useFocusOnNavigation() {
+  const main = useRef<HTMLElement>(null);
+  const { pathname } = useLocation();
+  const first = useRef(true);
+
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    main.current?.focus({ preventScroll: true });
+  }, [pathname]);
+
+  return main;
 }
 
 function Brand() {
@@ -63,9 +91,7 @@ function useMenu() {
 function MenuButton({ open, toggle }: { open: boolean; toggle: () => void }) {
   return (
     <button type="button" className="menu-button" aria-expanded={open} aria-controls="site-menu" aria-label="Menu" onClick={toggle}>
-      <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-        {open ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-      </svg>
+      {open ? <X aria-hidden="true" size={22} /> : <MenuIcon aria-hidden="true" size={22} />}
     </button>
   );
 }
@@ -100,21 +126,27 @@ function AppBar() {
           </NavLink>
         )}
         <InvitationsLink />
-        <span className="nav-spacer" />
-        {account && (
-          <Link to="/settings" className="account-link" title="Settings">
-            <span className="avatar" aria-hidden="true">
-              {initial(account.displayName, account.email)}
-            </span>
-            <span className="account-name">{personLabel(account.displayName, account.email)}</span>
-          </Link>
-        )}
-        <button type="button" className="button ghost small" onClick={() => void signOut()}>
-          Sign out
-        </button>
       </nav>
       <div className="account">
+        <ThemeToggle />
         <NotificationBell />
+        {account && (
+          <Menu
+            label={`Account: ${personLabel(account.displayName, account.email)}`}
+            trigger={
+              <>
+                <span className="avatar" aria-hidden="true">
+                  {initial(account.displayName, account.email)}
+                </span>
+                <span className="account-name">{personLabel(account.displayName, account.email)}</span>
+              </>
+            }
+            items={[
+              { label: 'Settings', icon: <Settings aria-hidden="true" size={16} />, onSelect: () => void navigate('/settings') },
+              { label: 'Sign out', icon: <LogOut aria-hidden="true" size={16} />, onSelect: () => void signOut() },
+            ]}
+          />
+        )}
         <MenuButton {...menu} />
       </div>
     </header>
@@ -141,7 +173,10 @@ function PublicBar() {
           Get started
         </Link>
       </nav>
-      <MenuButton {...menu} />
+      <div className="account">
+        <ThemeToggle />
+        <MenuButton {...menu} />
+      </div>
     </header>
   );
 }

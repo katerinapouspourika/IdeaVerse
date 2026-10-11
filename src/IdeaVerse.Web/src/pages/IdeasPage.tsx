@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Archive, Lightbulb, Plus, SearchX } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 
 import { daysUntil, describeDue, formatDate } from '../api/dates';
@@ -8,6 +9,7 @@ import { personLabel, sortLabels, statuses, statusLabels, type Idea, type IdeaSo
 import { Field } from '../components/Field';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { Progress } from '../components/Progress';
+import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
 import { usePageMeta } from '../seo/usePageMeta';
@@ -21,7 +23,7 @@ export function IdeasPage() {
   const { current, isLoading, error } = useWorkspace();
 
   if (isLoading) {
-    return <p className="muted">Loading…</p>;
+    return <Skeleton variant="cards" />;
   }
 
   if (!current) {
@@ -139,13 +141,23 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
         </div>
       </div>
 
-      {ideas.isLoading && <p className="muted">Loading ideas…</p>}
+      {ideas.isLoading && <Skeleton variant="cards" />}
       <ErrorMessage error={ideas.error} />
       {ideas.data &&
         (view === 'calendar' ? (
           <IdeaCalendar ideas={ideas.data} />
         ) : (
-          <IdeaList ideas={ideas.data} filtered={filtered} archived={archived} />
+          <IdeaList
+            ideas={ideas.data}
+            filtered={filtered}
+            archived={archived}
+            onAdd={() => setAdding({ title: '', description: '' })}
+            onClearFilters={() => {
+              setTab('All');
+              setSearch('');
+              setTag('');
+            }}
+          />
         ))}
     </div>
   );
@@ -169,17 +181,39 @@ function FilterTab({ label, active, onClick }: { label: string; active: boolean;
   );
 }
 
-function IdeaList({ ideas, filtered, archived }: { ideas: Idea[]; filtered: boolean; archived: boolean }) {
+interface IdeaListProps {
+  ideas: Idea[];
+  filtered: boolean;
+  archived: boolean;
+  onAdd: () => void;
+  onClearFilters: () => void;
+}
+
+function IdeaList({ ideas, filtered, archived, onAdd, onClearFilters }: IdeaListProps) {
   if (ideas.length === 0) {
     return (
-      <div className="card empty">
+      <div className="card empty stack center">
+        <span className="feature-icon big" aria-hidden="true">
+          {filtered ? <SearchX size={32} /> : archived ? <Archive size={32} /> : <Lightbulb size={32} />}
+        </span>
         <p>
           {filtered
-            ? 'No ideas match.'
+            ? 'No ideas match these filters.'
             : archived
               ? 'Nothing archived. Archive an idea you’ve set aside to keep it out of the list without deleting it.'
-              : 'No ideas yet. Add your first one and give it a date.'}
+              : 'No ideas yet. Add your first one and give it a date to make it real by.'}
         </p>
+        {filtered ? (
+          <button type="button" className="button" onClick={onClearFilters}>
+            Clear filters
+          </button>
+        ) : (
+          !archived && (
+            <button type="button" className="button primary" onClick={onAdd}>
+              <Plus aria-hidden="true" size={18} /> Add your first idea
+            </button>
+          )
+        )}
       </div>
     );
   }
