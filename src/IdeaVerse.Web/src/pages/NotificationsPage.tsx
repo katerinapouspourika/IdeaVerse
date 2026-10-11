@@ -14,6 +14,7 @@ const kindLabels: Record<ReminderKind, string> = {
   Assigned: 'Assigned to you',
   AddedToTeam: 'Added to team',
   Commented: 'Comment',
+  Mentioned: 'Mention',
 };
 
 export function NotificationsPage() {

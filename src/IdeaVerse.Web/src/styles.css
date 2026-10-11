@@ -2625,3 +2625,46 @@ a:focus-visible {
     grid-template-columns: 140px 1fr;
   }
 }
+
+/* Mentions */
+
+.mention {
+  padding: 0 3px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.mention-box {
+  position: relative;
+}
+
+.mention-box textarea {
+  width: 100%;
+}
+
+.mention-list {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  top: 100%;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  width: min(360px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  box-shadow: var(--shadow-lift);
+}
+
+.mention-option {
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.mention-option.active {
+  background: var(--accent-soft);
+}

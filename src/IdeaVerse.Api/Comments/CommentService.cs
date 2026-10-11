@@ -13,12 +13,18 @@ using Pouspourika.IdeaVerse.Api.Workspaces;
 /// <remarks>
 /// Everyone who can see an idea can read and post comments. Authors edit their own comments; authors and the workspace's
 /// owner and admins delete them. A deleted account's comments stay, without an author. A new comment notifies the idea's
-/// owner and team, except its author.
+/// owner and team, except its author. A comment can mention people in the workspace (see <see cref="Mentions"/>); each
+/// person it mentions, when it is posted or when an edit adds them, is notified instead.
 /// </remarks>
 /// <param name="context">The database context.</param>
 /// <param name="timeProvider">Clock used for timestamps.</param>
 public sealed class CommentService(IdeaVerseDbContext context, TimeProvider timeProvider)
 {
+  /// <summary>
+  /// Why a comment that fits as written was refused once its mentions named people in full.
+  /// </summary>
+  public const string TooLongMessage = "This comment is too long once its mentions are saved. Shorten it a little.";
+
   /// <summary>
   /// Lists an idea's comments, oldest first.
   /// </summary>
@@ -69,9 +75,14 @@ public sealed class CommentService(IdeaVerseDbContext context, TimeProvider time
       return new CommentResult(ChangeOutcome.NotFound);
     }
 
-    var comment = new Comment { IdeaId = ideaId, AuthorId = userId, Body = request.Body.Trim(), CreatedAt = timeProvider.GetUtcNow() };
+    if (await WithMentionsAsync(ideaId, request.Body, cancellationToken).ConfigureAwait(false) is not { } body)
+    {
+      return new CommentResult(ChangeOutcome.Invalid, Message: TooLongMessage);
+    }
+
+    var comment = new Comment { IdeaId = ideaId, AuthorId = userId, Body = body, CreatedAt = timeProvider.GetUtcNow() };
     context.Comments.Add(comment);
-    await NotifyTeamAsync(userId, ideaId, comment, cancellationToken).ConfigureAwait(false);
+    await NotifyAsync(userId, ideaId, comment, alreadyMentioned: [], notifyTeam: true, cancellationToken).ConfigureAwait(false);
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     return new CommentResult(ChangeOutcome.Changed, await ProjectAsync(userId, comment.Id, canModerate.Value, cancellationToken).ConfigureAwait(false));
   }
@@ -105,8 +116,15 @@ public sealed class CommentService(IdeaVerseDbContext context, TimeProvider time
       return new CommentResult(ChangeOutcome.Forbidden);
     }
 
-    comment.Body = request.Body.Trim();
+    if (await WithMentionsAsync(ideaId, request.Body, cancellationToken).ConfigureAwait(false) is not { } body)
+    {
+      return new CommentResult(ChangeOutcome.Invalid, Message: TooLongMessage);
+    }
+
+    var alreadyMentioned = Mentions.UserIds(comment.Body);
+    comment.Body = body;
     comment.EditedAt = timeProvider.GetUtcNow();
+    await NotifyAsync(userId, ideaId, comment, alreadyMentioned, notifyTeam: false, cancellationToken).ConfigureAwait(false);
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     return new CommentResult(ChangeOutcome.Changed, await ProjectAsync(userId, comment.Id, canModerate, cancellationToken).ConfigureAwait(false));
   }
@@ -146,32 +164,77 @@ public sealed class CommentService(IdeaVerseDbContext context, TimeProvider time
   }
 
   /// <summary>
-  /// Notifies the idea's owner and team, except the comment's author, that a comment was posted.
+  /// Trims a comment and rewrites its mentions to name people as the workspace knows them, leaving mentions of anyone else
+  /// as plain text (see <see cref="Mentions.Canonicalize"/>).
   /// </summary>
-  /// <param name="authorId">The author's identifier.</param>
   /// <param name="ideaId">The idea identifier.</param>
-  /// <param name="comment">The new comment.</param>
+  /// <param name="body">The submitted text.</param>
   /// <param name="cancellationToken">Token to cancel the query.</param>
-  /// <returns>A task that completes when the notifications are added, to be saved with the comment.</returns>
-  private async Task NotifyTeamAsync(string authorId, Guid ideaId, Comment comment, CancellationToken cancellationToken)
+  /// <returns>The text to save, or <see langword="null"/> when the rewritten names make it too long.</returns>
+  private async Task<string?> WithMentionsAsync(Guid ideaId, string body, CancellationToken cancellationToken)
+  {
+    var trimmed = body.Trim();
+    if (Mentions.UserIds(trimmed).Count == 0)
+    {
+      return trimmed;
+    }
+
+    var people = await context.Ideas
+      .Where(i => i.Id == ideaId)
+      .SelectMany(i => context.WorkspaceMembers.Where(m => m.WorkspaceId == i.WorkspaceId))
+      .Select(m => new { m.UserId, m.User!.DisplayName, m.User.Email })
+      .ToListAsync(cancellationToken)
+      .ConfigureAwait(false);
+    var text = Mentions.Canonicalize(trimmed, Mentions.Labels(people.Select(p => (p.UserId, p.DisplayName, p.Email ?? string.Empty))));
+    return text.Length <= Comment.BodyMaxLength ? text : null;
+  }
+
+  /// <summary>
+  /// Notifies the people a comment newly mentions, and, for a new comment, the rest of the idea's owner and team.
+  /// </summary>
+  /// <remarks>
+  /// The comment's mentions are already limited to people in the workspace (see <see cref="WithMentionsAsync"/>). The author
+  /// is never notified, and someone mentioned gets that notification instead of the one about a new comment.
+  /// </remarks>
+  /// <param name="authorId">The comment's author.</param>
+  /// <param name="ideaId">The idea identifier.</param>
+  /// <param name="comment">The comment, with its current text.</param>
+  /// <param name="alreadyMentioned">Who the comment mentioned before an edit, so they are not notified again.</param>
+  /// <param name="notifyTeam">Whether to tell the owner and team about a new comment.</param>
+  /// <param name="cancellationToken">Token to cancel the query.</param>
+  /// <returns>A task that completes once the notifications are added.</returns>
+  private async Task NotifyAsync(
+    string authorId,
+    Guid ideaId,
+    Comment comment,
+    IReadOnlyList<string> alreadyMentioned,
+    bool notifyTeam,
+    CancellationToken cancellationToken)
   {
     var idea = await context.Ideas
       .Where(i => i.Id == ideaId)
       .Select(i => new { i.TargetDate, i.OwnerId, MemberIds = i.Members.Select(m => m.UserId).ToList() })
       .SingleAsync(cancellationToken)
       .ConfigureAwait(false);
-    var detail = comment.Body.Length <= Notification.DetailMaxLength ? comment.Body : $"{comment.Body[..(Notification.DetailMaxLength - 1)].TrimEnd()}…";
-    foreach (var recipient in idea.MemberIds.Prepend(idea.OwnerId).Distinct(StringComparer.Ordinal).Where(id => id != authorId))
+    var mentioned = Mentions.UserIds(comment.Body).Where(id => id != authorId && !alreadyMentioned.Contains(id, StringComparer.Ordinal)).ToList();
+    var team = notifyTeam
+      ? idea.MemberIds.Prepend(idea.OwnerId).Distinct(StringComparer.Ordinal).Where(id => id != authorId && !mentioned.Contains(id, StringComparer.Ordinal))
+      : [];
+
+    var text = Mentions.ToPlainText(comment.Body);
+    var detail = text.Length <= Notification.DetailMaxLength ? text : $"{text[..(Notification.DetailMaxLength - 1)].TrimEnd()}…";
+    var now = comment.EditedAt ?? comment.CreatedAt;
+    foreach (var (recipient, kind) in mentioned.Select(id => (Recipient: id, Kind: ReminderKind.Mentioned)).Concat(team.Select(id => (Recipient: id, Kind: ReminderKind.Commented))))
     {
       context.Notifications.Add(new Notification
       {
         UserId = recipient,
         IdeaId = ideaId,
         ActorId = authorId,
-        Kind = ReminderKind.Commented,
+        Kind = kind,
         TargetDate = idea.TargetDate,
         Detail = detail,
-        CreatedAt = comment.CreatedAt,
+        CreatedAt = now,
       });
     }
   }

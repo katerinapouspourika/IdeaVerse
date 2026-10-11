@@ -43,4 +43,9 @@ public enum ReminderKind
   /// Someone commented on an idea the person owns or is on the team of; the notification's detail is the start of the comment.
   /// </summary>
   Commented,
+
+  /// <summary>
+  /// Someone mentioned the person in a comment; the notification's detail is the start of the comment.
+  /// </summary>
+  Mentioned,
 }

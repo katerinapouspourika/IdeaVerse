@@ -166,7 +166,7 @@ export interface Member {
 }
 
 /** What a notification is about: a countdown stage (the first four), or something a teammate did. */
-export type ReminderKind = 'ComingUp' | 'Tomorrow' | 'Today' | 'Overdue' | 'Assigned' | 'AddedToTeam' | 'Commented';
+export type ReminderKind = 'ComingUp' | 'Tomorrow' | 'Today' | 'Overdue' | 'Assigned' | 'AddedToTeam' | 'Commented' | 'Mentioned';
 
 export interface Notification {
   id: string;
