@@ -21,7 +21,7 @@ describe('IdeasPage', () => {
 
     renderApp('/ideas');
 
-    const items = await screen.findAllByRole('listitem');
+    const items = await within(screen.getByRole('main')).findAllByRole('listitem');
     expect(within(items[0]!).getByText('Spring launch')).toBeInTheDocument();
     expect(within(items[0]!).getByText('Overdue')).toBeInTheDocument();
     expect(within(items[0]!).getByText('1/4 ready')).toBeInTheDocument();
