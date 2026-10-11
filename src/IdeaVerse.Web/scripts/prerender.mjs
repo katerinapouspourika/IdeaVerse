@@ -1,7 +1,9 @@
 // Runs after `vite build` (see the `build` script): turns the built app into pages that work without JavaScript.
 //
 // - The public pages in `src/seo/pages.ts`, and a "not found" page, are rendered to HTML with their own title, description,
-//   canonical URL, link-preview tags, and structured data: `index.html` (home), `how-it-works.html`, `contact.html`, `404.html`.
+//   canonical URL, link-preview tags, and structured data: `index.html` (home), `how-it-works.html`, `contact.html`,
+//   `pricing.html`, `privacy.html`, `terms.html`, and `404.html`. Pages marked `index: false` are rendered but kept out of
+//   search engines and the sitemap.
 // - `app.html` is the empty app shell the API serves for signed-in pages.
 // - `sitemap.xml` and `robots.txt` list the public pages.
 //
@@ -49,6 +51,15 @@ function structuredData(path) {
         logo: absolute('/logo.png'),
       }),
       jsonLd({ '@context': 'https://schema.org', '@type': 'WebSite', name: ssr.siteName, url: absolute('/'), description: ssr.siteDescription }),
+    ];
+  }
+  if (path === '/pricing') {
+    return [
+      jsonLd({
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: ssr.faq.map((q) => ({ '@type': 'Question', name: q.question, acceptedAnswer: { '@type': 'Answer', text: q.answer } })),
+      }),
     ];
   }
   if (path === '/how-it-works') {
@@ -112,14 +123,16 @@ const files = {
   '404.html': page('/this-page-does-not-exist', ssr.notFoundMeta, { index: false }),
 };
 for (const [path, meta] of Object.entries(ssr.publicPages)) {
-  files[path === '/' ? 'index.html' : `${path.slice(1)}.html`] = page(path, meta, { index: true });
+  files[path === '/' ? 'index.html' : `${path.slice(1)}.html`] = page(path, meta, { index: meta.index !== false });
 }
 
 const today = new Date().toISOString().slice(0, 10);
 const sitemap = siteUrl && [
   '<?xml version="1.0" encoding="UTF-8"?>',
   '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-  ...Object.keys(ssr.publicPages).map((path) => `  <url><loc>${escape(absolute(path))}</loc><lastmod>${today}</lastmod></url>`),
+  ...Object.entries(ssr.publicPages)
+    .filter(([, meta]) => meta.index !== false)
+    .map(([path]) => `  <url><loc>${escape(absolute(path))}</loc><lastmod>${today}</lastmod></url>`),
   '</urlset>',
   '',
 ].join('\n');

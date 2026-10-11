@@ -48,6 +48,9 @@ internal static class WebAppExtensions
     ("/", "index.html"),
     ("/how-it-works", "how-it-works.html"),
     ("/contact", "contact.html"),
+    ("/pricing", "pricing.html"),
+    ("/privacy", "privacy.html"),
+    ("/terms", "terms.html"),
   ];
 
   /// <summary>

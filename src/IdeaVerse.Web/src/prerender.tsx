@@ -3,6 +3,7 @@ import { renderToString } from 'react-dom/server';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 
 import { AuthProvider } from './auth/AuthContext';
+import { faq } from './marketing/faq';
 import { walkthroughs, walkthroughsRecordedOn } from './marketing/walkthroughs';
 import { routes } from './routes';
 import { fullTitle, notFoundMeta, publicPages, shareImagePath, siteDescription, siteName } from './seo/pages';
@@ -23,4 +24,4 @@ export function render(path: string): string {
   );
 }
 
-export { fullTitle, notFoundMeta, publicPages, shareImagePath, siteDescription, siteName, walkthroughs, walkthroughsRecordedOn };
+export { faq, fullTitle, notFoundMeta, publicPages, shareImagePath, siteDescription, siteName, walkthroughs, walkthroughsRecordedOn };
