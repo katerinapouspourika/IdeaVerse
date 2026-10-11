@@ -1,3 +1,4 @@
+import { comparisons, useCases } from '../solutions/content';
 import { templates } from '../templates/templates';
 
 /** The product's name, used in every page title and in link previews. */
@@ -57,6 +58,23 @@ export const publicPages = {
     description:
       'Free idea templates for product launches, campaigns, events, hiring, website refreshes, and newsletters, each with a checklist of everything it needs.',
   },
+  '/use-cases': {
+    title: 'Use cases',
+    description: 'How marketing teams, product teams, event planners, and small businesses use IdeaVerse to plan ideas and finish them on time.',
+  },
+  '/compare': {
+    title: 'Compare',
+    description: 'An honest comparison of IdeaVerse with spreadsheets, to-do apps, and full project-management suites, including when they’re the better choice.',
+  },
+  // One page per use case and per comparison, at /use-cases/<slug> and /compare/<slug>.
+  ...(Object.fromEntries(useCases.map((u) => [`/use-cases/${u.slug}`, { title: `IdeaVerse for ${u.audience.toLowerCase()}`, description: u.summary }])) as Record<
+    `/use-cases/${string}`,
+    PageMeta
+  >),
+  ...(Object.fromEntries(comparisons.map((c) => [`/compare/${c.slug}`, { title: `IdeaVerse vs ${c.alternative}`, description: c.summary }])) as Record<
+    `/compare/${string}`,
+    PageMeta
+  >),
   // One page per template, at /templates/<slug>.
   ...(Object.fromEntries(templates.map((t) => [`/templates/${t.slug}`, { title: `${t.name} template`, description: t.summary }])) as Record<
     `/templates/${string}`,

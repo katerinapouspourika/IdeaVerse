@@ -9,6 +9,7 @@ import { HowItWorksPage } from './marketing/HowItWorksPage';
 import { PricingPage } from './marketing/PricingPage';
 import { LegalPage } from './legal/LegalPage';
 import { privacyPolicy, terms } from './legal/legal';
+import { ComparisonPage, ComparisonsPage, UseCasePage, UseCasesPage } from './solutions/SolutionPages';
 import { TemplatePage } from './templates/TemplatePage';
 import { TemplatesPage } from './templates/TemplatesPage';
 import { AuthPage } from './pages/AuthPage';
@@ -55,6 +56,10 @@ export const routes: RouteObject[] = [
       { path: '/terms', element: <LegalPage document={terms} description={publicPages['/terms'].description} /> },
       { path: '/templates', element: <TemplatesPage /> },
       { path: '/templates/:slug', element: <TemplatePage /> },
+      { path: '/use-cases', element: <UseCasesPage /> },
+      { path: '/use-cases/:slug', element: <UseCasePage /> },
+      { path: '/compare', element: <ComparisonsPage /> },
+      { path: '/compare/:slug', element: <ComparisonPage /> },
       { element: <RequireAuth />, HydrateFallback: Loading, children: signedIn },
       { path: '*', element: <NotFoundPage /> },
     ],
