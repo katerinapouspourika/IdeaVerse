@@ -1,37 +1,90 @@
 import { useState, type FormEvent } from 'react';
 
 import { addDays, todayIso } from '../api/dates';
-import { useCreateIdea } from '../api/queries';
+import { useAddComponents, useCreateIdea } from '../api/queries';
+import { useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { TagInput } from '../components/TagInput';
+import { findTemplate, templates } from '../templates/templates';
 
 interface NewIdeaFormProps {
   workspaceId: string;
   /** Title and description to start from, such as a brainstormed idea's. */
   initial?: { title: string; description: string };
+  /** The template to start from, by its slug, as the template gallery asks for. */
+  template?: string;
   onDone: () => void;
 }
 
-export function NewIdeaForm({ workspaceId, initial, onDone }: NewIdeaFormProps) {
+/**
+ * Adds an idea, either blank or from a template. A template fills in the fields, which can still be changed, and its
+ * checklist is added to the idea once it is saved.
+ */
+export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, onDone }: NewIdeaFormProps) {
   const create = useCreateIdea(workspaceId);
+  const addComponents = useAddComponents();
+  const toast = useToast();
   const today = todayIso();
-  const [title, setTitle] = useState(initial?.title ?? '');
-  const [description, setDescription] = useState(initial?.description ?? '');
-  const [targetDate, setTargetDate] = useState(addDays(today, 14));
-  const [tags, setTags] = useState<string[]>([]);
+  const starting = findTemplate(initialTemplate);
+  const [templateSlug, setTemplateSlug] = useState(starting?.slug ?? '');
+  const [title, setTitle] = useState(starting?.title ?? initial?.title ?? '');
+  const [description, setDescription] = useState(starting?.description ?? initial?.description ?? '');
+  const [targetDate, setTargetDate] = useState(addDays(today, starting?.days ?? 14));
+  const [tags, setTags] = useState<string[]>(starting?.tags ?? []);
+  const template = findTemplate(templateSlug);
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    create.mutate(
-      { title, description: description || null, targetDate, tags },
-      { onSuccess: onDone },
-    );
+  const chooseTemplate = (slug: string) => {
+    setTemplateSlug(slug);
+    const chosen = findTemplate(slug);
+    if (chosen) {
+      setTitle(chosen.title);
+      setDescription(chosen.description);
+      setTags(chosen.tags);
+      setTargetDate(addDays(today, chosen.days));
+    }
   };
 
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    const idea = await create.mutateAsync({ title, description: description || null, targetDate, tags }).catch(() => null);
+    if (!idea) {
+      return;
+    }
+    if (template) {
+      await addComponents
+        .mutateAsync({ ideaId: idea.id, components: template.components.map((c) => ({ title: c.title, notes: c.notes ?? null })) })
+        .catch(() => toast({ message: `Added “${idea.title}”, but not all of its checklist. Add the rest on its page.`, tone: 'error' }));
+    }
+    onDone();
+  };
+  const saving = create.isPending || addComponents.isPending;
+
   return (
-    <form className="card stack" onSubmit={submit} aria-label="New idea">
+    <form className="card stack" onSubmit={(event) => void submit(event)} aria-label="New idea">
       <h2>New idea</h2>
+      <Field label="Start from" hint={template ? `Adds ${template.components.length} things it needs once saved.` : undefined}>
+        {(props) => (
+          <select {...props} value={templateSlug} onChange={(e) => chooseTemplate(e.target.value)}>
+            <option value="">A blank idea</option>
+            {templates.map((t) => (
+              <option key={t.slug} value={t.slug}>
+                Template: {t.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </Field>
+      {template && (
+        <details className="template-preview small">
+          <summary>What the {template.name.toLowerCase()} template adds</summary>
+          <ul>
+            {template.components.map((c) => (
+              <li key={c.title}>{c.title}</li>
+            ))}
+          </ul>
+        </details>
+      )}
       <Field label="Title" error={fieldError(create.error, 'title')}>
         {(props) => (
           <input {...props} required maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Black Friday teaser campaign" />
@@ -52,8 +105,8 @@ export function NewIdeaForm({ workspaceId, initial, onDone }: NewIdeaFormProps) 
       </Field>
       <ErrorMessage error={create.error} />
       <div className="row">
-        <button type="submit" className="button primary" disabled={create.isPending}>
-          {create.isPending ? 'Saving…' : 'Add idea'}
+        <button type="submit" className="button primary" disabled={saving}>
+          {saving ? 'Saving…' : 'Add idea'}
         </button>
         <button type="button" className="button ghost" onClick={onDone}>
           Cancel

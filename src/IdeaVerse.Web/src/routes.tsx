@@ -9,6 +9,8 @@ import { HowItWorksPage } from './marketing/HowItWorksPage';
 import { PricingPage } from './marketing/PricingPage';
 import { LegalPage } from './legal/LegalPage';
 import { privacyPolicy, terms } from './legal/legal';
+import { TemplatePage } from './templates/TemplatePage';
+import { TemplatesPage } from './templates/TemplatesPage';
 import { AuthPage } from './pages/AuthPage';
 import { ConfirmEmailPage } from './pages/ConfirmEmailPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
@@ -51,6 +53,8 @@ export const routes: RouteObject[] = [
       { path: '/pricing', element: <PricingPage /> },
       { path: '/privacy', element: <LegalPage document={privacyPolicy} description={publicPages['/privacy'].description} /> },
       { path: '/terms', element: <LegalPage document={terms} description={publicPages['/terms'].description} /> },
+      { path: '/templates', element: <TemplatesPage /> },
+      { path: '/templates/:slug', element: <TemplatePage /> },
       { element: <RequireAuth />, HydrateFallback: Loading, children: signedIn },
       { path: '*', element: <NotFoundPage /> },
     ],

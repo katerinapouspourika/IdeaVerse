@@ -1,3 +1,5 @@
+import { templates } from '../templates/templates';
+
 /** The product's name, used in every page title and in link previews. */
 export const siteName = 'IdeaVerse';
 
@@ -50,6 +52,16 @@ export const publicPages = {
     description: 'The agreement between you and IdeaVerse for using the app.',
     index: false,
   },
+  '/templates': {
+    title: 'Templates',
+    description:
+      'Free idea templates for product launches, campaigns, events, hiring, website refreshes, and newsletters, each with a checklist of everything it needs.',
+  },
+  // One page per template, at /templates/<slug>.
+  ...(Object.fromEntries(templates.map((t) => [`/templates/${t.slug}`, { title: `${t.name} template`, description: t.summary }])) as Record<
+    `/templates/${string}`,
+    PageMeta
+  >),
 } satisfies Record<string, PageMeta>;
 
 export const notFoundMeta: PageMeta = {
