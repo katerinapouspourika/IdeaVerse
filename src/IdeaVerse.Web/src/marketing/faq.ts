@@ -23,7 +23,7 @@ export const faq: { question: string; answer: string }[] = [
   },
   {
     question: 'Can I use IdeaVerse on my phone?',
-    answer: 'Yes. It works in any modern browser on phones, tablets, and computers, and you can install it like an app from your browser.',
+    answer: 'Yes. It works in any browser on phones, tablets, and computers, with nothing to download. On your phone you can add it to your home screen so it opens like an app.',
   },
   {
     question: 'How do I delete my account?',
