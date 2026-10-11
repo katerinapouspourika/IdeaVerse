@@ -30,7 +30,7 @@ export function IdeaPage() {
     return (
       <div className="card empty">
         <p>This idea doesn’t exist or isn’t in one of your workspaces.</p>
-        <Link to="/">Back to ideas</Link>
+        <Link to="/ideas">Back to ideas</Link>
       </div>
     );
   }
@@ -56,7 +56,7 @@ function IdeaDetail({ idea }: { idea: Idea }) {
 
   return (
     <div className="stack">
-      <Link to="/" className="small">
+      <Link to="/ideas" className="small">
         ← All ideas
       </Link>
       {idea.archivedAt && <ArchivedBanner idea={idea} />}
@@ -236,7 +236,7 @@ function DeleteIdea({ idea }: { idea: Idea }) {
 
   const confirmAndDelete = () => {
     if (window.confirm(`Delete “${idea.title}”? This removes its components and team, and cannot be undone.`)) {
-      remove.mutate(undefined, { onSuccess: () => void navigate('/') });
+      remove.mutate(undefined, { onSuccess: () => void navigate('/ideas') });
     }
   };
 

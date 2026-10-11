@@ -89,7 +89,7 @@ describe('Account settings', () => {
       ...signedIn,
       [ideasRoute]: { status: 200, body: [anIdea({ role: 'Viewer', canEdit: false, canManage: false, ownerEmail: 'mia@example.com', ownerName: 'Mia' })] },
     });
-    renderApp('/');
+    renderApp('/ideas');
 
     expect(await screen.findByText('By Mia')).toBeInTheDocument();
   });

@@ -52,6 +52,8 @@ services:
       App__PublicUrl: http://localhost:8080
       # AI help: export ANTHROPIC_API_KEY before `docker compose up` to turn it on; without it, AI help is hidden.
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Contact form messages go here, caught by Mailpit like every other email.
+      Contact__Recipient: ${CONTACT_RECIPIENT:-hello@ideaverse.local}
 
 volumes:
   db-data:

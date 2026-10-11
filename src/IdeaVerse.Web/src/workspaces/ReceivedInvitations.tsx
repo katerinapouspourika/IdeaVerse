@@ -18,7 +18,7 @@ export function ReceivedInvitations({ emptyText }: { emptyText?: string }) {
     accept.mutate(invitation.id, {
       onSuccess: (workspace) => {
         select(workspace.id);
-        void navigate('/');
+        void navigate('/ideas');
       },
     });
   };

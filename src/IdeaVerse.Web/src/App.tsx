@@ -2,6 +2,9 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router';
 
 import { Layout } from './components/Layout';
 import { RequireAuth } from './components/RequireAuth';
+import { ContactPage } from './marketing/ContactPage';
+import { HomePage } from './marketing/HomePage';
+import { HowItWorksPage } from './marketing/HowItWorksPage';
 import { AuthPage } from './pages/AuthPage';
 import { ConfirmEmailPage } from './pages/ConfirmEmailPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
@@ -24,10 +27,13 @@ export const routes = [
       { path: '/confirm-email', element: <ConfirmEmailPage /> },
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
+      { path: '/', element: <HomePage /> },
+      { path: '/how-it-works', element: <HowItWorksPage /> },
+      { path: '/contact', element: <ContactPage /> },
       {
         element: <RequireAuth />,
         children: [
-          { path: '/', element: <IdeasPage /> },
+          { path: '/ideas', element: <IdeasPage /> },
           { path: '/ideas/:id', element: <IdeaPage /> },
           { path: '/notifications', element: <NotificationsPage /> },
           { path: '/people', element: <PeoplePage /> },

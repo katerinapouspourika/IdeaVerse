@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 
 import { useWorkspace } from './WorkspaceContext';
 
@@ -8,22 +8,27 @@ const newWorkspace = 'new';
 export function WorkspaceSwitcher() {
   const { all, current, select } = useWorkspace();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   if (!current) {
     return null;
   }
 
-  const change = (value: string) => {
+  const change = async (value: string) => {
     if (value === newWorkspace) {
-      void navigate('/workspaces/new');
+      await navigate('/workspaces/new');
       return;
     }
+    // An idea belongs to one workspace, so leave it for the new workspace's list first;
+    // otherwise the idea page would switch straight back to the idea's own workspace. Other pages show the new workspace in place.
+    if (pathname.startsWith('/ideas/')) {
+      await navigate('/ideas');
+    }
     select(value);
-    void navigate('/');
   };
 
   return (
-    <select className="switcher" aria-label="Workspace" value={current.id} onChange={(e) => change(e.target.value)}>
+    <select className="switcher" aria-label="Workspace" value={current.id} onChange={(e) => void change(e.target.value)}>
       {all.map((workspace) => (
         <option key={workspace.id} value={workspace.id}>
           {workspace.name}

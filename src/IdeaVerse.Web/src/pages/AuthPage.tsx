@@ -94,7 +94,9 @@ export function AuthPage({ mode }: { mode: Mode }) {
   };
 
   return (
-    <section className="card auth">
+    <div className="auth-layout">
+      <AuthAside />
+      <section className="card auth">
       <img src="/logo.png" alt="" className="logo auth-logo" width="72" height="72" />
       <h1>{text.title}</h1>
       <p className="muted">Plan ideas, line up what they need, and never lose track of a date.</p>
@@ -137,6 +139,26 @@ export function AuthPage({ mode }: { mode: Mode }) {
           <Link to="/forgot-password">Forgot your password?</Link>
         </p>
       )}
-    </section>
+      </section>
+    </div>
+  );
+}
+
+/** The welcome panel beside the sign-in and sign-up forms on wide screens. */
+function AuthAside() {
+  return (
+    <aside className="auth-aside" aria-label="About IdeaVerse">
+      <div className="stack tight">
+        <p className="eyebrow">IdeaVerse</p>
+        <h2 className="section-title">Bright ideas deserve a plan.</h2>
+      </div>
+      <ul>
+        <li>💡 Capture ideas with a date to make them real</li>
+        <li>🧩 Line up everything they need</li>
+        <li>👥 Share the work with your team</li>
+        <li>⏰ Get reminded before anything slips</li>
+      </ul>
+      <p className="small">Free to start. No credit card needed.</p>
+    </aside>
   );
 }

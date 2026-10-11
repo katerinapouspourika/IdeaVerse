@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 
 import { daysUntil, describeDue, formatDate } from '../api/dates';
 import { BrainstormPanel, describeBrainstormed } from '../ai/BrainstormPanel';
@@ -38,7 +38,17 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const [tag, setTag] = useState('');
   const [sort, setSort] = useState<IdeaSort>('TargetDate');
   const [view, setView] = useState<'list' | 'calendar'>('list');
-  const [adding, setAdding] = useState<{ title: string; description: string } | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const openForm = (location.state as { adding?: boolean } | null)?.adding === true;
+  const [adding, setAdding] = useState<{ title: string; description: string } | null>(openForm ? { title: '', description: '' } : null);
+
+  // Opened by the dashboard's "New idea": forget the request, so going back or reloading does not open the form again.
+  useEffect(() => {
+    if (openForm) {
+      void navigate('.', { replace: true, state: null });
+    }
+  }, [openForm, navigate]);
   const [brainstorming, setBrainstorming] = useState(false);
   const debouncedSearch = useDebounced(search, 250);
   const archived = tab === 'Archived';
