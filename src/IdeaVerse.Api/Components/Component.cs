@@ -49,9 +49,9 @@ public sealed class Component
   public bool IsDone { get; set; }
 
   /// <summary>
-  /// Gets the zero-based order of the component within its idea.
+  /// Gets or sets the zero-based order of the component within its idea.
   /// </summary>
-  public int Position { get; init; }
+  public int Position { get; set; }
 
   /// <summary>
   /// Gets when the component was added.

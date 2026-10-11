@@ -87,6 +87,7 @@ Statuses are `Planned`, `InProgress`, `Postponed`, and `Done`. Tags are trimmed,
 | --- | --- | --- |
 | `GET` | `/api/v1/ideas/{ideaId}/components` | List an idea's components in order. |
 | `POST` | `/api/v1/ideas/{ideaId}/components` | Add a component to the end of the list. |
+| `PUT` | `/api/v1/ideas/{ideaId}/components/order` | Reorder: `componentIds` lists every component of the idea once, in the new order (else 400). Returns the components in that order. Not recorded in the activity. |
 | `PUT` | `/api/v1/ideas/{ideaId}/components/{componentId}` | Replace title, notes, done flag, `assigneeId` (someone in the workspace, else 400; `null` for nobody), and `dueDate`. Assigning someone else notifies them. |
 | `DELETE` | `/api/v1/ideas/{ideaId}/components/{componentId}` | Delete a component. |
 | `GET` | `/api/v1/workspaces/{workspaceId}/assignments` | The caller's unfinished components in the workspace's active ideas that are not done, soonest due first and undated last, with each idea's title. 404 outside the workspace. |

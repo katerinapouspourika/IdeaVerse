@@ -145,6 +145,11 @@ export interface ComponentInput {
   notes: string | null;
 }
 
+/** Every component of an idea, once each, in their new order. */
+export interface ComponentOrder {
+  componentIds: string[];
+}
+
 export interface ComponentUpdate extends ComponentInput {
   isDone: boolean;
   assigneeId: string | null;

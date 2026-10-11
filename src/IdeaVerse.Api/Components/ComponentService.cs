@@ -168,6 +168,51 @@ public sealed class ComponentService(IdeaVerseDbContext context, TimeProvider ti
   }
 
   /// <summary>
+  /// Puts an idea's components in the given order. A reorder is not recorded in the idea's activity.
+  /// </summary>
+  /// <remarks>
+  /// A component deleted while the order is saved makes the request no longer list every component, so it is refused as invalid.
+  /// </remarks>
+  /// <param name="userId">The signed-in user's identifier.</param>
+  /// <param name="ideaId">The idea identifier.</param>
+  /// <param name="request">The validated request, which must list every component of the idea once.</param>
+  /// <param name="cancellationToken">Token to cancel the operation.</param>
+  /// <returns>The outcome.</returns>
+  public async Task<ComponentChangeResult> ReorderAsync(string userId, Guid ideaId, ReorderComponentsRequest request, CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(request);
+
+    if (!await context.EditableIdeas(userId).AnyAsync(i => i.Id == ideaId, cancellationToken).ConfigureAwait(false))
+    {
+      return await DeniedAsync(userId, ideaId, cancellationToken).ConfigureAwait(false);
+    }
+
+    var invalid = new ComponentChangeResult(ChangeOutcome.Invalid, Field: nameof(ReorderComponentsRequest.ComponentIds), Message: "List every component of the idea once.");
+    var components = await context.Components.Where(c => c.IdeaId == ideaId).ToDictionaryAsync(c => c.Id, cancellationToken).ConfigureAwait(false);
+    if (request.ComponentIds.Count != components.Count || request.ComponentIds.Distinct().Count() != components.Count || !request.ComponentIds.All(components.ContainsKey))
+    {
+      return invalid;
+    }
+
+    for (var position = 0; position < request.ComponentIds.Count; position++)
+    {
+      components[request.ComponentIds[position]].Position = position;
+    }
+
+    try
+    {
+      await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+    catch (DbUpdateConcurrencyException)
+    {
+      context.ChangeTracker.Clear();
+      return invalid;
+    }
+
+    return new ComponentChangeResult(ChangeOutcome.Changed);
+  }
+
+  /// <summary>
   /// Deletes a component.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
