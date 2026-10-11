@@ -5,8 +5,11 @@ using System.Net;
 using Pouspourika.IdeaVerse.Api.Accounts;
 using Pouspourika.IdeaVerse.Api.Comments;
 using Pouspourika.IdeaVerse.Api.Components;
+using Pouspourika.IdeaVerse.Api.Ideas;
 using Pouspourika.IdeaVerse.Api.Notifications;
 using Pouspourika.IdeaVerse.Api.Workspaces;
+
+using TUnit.Assertions.Enums;
 
 public class AssignmentTests
 {
@@ -168,6 +171,74 @@ public class AssignmentTests
     (await owner.AddMemberAsync(ideaId, "member@example.com")).Dispose();
 
     await Assert.That((await NotificationsAsync(member)).Items.Single().Message).IsEqualTo("Kat added you to the team of “Launch”.");
+  }
+
+  [Test]
+  public async Task Assignments_ComponentsAssignedToUser_ListsUnfinishedOnesSoonestDueFirst()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var viewer = await factory.CreateSignedInClientAsync("viewer@example.com");
+    await factory.JoinAsync(owner, viewer, "viewer@example.com");
+    var viewerId = await UserIdAsync(owner, "viewer@example.com");
+    var (ideaId, budget) = await IdeaWithComponentAsync(owner, Today.AddDays(30));
+    var venue = await (await owner.CreateComponentAsync(ideaId, "Venue")).ReadComponentAsync();
+    var poster = await (await owner.CreateComponentAsync(ideaId, "Poster")).ReadComponentAsync();
+    var flyers = await (await owner.CreateComponentAsync(ideaId, "Flyers")).ReadComponentAsync();
+    (await owner.UpdateComponentAsync(ideaId, budget.Id, new UpdateComponentRequest("Budget", null, IsDone: false, viewerId, Today.AddDays(9)))).Dispose();
+    (await owner.UpdateComponentAsync(ideaId, venue.Id, new UpdateComponentRequest("Venue", null, IsDone: false, viewerId))).Dispose();
+    (await owner.UpdateComponentAsync(ideaId, poster.Id, new UpdateComponentRequest("Poster", null, IsDone: false, viewerId, Today.AddDays(2)))).Dispose();
+    (await owner.UpdateComponentAsync(ideaId, flyers.Id, new UpdateComponentRequest("Flyers", null, IsDone: true, viewerId, Today.AddDays(1)))).Dispose();
+
+    var assignments = await viewer.GetFromJsonAsync<AssignmentResponse[]>($"/api/v1/workspaces/{await owner.WorkspaceIdAsync()}/assignments", Json.Options);
+    var ownersOwn = await owner.GetFromJsonAsync<AssignmentResponse[]>($"/api/v1/workspaces/{await owner.WorkspaceIdAsync()}/assignments", Json.Options);
+
+    await Assert.That(assignments!.Select(a => a.Title)).IsEquivalentTo(["Poster", "Budget", "Venue"], CollectionOrdering.Matching);
+    await Assert.That(assignments![0].IdeaTitle).IsEqualTo("Launch");
+    await Assert.That(ownersOwn!).IsEmpty();
+  }
+
+  [Test]
+  public async Task Assignments_ArchivedIdea_AreLeftOut()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    var ownerId = await UserIdAsync(owner, "owner@example.com");
+    var (ideaId, budget) = await IdeaWithComponentAsync(owner);
+    (await owner.UpdateComponentAsync(ideaId, budget.Id, new UpdateComponentRequest("Budget", null, IsDone: false, ownerId, Today.AddDays(2)))).Dispose();
+    (await owner.PostAsync($"/api/v1/ideas/{ideaId}/archive", null)).Dispose();
+
+    var assignments = await owner.GetFromJsonAsync<AssignmentResponse[]>($"/api/v1/workspaces/{await owner.WorkspaceIdAsync()}/assignments", Json.Options);
+
+    await Assert.That(assignments!).IsEmpty();
+  }
+
+  [Test]
+  public async Task Assignments_DoneIdea_AreLeftOut()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    var ownerId = await UserIdAsync(owner, "owner@example.com");
+    var (ideaId, budget) = await IdeaWithComponentAsync(owner);
+    (await owner.UpdateComponentAsync(ideaId, budget.Id, new UpdateComponentRequest("Budget", null, IsDone: false, ownerId, Today.AddDays(2)))).Dispose();
+    var idea = await owner.GetFromJsonAsync<IdeaResponse>($"/api/v1/ideas/{ideaId}", Json.Options);
+    (await owner.PutAsJsonAsync($"/api/v1/ideas/{ideaId}", new UpdateIdeaRequest(idea!.Title, null, idea.TargetDate, IdeaStatus.Done), Json.Options)).Dispose();
+
+    var assignments = await owner.GetFromJsonAsync<AssignmentResponse[]>($"/api/v1/workspaces/{await owner.WorkspaceIdAsync()}/assignments", Json.Options);
+
+    await Assert.That(assignments!).IsEmpty();
+  }
+
+  [Test]
+  public async Task Assignments_WorkspaceUserIsNotIn_ReturnsNotFound()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var other = await factory.CreateSignedInClientAsync("other@example.com");
+
+    using var response = await other.GetAsync($"/api/v1/workspaces/{await owner.WorkspaceIdAsync()}/assignments");
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
   }
 
   private static async Task<(Guid IdeaId, ComponentResponse Component)> IdeaWithComponentAsync(HttpClient client, DateOnly? targetDate = null)

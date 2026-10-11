@@ -80,6 +80,7 @@ Statuses are `Planned`, `InProgress`, `Postponed`, and `Done`. Tags are trimmed,
 | `POST` | `/api/v1/ideas/{ideaId}/components` | Add a component to the end of the list. |
 | `PUT` | `/api/v1/ideas/{ideaId}/components/{componentId}` | Replace title, notes, done flag, `assigneeId` (someone in the workspace, else 400; `null` for nobody), and `dueDate`. Assigning someone else notifies them. |
 | `DELETE` | `/api/v1/ideas/{ideaId}/components/{componentId}` | Delete a component. |
+| `GET` | `/api/v1/workspaces/{workspaceId}/assignments` | The caller's unfinished components in the workspace's active ideas that are not done, soonest due first and undated last, with each idea's title. 404 outside the workspace. |
 
 Validation errors return `400` with RFC 9457 problem details whose `errors` are keyed by camelCase field name.
 
@@ -103,6 +104,8 @@ Validation errors return `400` with RFC 9457 problem details whose `errors` are 
 | `POST` | `/api/v1/ideas/{id}/ai/improve` | Critique the idea and propose a sharper title and description. Needs the right to edit the idea. Nothing is changed until the user saves it. |
 
 A used-up allowance returns 429, and an AI failure returns 502.
+
+- **Contact form** — `POST /api/v1/contact` is open to everyone and emails `name`, `email`, and `message` to `Contact:Recipient`, with the sender's address to reply to. Each client address (each /64 network for IPv6) may send `Contact:MessagesPerHour` messages an hour; more return 429. While no recipient is set it returns 503. A filled-in `website` field, hidden from people, marks the message as spam: it is accepted but not sent.
 
 - **Reminders** — a background job (`ReminderWorker`) runs at startup and then every `Reminders:Interval`. For every idea that is not done, each person on its team (owner included) who is still in its workspace gets one reminder per stage, judged by their own local date and raised at the job's first run once their local time reaches `Reminders:SendAt`: **coming up** (two to seven days before), **tomorrow**, **today**, and once when it becomes **overdue**. Reminders are stored per idea, person, stage, and target date, so reruns never repeat one and postponing starts a fresh set. Each reminder is shown in the app and, unless the person turned emails off, emailed; kinds a person turned off are not raised for them. A failed email is retried on later runs for `Reminders:EmailRetryWindow`.
 
@@ -132,6 +135,8 @@ Notifications that no longer concern the user (they left the team or workspace, 
 | `Ai:DailyLimitPerWorkspace` | `50` | AI requests each workspace may make per UTC day. |
 | `ANTHROPIC_API_KEY` | empty | Claude API key for AI help. Keep it in user secrets or an environment variable, never in `appsettings.json`. |
 | `Ideation:*` | `Effort: medium`, `IdeaCount: 5` | Model settings for the agents; see `src/IdeaVerse.Agents/README.md`. |
+| `Contact:Recipient` | empty (`hello@ideaverse.local` in `compose.yaml`) | Where contact form messages are emailed, with the sender as Reply-To. Empty turns the form off; anything else must be an email address, checked at startup. |
+| `Contact:MessagesPerHour` | `5` | Contact messages each client address may send per hour. |
 | `Email:From` | `IdeaVerse <no-reply@ideaverse.local>` | Sender of reminder and account emails. |
 | `Email:SmtpHost` | empty (`localhost` in Development) | SMTP server. When empty, emails are logged instead of sent. |
 | `Email:SmtpPort` | `587` (`1025` in Development) | SMTP port. |
@@ -139,6 +144,9 @@ Notifications that no longer concern the user (they left the team or workspace, 
 | `Email:Username`, `Email:Password` | empty | SMTP credentials, if the server needs them. Keep the password in user secrets or an environment variable, never in `appsettings.json`. |
 
 ## Caveats
+
+> [!WARNING]
+> The contact form's rate limit is per client address as the API sees it. Behind a reverse proxy or load balancer, configure ASP.NET Core's forwarded headers for that proxy before going live; otherwise every visitor shares the proxy's address and one limit.
 
 > [!NOTE]
 > "Today" is each user's local date in their time zone: it decides `isOverdue`, whether a new or changed target date is in the past, and reminder stages and wording. Target dates themselves are plain dates with no time zone. The Docker image's `-extra` Alpine base includes the time zone database this needs.

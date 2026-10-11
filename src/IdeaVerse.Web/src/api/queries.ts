@@ -3,6 +3,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { request } from './client';
 import type {
   ActivityEntry,
+  Assignment,
   AiStatus,
   BrainstormedIdea,
   Comment,
@@ -10,6 +11,7 @@ import type {
   ComponentSuggestion,
   ComponentInput,
   ComponentUpdate,
+  ContactMessage,
   Idea,
   IdeaImprovement,
   IdeaFilter,
@@ -32,6 +34,7 @@ export const keys = {
   ai: (workspaceId: string) => ['workspaces', workspaceId, 'ai'] as const,
   ideas: (workspaceId: string, query: string) => ['ideas', workspaceId, query] as const,
   tags: (workspaceId: string) => ['tags', workspaceId] as const,
+  assignments: (workspaceId: string) => ['assignments', workspaceId] as const,
   idea: (id: string) => ['idea', id] as const,
   components: (ideaId: string) => ['idea', ideaId, 'components'] as const,
   members: (ideaId: string) => ['idea', ideaId, 'members'] as const,
@@ -200,6 +203,7 @@ function useInvalidateIdea() {
   return (ideaId?: string) => {
     void client.invalidateQueries({ queryKey: ['ideas'] });
     void client.invalidateQueries({ queryKey: ['tags'] });
+    void client.invalidateQueries({ queryKey: ['assignments'] });
     if (ideaId) {
       void client.invalidateQueries({ queryKey: ['idea', ideaId] });
     }
@@ -397,5 +401,18 @@ export function useActivity(ideaId: string, enabled: boolean) {
     queryKey: keys.activity(ideaId),
     queryFn: () => request<ActivityEntry[]>('GET', `/api/v1/ideas/${ideaId}/activity`),
     enabled,
+  });
+}
+
+export function useAssignments(workspaceId: string) {
+  return useQuery({
+    queryKey: keys.assignments(workspaceId),
+    queryFn: () => request<Assignment[]>('GET', `/api/v1/workspaces/${workspaceId}/assignments`),
+  });
+}
+
+export function useSendContactMessage() {
+  return useMutation({
+    mutationFn: (message: ContactMessage) => request<void>('POST', '/api/v1/contact', message),
   });
 }

@@ -55,6 +55,7 @@ export const signedIn = {
   'GET /api/v1/notifications': { status: 200, body: { items: [], unreadCount: 0 } },
   'GET /api/v1/workspaces': { status: 200, body: [aWorkspace()] },
   'GET /api/v1/invitations': { status: 200, body: [] },
+  'GET /api/v1/workspaces/ws-1/assignments': { status: 200, body: [] },
 };
 
 export const signedOut = { 'GET /api/v1/account': { status: 401 } };

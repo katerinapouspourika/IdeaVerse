@@ -23,6 +23,11 @@ internal sealed class SmtpMailSender(IOptions<EmailOptions> options) : IMailSend
     using var mime = new MimeMessage();
     mime.From.Add(MailboxAddress.Parse(settings.From));
     mime.To.Add(MailboxAddress.Parse(message.To));
+    if (message.ReplyTo is not null)
+    {
+      mime.ReplyTo.Add(MailboxAddress.Parse(message.ReplyTo));
+    }
+
     mime.Subject = message.Subject;
     mime.Body = new TextPart("plain") { Text = message.Body };
 

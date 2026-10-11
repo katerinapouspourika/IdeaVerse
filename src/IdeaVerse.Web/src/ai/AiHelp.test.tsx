@@ -38,7 +38,7 @@ describe('AI help', () => {
       [ideasRoute]: { status: 200, body: [] },
       'POST /api/v1/workspaces/ws-1/ai/brainstorm': { status: 200, body: [guestSeries] },
     });
-    renderApp('/');
+    renderApp('/ideas');
 
     await userEvent.click(await screen.findByRole('button', { name: 'Brainstorm with AI' }));
     const panel = screen.getByRole('region', { name: 'Brainstorm with AI' });
@@ -123,7 +123,7 @@ describe('AI help', () => {
 
   it('hides AI help when it isn’t set up', async () => {
     fakeApi({ ...signedIn, ...aiOff, [ideasRoute]: { status: 200, body: [] } });
-    renderApp('/');
+    renderApp('/ideas');
 
     await screen.findByRole('heading', { name: 'Ideas' });
     expect(screen.queryByRole('button', { name: 'Brainstorm with AI' })).not.toBeInTheDocument();

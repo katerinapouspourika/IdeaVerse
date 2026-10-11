@@ -12,6 +12,7 @@ using Pouspourika.IdeaVerse.Api.Ai;
 using Pouspourika.IdeaVerse.Api.Auth;
 using Pouspourika.IdeaVerse.Api.Comments;
 using Pouspourika.IdeaVerse.Api.Components;
+using Pouspourika.IdeaVerse.Api.Contact;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Email;
 using Pouspourika.IdeaVerse.Api.Ideas;
@@ -63,6 +64,7 @@ builder.Services.AddIdeationAgents().BindConfiguration(IdeationOptions.SectionNa
 builder.Services.AddOptions<AiOptions>().BindConfiguration(AiOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
 builder.Services.AddScoped<AiService>();
 builder.Services.AddHostedService<ReminderWorker>();
+builder.Services.AddContactForm();
 
 var app = builder.Build();
 
@@ -77,6 +79,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapAuthEndpoints();
 app.MapAccountEndpoints();
@@ -88,6 +91,7 @@ app.MapMemberEndpoints();
 app.MapCommentEndpoints();
 app.MapNotificationEndpoints();
 app.MapAiEndpoints();
+app.MapContactEndpoints();
 app.MapWebAppFallback();
 
 await app.MigrateDatabaseIfEnabledAsync();
