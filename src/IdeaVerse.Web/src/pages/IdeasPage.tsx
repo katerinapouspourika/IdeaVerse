@@ -20,6 +20,7 @@ import { usePageMeta } from '../seo/usePageMeta';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { IdeaBoard } from './IdeaBoard';
 import { IdeaCalendar } from './IdeaCalendar';
+import { IdeaTimeline } from './IdeaTimeline';
 import { NewIdeaForm } from './NewIdeaForm';
 import { WelcomePage } from './WelcomePage';
 
@@ -46,7 +47,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const [search, setSearch] = useState('');
   const [tag, setTag] = useState('');
   const [sort, setSort] = useState<IdeaSort>('TargetDate');
-  const [view, setView] = useState<'list' | 'board' | 'calendar' | 'matrix'>('list');
+  const [view, setView] = useState<'list' | 'board' | 'calendar' | 'timeline' | 'matrix'>('list');
   const location = useLocation();
   const navigate = useNavigate();
   const openForm = (location.state as { adding?: boolean } | null)?.adding === true;
@@ -151,6 +152,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
           <FilterTab label="List" active={view === 'list'} onClick={() => setView('list')} />
           <FilterTab label="Board" active={view === 'board'} onClick={() => setView('board')} />
           <FilterTab label="Calendar" active={view === 'calendar'} onClick={() => setView('calendar')} />
+          <FilterTab label="Timeline" active={view === 'timeline'} onClick={() => setView('timeline')} />
           <FilterTab label="Matrix" active={view === 'matrix'} onClick={() => setView('matrix')} />
         </div>
       </div>
@@ -162,6 +164,8 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
           <IdeaCalendar ideas={ideas.data} />
         ) : view === 'board' ? (
           <IdeaBoard ideas={ideas.data} />
+        ) : view === 'timeline' ? (
+          <IdeaTimeline ideas={ideas.data} />
         ) : view === 'matrix' ? (
           <IdeaMatrix ideas={ideas.data} />
         ) : (
