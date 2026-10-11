@@ -16,6 +16,7 @@ import type {
   IdeaImprovement,
   IdeaFilter,
   IdeaInput,
+  IdeaStatus,
   IdeaUpdate,
   Invitation,
   Member,
@@ -223,6 +224,22 @@ export function useUpdateIdea(id: string) {
   return useMutation({
     mutationFn: (input: IdeaUpdate) => request<Idea>('PUT', `/api/v1/ideas/${id}`, input),
     onSuccess: () => invalidate(id),
+  });
+}
+
+/** Changes an idea's status, keeping its other details, as the board does when an idea is dragged to another column. */
+export function useMoveIdea() {
+  const invalidate = useInvalidateIdea();
+  return useMutation({
+    mutationFn: ({ idea, status }: { idea: Idea; status: IdeaStatus }) =>
+      request<Idea>('PUT', `/api/v1/ideas/${idea.id}`, {
+        title: idea.title,
+        description: idea.description,
+        targetDate: idea.targetDate,
+        status,
+        tags: idea.tags,
+      } satisfies IdeaUpdate),
+    onSettled: (_saved, _error, { idea }) => invalidate(idea.id),
   });
 }
 
