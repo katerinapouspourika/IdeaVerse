@@ -22,7 +22,7 @@ describe('Template gallery', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/templates/product-launch'));
     expect(await screen.findByRole('heading', { level: 1, name: 'Product launch' })).toBeInTheDocument();
     await waitFor(() => expect(document.title).toBe('Product launch template · IdeaVerse'));
-    const items = within(screen.getByRole('list')).getAllByRole('listitem');
+    const items = within(within(screen.getByRole('main')).getByRole('list')).getAllByRole('listitem');
     expect(items).toHaveLength(launch.components.length);
   });
 

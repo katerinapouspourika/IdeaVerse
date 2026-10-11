@@ -192,20 +192,55 @@ function PublicBar() {
   );
 }
 
+/** The footer's links, grouped so each group reads as a short list. */
+const footerGroups = [
+  {
+    heading: 'Product',
+    links: [
+      { to: '/how-it-works', label: 'How it works' },
+      { to: '/pricing', label: 'Pricing' },
+    ],
+  },
+  {
+    heading: 'Explore',
+    links: [
+      { to: '/templates', label: 'Templates' },
+      { to: '/use-cases', label: 'Use cases' },
+      { to: '/compare', label: 'Compare' },
+    ],
+  },
+  {
+    heading: 'Company',
+    links: [
+      { to: '/contact', label: 'Contact' },
+      { to: '/privacy', label: 'Privacy' },
+      { to: '/terms', label: 'Terms' },
+    ],
+  },
+];
+
 function Footer() {
   return (
     <footer className="footer">
       <div className="footer-inner">
-        <span className="muted small">© {new Date().getFullYear()} IdeaVerse · Plan ideas, together, on time.</span>
-        <nav className="row wrap small" aria-label="Footer">
-          <Link to="/how-it-works">How it works</Link>
-          <Link to="/pricing">Pricing</Link>
-          <Link to="/templates">Templates</Link>
-          <Link to="/use-cases">Use cases</Link>
-          <Link to="/compare">Compare</Link>
-          <Link to="/contact">Contact us</Link>
-          <Link to="/privacy">Privacy</Link>
-          <Link to="/terms">Terms</Link>
+        <div className="footer-brand">
+          <Brand />
+          <p className="muted small">Plan ideas, together, on time.</p>
+          <p className="muted small">© {new Date().getFullYear()} IdeaVerse</p>
+        </div>
+        <nav className="footer-links" aria-label="Footer">
+          {footerGroups.map((group) => (
+            <div key={group.heading} className="footer-group">
+              <h2 className="footer-heading">{group.heading}</h2>
+              <ul>
+                {group.links.map((link) => (
+                  <li key={link.to}>
+                    <Link to={link.to}>{link.label}</Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </nav>
       </div>
     </footer>
