@@ -43,6 +43,32 @@ public sealed class ComponentService(IdeaVerseDbContext context, TimeProvider ti
   }
 
   /// <summary>
+  /// Lists the unfinished components assigned to the user in a workspace's active ideas, soonest due first and undated last.
+  /// </summary>
+  /// <param name="userId">The signed-in user's identifier.</param>
+  /// <param name="workspaceId">The workspace identifier.</param>
+  /// <param name="cancellationToken">Token to cancel the query.</param>
+  /// <returns>The assignments, or <see langword="null"/> when the user is not in the workspace.</returns>
+  public async Task<IReadOnlyList<AssignmentResponse>?> ListAssignedAsync(string userId, Guid workspaceId, CancellationToken cancellationToken)
+  {
+    if (await context.RoleInAsync(userId, workspaceId, cancellationToken).ConfigureAwait(false) is null)
+    {
+      return null;
+    }
+
+    var ideas = context.VisibleIdeas(userId).Where(i => i.WorkspaceId == workspaceId && i.ArchivedAt == null && i.Status != IdeaStatus.Done);
+    return await context.Components
+      .Where(c => c.AssigneeId == userId && !c.IsDone && ideas.Any(i => i.Id == c.IdeaId))
+      .OrderBy(c => c.DueDate == null)
+      .ThenBy(c => c.DueDate)
+      .ThenBy(c => c.Idea!.TargetDate)
+      .ThenBy(c => c.Title)
+      .Select(c => new AssignmentResponse(c.Id, c.Title, c.DueDate, c.IdeaId, c.Idea!.Title, c.Idea.TargetDate))
+      .ToListAsync(cancellationToken)
+      .ConfigureAwait(false);
+  }
+
+  /// <summary>
   /// Adds a component to the end of an idea's list.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>

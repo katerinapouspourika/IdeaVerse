@@ -15,7 +15,7 @@ describe('Idea tracking', () => {
       [ideasRoute]: { status: 200, body: [launch, hiring] },
       [`${ideasRoute}?search=hiring`]: { status: 200, body: [hiring] },
     });
-    renderApp('/');
+    renderApp('/ideas');
     await screen.findByText('Spring launch');
 
     await userEvent.type(screen.getByLabelText('Search'), 'hiring');
@@ -32,7 +32,7 @@ describe('Idea tracking', () => {
       'GET /api/v1/workspaces/ws-1/tags': { status: 200, body: ['marketing', 'ops'] },
       [`${ideasRoute}?tag=ops`]: { status: 200, body: [hiring] },
     });
-    renderApp('/');
+    renderApp('/ideas');
     const card = (await screen.findByText('Spring launch')).closest('a')!;
     expect(within(card).getByRole('list', { name: 'Tags' })).toHaveTextContent('marketing');
 
@@ -48,7 +48,7 @@ describe('Idea tracking', () => {
       [ideasRoute]: { status: 200, body: [launch, hiring] },
       [`${ideasRoute}?sort=Title`]: { status: 200, body: [hiring, launch] },
     });
-    renderApp('/');
+    renderApp('/ideas');
     await screen.findByText('Spring launch');
 
     await userEvent.selectOptions(screen.getByLabelText('Sort by'), 'Title');
@@ -62,7 +62,7 @@ describe('Idea tracking', () => {
       [ideasRoute]: { status: 200, body: [launch] },
       [`${ideasRoute}?archived=true`]: { status: 200, body: [] },
     });
-    renderApp('/');
+    renderApp('/ideas');
     await screen.findByText('Spring launch');
 
     await userEvent.click(screen.getByRole('button', { name: 'Archived' }));
@@ -73,7 +73,7 @@ describe('Idea tracking', () => {
   it('shows ideas on their dates in the calendar, month by month', async () => {
     const today = todayIso();
     fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [{ ...launch, targetDate: today }] } });
-    renderApp('/');
+    renderApp('/ideas');
     await screen.findByText('Spring launch');
 
     await userEvent.click(screen.getByRole('button', { name: 'Calendar' }));
@@ -94,7 +94,7 @@ describe('Idea tracking', () => {
       [ideasRoute]: { status: 200, body: [] },
       'POST /api/v1/workspaces/ws-1/ideas': { status: 201, body: launch },
     });
-    renderApp('/');
+    renderApp('/ideas');
     await userEvent.click(await screen.findByRole('button', { name: 'New idea' }));
 
     const form = screen.getByRole('form', { name: 'New idea' });

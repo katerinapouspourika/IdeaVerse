@@ -28,7 +28,27 @@ internal static class ComponentEndpoints
     group.MapPut("/{componentId:guid}", UpdateAsync).WithValidation<UpdateComponentRequest>();
     group.MapDelete("/{componentId:guid}", DeleteAsync);
 
+    endpoints.MapGet("/api/v1/workspaces/{workspaceId:guid}/assignments", ListAssignedAsync).WithTags("Components").RequireAuthorization();
+
     return endpoints;
+  }
+
+  /// <summary>
+  /// Lists the signed-in user's unfinished assigned components in a workspace.
+  /// </summary>
+  /// <param name="workspaceId">The workspace identifier.</param>
+  /// <param name="user">The signed-in user.</param>
+  /// <param name="service">The component service.</param>
+  /// <param name="cancellationToken">Token to cancel the request.</param>
+  /// <returns>The assignments, or 404 when the user is not in the workspace.</returns>
+  private static async Task<Results<Ok<AssignmentResponse[]>, NotFound>> ListAssignedAsync(
+    Guid workspaceId,
+    ClaimsPrincipal user,
+    ComponentService service,
+    CancellationToken cancellationToken)
+  {
+    var assignments = await service.ListAssignedAsync(user.GetUserId(), workspaceId, cancellationToken).ConfigureAwait(false);
+    return assignments is null ? TypedResults.NotFound() : TypedResults.Ok(assignments.ToArray());
   }
 
   /// <summary>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 
 import { daysUntil, describeDue, formatDate } from '../api/dates';
 import { BrainstormPanel, describeBrainstormed } from '../ai/BrainstormPanel';
@@ -38,7 +38,10 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const [tag, setTag] = useState('');
   const [sort, setSort] = useState<IdeaSort>('TargetDate');
   const [view, setView] = useState<'list' | 'calendar'>('list');
-  const [adding, setAdding] = useState<{ title: string; description: string } | null>(null);
+  const location = useLocation();
+  const [adding, setAdding] = useState<{ title: string; description: string } | null>(
+    (location.state as { adding?: boolean } | null)?.adding ? { title: '', description: '' } : null,
+  );
   const [brainstorming, setBrainstorming] = useState(false);
   const debouncedSearch = useDebounced(search, 250);
   const archived = tab === 'Archived';

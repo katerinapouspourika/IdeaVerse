@@ -260,3 +260,22 @@ export interface ActivityEntry {
   actorName: string | null;
   createdAt: string;
 }
+
+/** An unfinished component assigned to the signed-in user. */
+export interface Assignment {
+  componentId: string;
+  title: string;
+  /** ISO date, `YYYY-MM-DD`, if it has one. */
+  dueDate: string | null;
+  ideaId: string;
+  ideaTitle: string;
+  ideaTargetDate: string;
+}
+
+export interface ContactMessage {
+  name: string;
+  email: string;
+  message: string;
+  /** Left empty by people; filled in only by bots. */
+  website?: string;
+}

@@ -8,7 +8,7 @@ describe('AuthPage', () => {
   it('redirects a signed-out visitor to the login page', async () => {
     fakeApi(signedOut);
 
-    const router = renderApp('/');
+    const router = renderApp('/ideas');
 
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/login');
@@ -25,7 +25,7 @@ describe('AuthPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('That email and password do not match.');
   });
 
-  it('signs in with a cookie and opens the ideas list', async () => {
+  it('signs in with a cookie and opens the dashboard', async () => {
     let signedInNow = false;
     const calls = fakeApi({
       'GET /api/v1/account': () => (signedInNow ? { status: 200, body: { email: 'kat@example.com', timeZone: 'UTC', emailReminders: true, reminderKinds: ['ComingUp', 'Tomorrow', 'Today', 'Overdue'] } } : { status: 401 }),
@@ -34,6 +34,7 @@ describe('AuthPage', () => {
         return { status: 200 };
       },
       'GET /api/v1/workspaces': { status: 200, body: [aWorkspace()] },
+      'GET /api/v1/workspaces/ws-1/assignments': { status: 200, body: [] },
       [ideasRoute]: { status: 200, body: [] },
     });
     const router = renderApp('/login');
@@ -42,7 +43,7 @@ describe('AuthPage', () => {
     await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!');
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    expect(await screen.findByRole('heading', { name: 'Ideas' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /^Good (morning|afternoon|evening)$/ })).toBeInTheDocument();
     await waitFor(() => expect(router.state.location.pathname).toBe('/'));
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ email: 'kat@example.com', password: 'Passw0rd!' });
   });

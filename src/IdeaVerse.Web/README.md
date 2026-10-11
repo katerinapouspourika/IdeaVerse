@@ -18,14 +18,16 @@ Open `http://localhost:5173`. The dev server forwards `/api` to the API, so the 
 
 ## Features
 
-- **Accounts** — sign up, sign in, and sign out with the API's cookie login. Signed-out visitors are sent to the login page and returned to where they were going.
+- **Public pages** — signed-out visitors land on the home page at `/`, with `/how-it-works` (recorded walkthrough videos of the app) and `/contact` (a form the API emails to the team). The header turns into a menu button on narrow screens.
+- **Accounts** — sign up, sign in, and sign out with the API's cookie login. Signed-out visitors opening a signed-in page are sent to the login page and returned to where they were going.
+- **Dashboard** — signed in, `/` greets the user and shows the current workspace at a glance: counts of overdue, due-this-week, in-progress, and done ideas, the ideas that need attention, the components assigned to them, and their latest reminders.
   - **Settings** — the name (or email) in the header opens `/settings`, where the user sets the name others see, changes their email (confirmed through a link to the new address) and password, deletes their account, picks their time zone and which reminders they get (coming up, due tomorrow, due today, overdue), and whether they are also emailed. An account without a time zone gets the browser's on first sign-in.
   - New accounts confirm their email first: sign-up shows "Check your inbox", the emailed link opens `/confirm-email`, and signing in before confirming explains why and offers to resend the link.
   - "Forgot your password?" on the sign-in page emails a link to `/reset-password`, where the user chooses a new one. Locally, these emails arrive in Mailpit at `http://localhost:8025`.
 - **Workspaces** — the header's workspace menu switches between the user's workspaces (the choice is remembered in the browser) or starts a new one at `/workspaces/new`. Someone in no workspace yet sees a welcome page to join one they were invited to or create their own.
 - **People** — `/people` lists the current workspace's people and roles. Owners and admins invite people by email, change roles, remove people, revoke open invitations, and rename the workspace; anyone but the owner can leave. The owner's danger zone hands the workspace to someone else, or deletes it after its name is typed.
 - **Invitations** — the header shows "Invitations (n)" while any are open. `/invitations`, where invitation emails link, lists the user's open invitations to join or decline. Joining opens the workspace.
-- **Ideas list** — the current workspace's ideas with status filters, a search box, a tag filter, and a choice of order (target date, title, recently changed, newest), plus overdue and due-this-week summaries, component progress, tags, and whose idea it is. The Archived tab shows archived ideas, and the Calendar view lays the ideas out on a month grid by target date.
+- **Ideas list** — `/ideas`: the current workspace's ideas with status filters, a search box, a tag filter, and a choice of order (target date, title, recently changed, newest), plus overdue and due-this-week summaries, component progress, tags, and whose idea it is. The Archived tab shows archived ideas, and the Calendar view lays the ideas out on a month grid by target date.
 - **Reminders** — a bell in the header shows how many reminders are unread, checked every minute. The reminders page lists them newest first, opens the idea (marking the reminder read), and marks them all read. Reminder emails go to Mailpit locally, at `http://localhost:8025`.
 - **AI help** — shown only when the API has it set up, with the workspace's remaining requests for the day. "Brainstorm with AI" on the ideas list turns a goal into scored ideas, each of which opens the new idea form filled in. On an idea its team can edit, "Suggest with AI" proposes components to tick and add, and "Improve with AI" shows a critique and a sharper version to use or dismiss.
 - **Idea page** — edit details, status, and tags, postpone to a later date, archive or restore (owner and workspace admins), check off components, and manage the team, which is chosen from the workspace's people. People outside the idea's team see it read-only; deleting and managing the team are for the idea's owner and the workspace's admins, and team members can leave instead. Opening an idea from another workspace switches the header to that workspace. Components can be assigned to someone in the workspace with a due date, shown on the component and flagged once it passes. Below the team, everyone in the workspace can discuss the idea in comments (editing their own; admins can delete any), and an Activity section shows who changed what, loaded when opened.
@@ -39,6 +41,7 @@ Open `http://localhost:5173`. The dev server forwards `/api` to the API, so the 
 | `npm run lint` | ESLint. |
 | `npm run typecheck` | TypeScript, without emitting. |
 | `npm test` | Vitest and Testing Library, against a fake API. |
+| `npm run record:walkthroughs` | Re-records the How it works videos in `public/how-it-works/` by driving the running app; see below. |
 
 ## Usage Examples
 
@@ -48,6 +51,17 @@ In production the API serves the built app from its `wwwroot`, on the same origi
 docker compose up --build
 ```
 
+### Recording the walkthroughs
+
+`scripts/record-walkthroughs.mjs` signs up two demo accounts, confirms them through the emails Mailpit caught, and records one short video (WebM, 1024×640) and poster image per walkthrough listed in `src/marketing/walkthroughs.ts`. The walkthroughs build on each other, so they are always recorded together. Re-record after visible changes to the app:
+
+```bash
+docker compose up --build -d
+BASE_URL=http://localhost:8080 npm run record:walkthroughs
+```
+
+Set `CHROMIUM_PATH` when Playwright has no browser of its own installed, and `MAILPIT_URL` when Mailpit is not at `http://localhost:8025`.
+
 ## Recommendations
 
 > [!NOTE]
@@ -55,6 +69,9 @@ docker compose up --build
 
 > [!NOTE]
 > "Today" follows the account's time zone (the browser's until the account has one), matching the API's notion of "today" and "overdue".
+
+> [!NOTE]
+> The look is "bright and friendly": colours, radii, and shadows are CSS variables at the top of `src/styles.css`, built from the logo's navy and sky blue with a warm yellow accent, and redefined for dark mode. The font is Nunito, bundled from `@fontsource-variable/nunito` rather than loaded from Google.
 
 > [!NOTE]
 > The logo in `public/` (`logo.png`, `favicon.ico`, `apple-touch-icon.png`) is cut from the original at `branding/ideaverse-logo.png`, with its white background made transparent. Regenerate all three from that file when the logo changes. In dark mode the logo sits on a white tile, because the navy lines do not show on a dark background.

@@ -19,7 +19,7 @@ describe('IdeasPage', () => {
       },
     });
 
-    renderApp('/');
+    renderApp('/ideas');
 
     const items = await screen.findAllByRole('listitem');
     expect(within(items[0]!).getByText('Spring launch')).toBeInTheDocument();
@@ -36,7 +36,7 @@ describe('IdeasPage', () => {
   it('shows an empty state when there are no ideas', async () => {
     fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
 
-    renderApp('/');
+    renderApp('/ideas');
 
     expect(await screen.findByText(/No ideas yet/)).toBeInTheDocument();
   });
@@ -47,7 +47,7 @@ describe('IdeasPage', () => {
       [ideasRoute]: { status: 200, body: [anIdea()] },
       [`${ideasRoute}?status=Done`]: { status: 200, body: [] },
     });
-    renderApp('/');
+    renderApp('/ideas');
     await screen.findByText('Black Friday teaser');
 
     await userEvent.click(screen.getByRole('button', { name: 'Done' }));
@@ -62,7 +62,7 @@ describe('IdeasPage', () => {
       [ideasRoute]: { status: 200, body: [] },
       'POST /api/v1/workspaces/ws-1/ideas': { status: 400, body: { errors: { targetDate: ['The target date cannot be in the past.'] } } },
     });
-    renderApp('/');
+    renderApp('/ideas');
     await userEvent.click(await screen.findByRole('button', { name: 'New idea' }));
 
     const form = screen.getByRole('form', { name: 'New idea' });
@@ -83,7 +83,7 @@ describe('IdeasPage', () => {
       [ideasRoute]: { status: 200, body: [anIdea({ title: 'Acme idea' })] },
       'GET /api/v1/workspaces/ws-2/ideas': { status: 200, body: [anIdea({ id: 'g', workspaceId: 'ws-2', title: 'Globex idea' })] },
     });
-    renderApp('/');
+    renderApp('/ideas');
     await screen.findByText('Acme idea');
 
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Workspace' }), 'Globex');
@@ -114,7 +114,7 @@ describe('IdeasPage', () => {
         },
         [ideasRoute]: { status: 200, body: [] },
       });
-      renderApp('/');
+      renderApp('/ideas');
 
       expect(await screen.findByRole('heading', { name: 'Welcome to IdeaVerse' })).toBeInTheDocument();
       const form = screen.getByRole('form', { name: 'Create workspace' });
@@ -137,7 +137,7 @@ describe('IdeasPage', () => {
         },
         'GET /api/v1/workspaces/ws-2/ideas': { status: 200, body: [anIdea({ workspaceId: 'ws-2', title: 'Globex idea', role: 'Viewer' })] },
       });
-      renderApp('/');
+      renderApp('/ideas');
 
       expect(await screen.findByText(/leo@example.com invited you as a member/)).toBeInTheDocument();
       await userEvent.click(screen.getByRole('button', { name: 'Join Globex' }));

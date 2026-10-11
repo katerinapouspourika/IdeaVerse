@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 
 import { useWorkspace } from './WorkspaceContext';
 
@@ -8,6 +8,7 @@ const newWorkspace = 'new';
 export function WorkspaceSwitcher() {
   const { all, current, select } = useWorkspace();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   if (!current) {
     return null;
@@ -19,7 +20,10 @@ export function WorkspaceSwitcher() {
       return;
     }
     select(value);
-    void navigate('/');
+    // An idea belongs to one workspace, so leave it for the new workspace's list; other pages show the new workspace in place.
+    if (pathname.startsWith('/ideas/')) {
+      void navigate('/ideas');
+    }
   };
 
   return (

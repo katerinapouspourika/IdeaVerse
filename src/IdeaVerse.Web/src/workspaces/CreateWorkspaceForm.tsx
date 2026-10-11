@@ -18,7 +18,7 @@ export function CreateWorkspaceForm({ onCancel }: { onCancel?: () => void }) {
     create.mutate(name, {
       onSuccess: (workspace) => {
         select(workspace.id);
-        void navigate('/');
+        void navigate('/ideas');
       },
     });
   };
