@@ -8,6 +8,7 @@ import { statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types
 import { useToast } from '../components/Feedback';
 import { Progress } from '../components/Progress';
 import { Tags } from '../components/Tags';
+import { useIdeaPanel } from '../panel/useIdeaPanel';
 
 /** The drag payload's type, so the board ignores anything else dropped on it. */
 const dragType = 'application/x-ideaverse-idea';
@@ -97,6 +98,7 @@ export function IdeaBoard({ ideas }: { ideas: Idea[] }) {
 
 function BoardCard({ idea, status, onMove }: { idea: Idea; status: IdeaStatus; onMove: (status: IdeaStatus) => void }) {
   const [dragging, setDragging] = useState(false);
+  const { linkProps } = useIdeaPanel();
   return (
     <li
       className={['card', 'board-card', idea.isOverdue ? 'is-overdue' : '', dragging ? 'dragging' : ''].filter(Boolean).join(' ')}
@@ -109,7 +111,7 @@ function BoardCard({ idea, status, onMove }: { idea: Idea; status: IdeaStatus; o
       onDragEnd={() => setDragging(false)}
     >
       <div className="row spread">
-        <Link to={`/ideas/${idea.id}`} className="board-title">
+        <Link {...linkProps(idea.id)} className="board-title">
           {idea.title}
         </Link>
         {idea.canEdit && <GripVertical aria-hidden="true" size={16} className="grip" />}

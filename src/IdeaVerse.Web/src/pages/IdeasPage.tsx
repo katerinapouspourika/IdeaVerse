@@ -12,6 +12,8 @@ import { Progress } from '../components/Progress';
 import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
+import { IdeaPanel } from '../panel/IdeaPanel';
+import { useIdeaPanel } from '../panel/useIdeaPanel';
 import { IdeaMatrix } from '../priority/IdeaMatrix';
 import { VoteButton } from '../priority/VoteButton';
 import { usePageMeta } from '../seo/usePageMeta';
@@ -65,6 +67,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const tags = useTags(workspace.id);
   const ai = useAiStatus(workspace.id);
   const filtered = status !== undefined || debouncedSearch.trim() !== '' || tag !== '';
+  const panel = useIdeaPanel();
 
   return (
     <div className="stack">
@@ -168,6 +171,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
             }}
           />
         ))}
+      {panel.openId && <IdeaPanel key={panel.openId} id={panel.openId} onClose={panel.close} />}
     </div>
   );
 }
@@ -199,6 +203,7 @@ interface IdeaListProps {
 }
 
 function IdeaList({ ideas, filtered, archived, onAdd, onClearFilters }: IdeaListProps) {
+  const { linkProps } = useIdeaPanel();
   if (ideas.length === 0) {
     return (
       <div className="card empty stack center">
@@ -242,7 +247,7 @@ function IdeaList({ ideas, filtered, archived, onAdd, onClearFilters }: IdeaList
       <ul className="idea-list">
         {ideas.map((idea) => (
           <li key={idea.id} className="idea-item">
-            <Link to={`/ideas/${idea.id}`} className={idea.isOverdue ? 'card idea-card is-overdue' : 'card idea-card'}>
+            <Link {...linkProps(idea.id)} className={idea.isOverdue ? 'card idea-card is-overdue' : 'card idea-card'}>
               <div className="row spread">
                 <h2 className="idea-title">{idea.title}</h2>
                 <StatusBadge idea={idea} />

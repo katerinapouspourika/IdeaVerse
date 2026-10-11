@@ -2289,3 +2289,52 @@ a:focus-visible {
     display: none;
   }
 }
+
+/* Side panel: an idea's essentials over the list */
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  justify-content: flex-end;
+  background: rgb(14 18 48 / 0.35);
+}
+
+.drawer {
+  width: min(560px, 100%);
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px 20px 32px;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-lift);
+  animation: drawer-in 0.18s ease-out;
+}
+
+.drawer-bar {
+  position: sticky;
+  top: -16px;
+  z-index: 1;
+  margin: -16px -20px 0;
+  padding: 12px 20px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.drawer-title {
+  font-size: 1.4rem;
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer {
+    animation: none;
+  }
+}

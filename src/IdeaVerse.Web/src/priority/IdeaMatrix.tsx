@@ -1,10 +1,12 @@
 import { Link } from 'react-router';
 
 import type { Idea } from '../api/types';
+import { useIdeaPanel } from '../panel/useIdeaPanel';
 import { quadrantHints, quadrantLabels, quadrantOf, quadrants, type Quadrant } from './priority';
 
 /** Places scored ideas on a 2×2 of impact against effort, with the ideas still to score listed below. */
 export function IdeaMatrix({ ideas }: { ideas: Idea[] }) {
+  const { linkProps } = useIdeaPanel();
   const placed = new Map<Quadrant, Idea[]>(quadrants.map((q) => [q, []]));
   const unscored: Idea[] = [];
   for (const idea of ideas) {
@@ -34,7 +36,7 @@ export function IdeaMatrix({ ideas }: { ideas: Idea[] }) {
             <ul className="matrix-ideas">
               {placed.get(q)!.map((idea) => (
                 <li key={idea.id}>
-                  <Link to={`/ideas/${idea.id}`}>{idea.title}</Link>{' '}
+                  <Link {...linkProps(idea.id)}>{idea.title}</Link>{' '}
                   <span className="muted small">
                     impact {idea.impact} · effort {idea.effort}
                   </span>
@@ -53,7 +55,7 @@ export function IdeaMatrix({ ideas }: { ideas: Idea[] }) {
           <ul className="matrix-ideas">
             {unscored.map((idea) => (
               <li key={idea.id}>
-                <Link to={`/ideas/${idea.id}`}>{idea.title}</Link>
+                <Link {...linkProps(idea.id)}>{idea.title}</Link>
               </li>
             ))}
           </ul>
