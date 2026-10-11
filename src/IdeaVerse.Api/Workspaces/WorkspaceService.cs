@@ -288,6 +288,10 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
         .Where(m => m.UserId == memberUserId && m.Idea!.WorkspaceId == workspaceId)
         .ExecuteDeleteAsync(cancellationToken)
         .ConfigureAwait(false);
+      await context.IdeaVotes
+        .Where(v => v.UserId == memberUserId && v.Idea!.WorkspaceId == workspaceId)
+        .ExecuteDeleteAsync(cancellationToken)
+        .ConfigureAwait(false);
       await context.WorkspaceMembers
         .Where(m => m.WorkspaceId == workspaceId && m.UserId == memberUserId)
         .ExecuteDeleteAsync(cancellationToken)

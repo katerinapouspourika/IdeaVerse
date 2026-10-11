@@ -72,6 +72,14 @@ export interface Idea {
   tags: string[];
   /** When it was archived; `null` while it is active. */
   archivedAt: string | null;
+  /** How many people in the workspace voted for it. */
+  voteCount: number;
+  /** Whether the user voted for it. */
+  hasVoted: boolean;
+  /** How much it would matter, 1–5; `null` until scored. */
+  impact: number | null;
+  /** How much work it would take, 1–5; `null` until scored. */
+  effort: number | null;
 }
 
 export interface IdeaInput {
@@ -82,14 +90,25 @@ export interface IdeaInput {
   tags?: string[];
 }
 
-export type IdeaSort = 'TargetDate' | 'Title' | 'Updated' | 'Created';
+export type IdeaSort = 'TargetDate' | 'Title' | 'Updated' | 'Created' | 'Votes' | 'Priority';
 
 export const sortLabels: Record<IdeaSort, string> = {
   TargetDate: 'Target date',
   Title: 'Title',
   Updated: 'Recently changed',
   Created: 'Newest',
+  Votes: 'Most votes',
+  Priority: 'Impact for effort',
 };
+
+/** The lowest and highest impact or effort score. */
+export const minScore = 1;
+export const maxScore = 5;
+
+export interface PriorityInput {
+  impact: number | null;
+  effort: number | null;
+}
 
 /** What to show of a workspace's ideas; every part is optional. */
 export interface IdeaFilter {
@@ -249,7 +268,8 @@ export type ActivityKind =
   | 'MemberLeft'
   | 'TagsChanged'
   | 'Archived'
-  | 'Restored';
+  | 'Restored'
+  | 'Rescored';
 
 export interface ActivityEntry {
   id: string;

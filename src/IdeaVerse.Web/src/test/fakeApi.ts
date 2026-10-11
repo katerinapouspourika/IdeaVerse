@@ -82,6 +82,10 @@ export function anIdea(overrides: Partial<Idea> = {}): Idea {
     updatedAt: '2026-10-01T09:00:00Z',
     tags: [],
     archivedAt: null,
+    voteCount: 0,
+    hasVoted: false,
+    impact: null,
+    effort: null,
     ...overrides,
   };
 }

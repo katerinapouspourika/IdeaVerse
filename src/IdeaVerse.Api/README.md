@@ -66,17 +66,20 @@ The API also serves the web app (`src/IdeaVerse.Web`) from `wwwroot` when one is
 
 | Method | Route | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/v1/workspaces/{workspaceId}/ideas?status=&search=&tag=&sort=&archived=` | List a workspace's active ideas (or, with `archived=true`, its archived ones). `search` matches title or description ignoring case, `tag` one tag; `sort` is `TargetDate` (default, soonest first), `Title`, `Updated`, or `Created` (both newest first). |
+| `GET` | `/api/v1/workspaces/{workspaceId}/ideas?status=&search=&tag=&sort=&archived=` | List a workspace's active ideas (or, with `archived=true`, its archived ones). `search` matches title or description ignoring case, `tag` one tag; `sort` is `TargetDate` (default, soonest first), `Title`, `Updated`, or `Created` (both newest first), `Votes` (most first), or `Priority` (highest impact for effort first; ideas missing a score last, by impact). |
 | `GET` | `/api/v1/workspaces/{workspaceId}/tags` | The tags the workspace's ideas use, alphabetically. |
 | `GET` | `/api/v1/ideas/{id}` | Get one idea. |
 | `POST` | `/api/v1/workspaces/{workspaceId}/ideas` | Create an idea in a workspace, owned by the user; the target date must be today or later. Optional `tags`. |
 | `PUT` | `/api/v1/ideas/{id}` | Replace title, description, target date, and status, and `tags` when given. A changed date must be today or later. |
 | `POST` | `/api/v1/ideas/{id}/postpone` | Move to a later date, mark `Postponed`, and count the postponement. Completed ideas cannot be postponed. |
+| `PUT` | `/api/v1/ideas/{id}/priority` | Score impact and effort, each 1–5 or `null` to clear; the idea's team and the workspace's owner and admins only. Changes are recorded as `Rescored` activity. |
+| `PUT` | `/api/v1/ideas/{id}/vote` | Vote for an idea; anyone in its workspace may, once. Voting again changes nothing. |
+| `DELETE` | `/api/v1/ideas/{id}/vote` | Withdraw the caller's vote; nothing changes when there was none. |
 | `POST` | `/api/v1/ideas/{id}/archive` | Archive an idea: it leaves the list, is no longer overdue, and its team and assignees get no reminders. 409 when already archived. |
 | `POST` | `/api/v1/ideas/{id}/restore` | Bring an archived idea back. 409 when it is not archived. |
 | `DELETE` | `/api/v1/ideas/{id}` | Delete an idea. |
 
-Statuses are `Planned`, `InProgress`, `Postponed`, and `Done`. Tags are trimmed, lower-cased, and deduplicated; an idea has at most 10, of up to 30 characters, without commas. Responses include `tags`, `archivedAt`, `isOverdue` (the target date has passed and the idea is neither done nor archived), the `workspaceId`, the `ownerEmail`, the caller's `role` (`Owner`, `Member` of the team, or `Viewer`), whether they `canEdit` and `canManage` it, `memberCount`, and component progress as `componentCount` and `completedComponentCount`.
+Statuses are `Planned`, `InProgress`, `Postponed`, and `Done`. Tags are trimmed, lower-cased, and deduplicated; an idea has at most 10, of up to 30 characters, without commas. Responses include `tags`, `archivedAt`, `isOverdue` (the target date has passed and the idea is neither done nor archived), the `workspaceId`, the `ownerEmail`, the caller's `role` (`Owner`, `Member` of the team, or `Viewer`), whether they `canEdit` and `canManage` it, `memberCount`, component progress as `componentCount` and `completedComponentCount`, `voteCount` and whether the caller `hasVoted`, and the `impact` and `effort` scores (`null` until scored).
 
 - **Components** — the things an idea needs before it can be implemented (a budget, a designer, a venue), under `/api/v1/ideas/{ideaId}/components`. Everyone in the workspace sees them; those who can edit the idea change them. Each has a title, optional notes, a done flag with the time it was completed, and a position. Deleting an idea deletes its components.
 

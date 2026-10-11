@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Pouspourika.IdeaVerse.Api.Accounts;
 using Pouspourika.IdeaVerse.Api.Activity;
 using Pouspourika.IdeaVerse.Api.Data;
+using Pouspourika.IdeaVerse.Api.Votes;
 using Pouspourika.IdeaVerse.Api.Workspaces;
 
 /// <summary>
@@ -73,6 +74,13 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
       IdeaSort.Title => query.OrderBy(i => i.Title).ThenBy(i => i.TargetDate),
       IdeaSort.Updated => query.OrderByDescending(i => i.UpdatedAt).ThenBy(i => i.Title),
       IdeaSort.Created => query.OrderByDescending(i => i.CreatedAt).ThenBy(i => i.Title),
+      IdeaSort.Votes => query.OrderByDescending(i => i.Votes.Count).ThenBy(i => i.TargetDate).ThenBy(i => i.Title),
+      IdeaSort.Priority => query
+        .OrderBy(i => i.Impact == null || i.Effort == null)
+        .ThenByDescending(i => i.Impact == null || i.Effort == null ? 0 : (double)i.Impact / i.Effort)
+        .ThenByDescending(i => i.Impact ?? 0)
+        .ThenBy(i => i.TargetDate)
+        .ThenBy(i => i.Title),
       IdeaSort.TargetDate or _ => query.OrderBy(i => i.TargetDate).ThenBy(i => i.Title),
     };
 
@@ -272,6 +280,65 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
   }
 
   /// <summary>
+  /// Scores an idea's impact and effort. Those who can edit the idea may score it.
+  /// </summary>
+  /// <param name="userId">The signed-in user's identifier.</param>
+  /// <param name="id">The idea identifier.</param>
+  /// <param name="request">The validated request.</param>
+  /// <param name="cancellationToken">Token to cancel the operation.</param>
+  /// <returns>The outcome, carrying the idea.</returns>
+  public async Task<IdeaChangeResult> SetPriorityAsync(string userId, Guid id, SetPriorityRequest request, CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(request);
+
+    var idea = await context.EditableIdeas(userId).FirstOrDefaultAsync(i => i.Id == id, cancellationToken).ConfigureAwait(false);
+    if (idea is null)
+    {
+      return IdeaChangeResult.Denied(await context.DenialAsync(userId, id, cancellationToken).ConfigureAwait(false), NotOnTeamMessage);
+    }
+
+    if (request.Impact == idea.Impact && request.Effort == idea.Effort)
+    {
+      return IdeaChangeResult.Changed((await GetAsync(userId, id, cancellationToken).ConfigureAwait(false))!);
+    }
+
+    var detail = request.Impact is null && request.Effort is null
+      ? string.Empty
+      : $"{Describe("Impact", request.Impact)}, {Describe("effort", request.Effort)}";
+    context.Record(idea.Id, userId, ActivityKind.Rescored, timeProvider.GetUtcNow(), detail);
+    idea.Impact = request.Impact;
+    idea.Effort = request.Effort;
+    return await SaveAsync(userId, idea, cancellationToken).ConfigureAwait(false);
+  }
+
+  /// <summary>
+  /// Adds or removes the user's vote for an idea in their workspace. Voting twice, or withdrawing a vote never cast, changes nothing.
+  /// </summary>
+  /// <param name="userId">The signed-in user's identifier.</param>
+  /// <param name="id">The idea identifier.</param>
+  /// <param name="vote"><see langword="true"/> to vote, <see langword="false"/> to withdraw the vote.</param>
+  /// <param name="cancellationToken">Token to cancel the operation.</param>
+  /// <returns>The idea with its new vote count, or <see langword="null"/> when the user cannot see it.</returns>
+  public async Task<IdeaResponse?> SetVoteAsync(string userId, Guid id, bool vote, CancellationToken cancellationToken)
+  {
+    if (!await context.VisibleIdeas(userId).AnyAsync(i => i.Id == id, cancellationToken).ConfigureAwait(false))
+    {
+      return null;
+    }
+
+    if (vote)
+    {
+      await AddVoteAsync(userId, id, cancellationToken).ConfigureAwait(false);
+    }
+    else
+    {
+      await context.IdeaVotes.Where(v => v.IdeaId == id && v.UserId == userId).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    return await GetAsync(userId, id, cancellationToken).ConfigureAwait(false);
+  }
+
+  /// <summary>
   /// Archives or restores an idea. Only its owner and the workspace's owner and admins may do so.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
@@ -317,12 +384,54 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
   }
 
   /// <summary>
+  /// Describes one score for the activity history, such as "Impact 4" or "effort not scored".
+  /// </summary>
+  /// <param name="name">The score's name.</param>
+  /// <param name="score">The score, if set.</param>
+  /// <returns>The description.</returns>
+  private static string Describe(string name, int? score)
+    => score is { } value ? string.Create(CultureInfo.InvariantCulture, $"{name} {value}") : $"{name} not scored";
+
+  /// <summary>
   /// Trims a description, treating blank text as no description.
   /// </summary>
   /// <param name="description">The submitted description.</param>
   /// <returns>The trimmed description, or <see langword="null"/>.</returns>
   private static string? Normalize(string? description)
     => string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+
+  /// <summary>
+  /// Adds the user's vote for an idea unless they already voted.
+  /// </summary>
+  /// <remarks>
+  /// A concurrent request may cast the same vote between the check and the insert, which then fails on the key. The vote
+  /// exists either way, so that failure is the outcome asked for; any other failure is rethrown.
+  /// </remarks>
+  /// <param name="userId">The voter's identifier.</param>
+  /// <param name="id">The idea identifier.</param>
+  /// <param name="cancellationToken">Token to cancel the operation.</param>
+  /// <returns>A task that completes once the vote exists.</returns>
+  private async Task AddVoteAsync(string userId, Guid id, CancellationToken cancellationToken)
+  {
+    if (await context.IdeaVotes.AnyAsync(v => v.IdeaId == id && v.UserId == userId, cancellationToken).ConfigureAwait(false))
+    {
+      return;
+    }
+
+    var added = context.IdeaVotes.Add(new IdeaVote { IdeaId = id, UserId = userId, CreatedAt = timeProvider.GetUtcNow() });
+    try
+    {
+      await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+    catch (DbUpdateException)
+    {
+      added.State = EntityState.Detached;
+      if (!await context.IdeaVotes.AnyAsync(v => v.IdeaId == id && v.UserId == userId, cancellationToken).ConfigureAwait(false))
+      {
+        throw;
+      }
+    }
+  }
 
   /// <summary>
   /// Stamps <see cref="Idea.UpdatedAt"/> and saves a new or changed idea.

@@ -21,6 +21,7 @@ import type {
   Invitation,
   Member,
   Notifications,
+  PriorityInput,
   ReceivedInvitation,
   Workspace,
   WorkspaceMember,
@@ -239,6 +240,39 @@ export function useMoveIdea() {
         status,
         tags: idea.tags,
       } satisfies IdeaUpdate),
+    onSettled: (_saved, _error, { idea }) => invalidate(idea.id),
+  });
+}
+
+/** Puts a saved idea into the cached idea and lists at once, so a control doesn't flick back while they refresh. */
+function useStoreIdea() {
+  const client = useQueryClient();
+  return (saved: Idea) => {
+    client.setQueryData(keys.idea(saved.id), saved);
+    client.setQueriesData<Idea[]>({ queryKey: ['ideas'] }, (ideas) => ideas?.map((i) => (i.id === saved.id ? saved : i)));
+  };
+}
+
+/** Votes for an idea, or withdraws the vote. */
+export function useVote() {
+  const invalidate = useInvalidateIdea();
+  const store = useStoreIdea();
+  return useMutation({
+    mutationFn: ({ idea, vote }: { idea: Idea; vote: boolean }) =>
+      request<Idea>(vote ? 'PUT' : 'DELETE', `/api/v1/ideas/${idea.id}/vote`),
+    onSuccess: store,
+    onSettled: (_saved, _error, { idea }) => invalidate(idea.id),
+  });
+}
+
+/** Scores an idea's impact and effort; `null` clears a score. */
+export function useSetPriority() {
+  const invalidate = useInvalidateIdea();
+  const store = useStoreIdea();
+  return useMutation({
+    mutationFn: ({ idea, priority }: { idea: Idea; priority: PriorityInput }) =>
+      request<Idea>('PUT', `/api/v1/ideas/${idea.id}/priority`, priority),
+    onSuccess: store,
     onSettled: (_saved, _error, { idea }) => invalidate(idea.id),
   });
 }

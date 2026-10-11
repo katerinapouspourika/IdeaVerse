@@ -12,6 +12,8 @@ import { Progress } from '../components/Progress';
 import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
+import { IdeaMatrix } from '../priority/IdeaMatrix';
+import { VoteButton } from '../priority/VoteButton';
 import { usePageMeta } from '../seo/usePageMeta';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { IdeaBoard } from './IdeaBoard';
@@ -42,7 +44,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const [search, setSearch] = useState('');
   const [tag, setTag] = useState('');
   const [sort, setSort] = useState<IdeaSort>('TargetDate');
-  const [view, setView] = useState<'list' | 'board' | 'calendar'>('list');
+  const [view, setView] = useState<'list' | 'board' | 'calendar' | 'matrix'>('list');
   const location = useLocation();
   const navigate = useNavigate();
   const openForm = (location.state as { adding?: boolean } | null)?.adding === true;
@@ -140,6 +142,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
           <FilterTab label="List" active={view === 'list'} onClick={() => setView('list')} />
           <FilterTab label="Board" active={view === 'board'} onClick={() => setView('board')} />
           <FilterTab label="Calendar" active={view === 'calendar'} onClick={() => setView('calendar')} />
+          <FilterTab label="Matrix" active={view === 'matrix'} onClick={() => setView('matrix')} />
         </div>
       </div>
 
@@ -150,6 +153,8 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
           <IdeaCalendar ideas={ideas.data} />
         ) : view === 'board' ? (
           <IdeaBoard ideas={ideas.data} />
+        ) : view === 'matrix' ? (
+          <IdeaMatrix ideas={ideas.data} />
         ) : (
           <IdeaList
             ideas={ideas.data}
@@ -236,7 +241,7 @@ function IdeaList({ ideas, filtered, archived, onAdd, onClearFilters }: IdeaList
       )}
       <ul className="idea-list">
         {ideas.map((idea) => (
-          <li key={idea.id}>
+          <li key={idea.id} className="idea-item">
             <Link to={`/ideas/${idea.id}`} className={idea.isOverdue ? 'card idea-card is-overdue' : 'card idea-card'}>
               <div className="row spread">
                 <h2 className="idea-title">{idea.title}</h2>
@@ -255,6 +260,10 @@ function IdeaList({ ideas, filtered, archived, onAdd, onClearFilters }: IdeaList
                 <Tags tags={idea.tags} />
               </div>
             </Link>
+            {/* Outside the link, which can't hold a button; placed over the card's corner. */}
+            <div className="idea-item-vote">
+              <VoteButton idea={idea} />
+            </div>
           </li>
         ))}
       </ul>

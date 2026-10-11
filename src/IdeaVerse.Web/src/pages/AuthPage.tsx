@@ -53,9 +53,10 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const [registered, setRegistered] = useState(false);
   const [pending, setPending] = useState(false);
   const text = copy[mode];
-  const from = (location.state as { from?: string } | null)?.from ?? '/';
+  const state = location.state as { from?: string; signedOut?: boolean } | null;
+  const from = state?.from ?? '/';
 
-  if (account) {
+  if (account && !state?.signedOut) {
     return <Navigate to={from} replace />;
   }
 

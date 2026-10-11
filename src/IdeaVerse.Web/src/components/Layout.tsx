@@ -104,7 +104,8 @@ function AppBar() {
 
   const signOut = async () => {
     await logout();
-    await navigate('/login');
+    // Tells the sign-in page not to send the user back in while it still sees the account it just dropped.
+    await navigate('/login', { state: { signedOut: true } });
   };
 
   return (

@@ -12,6 +12,7 @@ using Pouspourika.IdeaVerse.Api.Ideas;
 using Pouspourika.IdeaVerse.Api.Invitations;
 using Pouspourika.IdeaVerse.Api.Members;
 using Pouspourika.IdeaVerse.Api.Notifications;
+using Pouspourika.IdeaVerse.Api.Votes;
 using Pouspourika.IdeaVerse.Api.Workspaces;
 
 /// <summary>
@@ -74,6 +75,11 @@ public sealed class IdeaVerseDbContext(DbContextOptions<IdeaVerseDbContext> opti
   /// Gets the reminders raised for all users.
   /// </summary>
   public DbSet<Notification> Notifications => Set<Notification>();
+
+  /// <summary>
+  /// Gets the votes cast for ideas.
+  /// </summary>
+  public DbSet<IdeaVote> IdeaVotes => Set<IdeaVote>();
 
   /// <inheritdoc/>
   /// <remarks>

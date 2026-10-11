@@ -27,6 +27,10 @@ using Pouspourika.IdeaVerse.Api.Data;
 /// <param name="UpdatedAt">When the idea was last changed.</param>
 /// <param name="Tags">The idea's tags.</param>
 /// <param name="ArchivedAt">When the idea was archived, or <see langword="null"/> while it is active.</param>
+/// <param name="VoteCount">How many people in the workspace voted for the idea.</param>
+/// <param name="HasVoted">Whether the signed-in user voted for it.</param>
+/// <param name="Impact">How much the idea would help, 1 to 5, if scored.</param>
+/// <param name="Effort">How much work it would take, 1 to 5, if scored.</param>
 public sealed record IdeaResponse(
   Guid Id,
   Guid WorkspaceId,
@@ -47,7 +51,11 @@ public sealed record IdeaResponse(
   DateTimeOffset CreatedAt,
   DateTimeOffset UpdatedAt,
   IReadOnlyList<string> Tags,
-  DateTimeOffset? ArchivedAt)
+  DateTimeOffset? ArchivedAt,
+  int VoteCount,
+  bool HasVoted,
+  int? Impact,
+  int? Effort)
 {
   /// <summary>
   /// Builds a query projection from <see cref="Idea"/> to its response, counting components and checking access in the database.
@@ -77,5 +85,9 @@ public sealed record IdeaResponse(
       i.CreatedAt,
       i.UpdatedAt,
       i.Tags,
-      i.ArchivedAt);
+      i.ArchivedAt,
+      i.Votes.Count,
+      i.Votes.Any(v => v.UserId == userId),
+      i.Impact,
+      i.Effort);
 }
