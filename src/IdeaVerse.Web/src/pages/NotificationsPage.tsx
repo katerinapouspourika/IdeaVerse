@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from '../api/queries';
 import type { Notification, ReminderKind } from '../api/types';
-import { ErrorMessage } from '../components/ErrorMessage';
+import { ErrorMessage, LoadError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
 import { usePageMeta } from '../seo/usePageMeta';
 
@@ -37,7 +37,8 @@ export function NotificationsPage() {
         Reminders arrive a week before, the day before, and on the day an idea or task is due, and once if it becomes overdue. You also hear when you’re added to a team, given a task, or someone comments. Change what you get in Settings.
       </p>
       {notifications.isLoading && <Skeleton variant="cards" />}
-      <ErrorMessage error={notifications.error ?? markAll.error} />
+      <LoadError queries={notifications} />
+      <ErrorMessage error={markAll.error} />
       {notifications.data?.items.length === 0 && (
         <div className="card empty">
           <p>Nothing yet. Reminders and updates about your ideas appear here.</p>

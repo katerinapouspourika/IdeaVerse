@@ -14,7 +14,7 @@ import {
 import { personLabel, type Component } from '../api/types';
 import { useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
-import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
 
 const componentDragType = 'application/x-ideaverse-component';
@@ -141,7 +141,8 @@ export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: st
       <p className="visually-hidden" aria-live="polite">
         {announcement}
       </p>
-      <ErrorMessage error={components.error ?? update.error ?? remove.error} />
+      <LoadError queries={components} />
+      <ErrorMessage error={update.error ?? remove.error} />
       {canEdit && <AddComponentForm ideaId={ideaId} />}
       {canEdit && <SuggestComponents ideaId={ideaId} workspaceId={workspaceId} />}
     </section>
@@ -388,7 +389,8 @@ function AssignForm({ ideaId, workspaceId, component, onDone }: { ideaId: string
       <button type="button" className="button ghost small" onClick={onDone}>
         Cancel
       </button>
-      <ErrorMessage error={update.error ?? people.error} />
+      <ErrorMessage error={update.error} />
+      <LoadError queries={people} />
     </form>
   );
 }

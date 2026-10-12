@@ -281,6 +281,13 @@ a {
   margin: 0;
 }
 
+.load-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
 .overdue-text {
   color: var(--danger);
   font-weight: 600;
