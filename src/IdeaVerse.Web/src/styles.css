@@ -232,6 +232,7 @@ a {
 
 .grow {
   flex: 1 1 200px;
+  min-width: 0;
 }
 
 .card {
@@ -259,6 +260,8 @@ a {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  /* An email in a message, such as "We sent a link to …", wraps rather than pushing the card wider. */
+  overflow-wrap: anywhere;
 }
 
 .muted {
@@ -300,6 +303,7 @@ a {
 .field {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 4px;
   font-size: 0.9rem;
   font-weight: 600;
@@ -312,6 +316,8 @@ a {
 input,
 select,
 textarea {
+  /* Never wider than the space it is given: a select otherwise grows to its longest option. */
+  max-width: 100%;
   font: inherit;
   font-weight: 400;
   color: var(--text);
@@ -521,6 +527,12 @@ textarea:focus-visible,
   gap: 8px;
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
+}
+
+/* A long name or email wraps rather than being cut off beside the role badge. */
+.team li > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .checklist li:last-child,
@@ -1728,7 +1740,8 @@ h3 {
 /* Sign in and sign up */
 .auth-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* Two equal halves that hold their width: a long email scrolls inside its box instead of widening the card. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   max-width: 920px;
   margin: 8px auto;
   border-radius: 28px;
@@ -3137,6 +3150,15 @@ a:focus-visible {
   .comparison td:last-child {
     margin: 4px 0 12px;
   }
+}
+
+/* A short note about what happens next, such as the template waiting for someone signing up. */
+.note {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-small);
+  background: var(--accent-soft);
+  color: var(--text);
 }
 
 /* Setting up a workspace: the steps, and a narrower column for the forms. */
