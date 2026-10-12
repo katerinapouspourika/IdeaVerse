@@ -14,7 +14,10 @@ import type {
   ComponentUpdate,
   ContactMessage,
   ContactStatus,
+  DiscoveredWorkspace,
+  DiscoverySettings,
   InviteLink,
+  JoinRequest,
   JoinPreview,
   Idea,
   IdeaImprovement,
@@ -37,6 +40,9 @@ export const keys = {
   workspaceMembers: (workspaceId: string) => ['workspaces', workspaceId, 'members'] as const,
   invitations: (workspaceId: string) => ['workspaces', workspaceId, 'invitations'] as const,
   inviteLink: (workspaceId: string) => ['workspaces', workspaceId, 'invite-link'] as const,
+  discovery: (workspaceId: string) => ['workspaces', workspaceId, 'discovery'] as const,
+  joinRequests: (workspaceId: string) => ['workspaces', workspaceId, 'join-requests'] as const,
+  discover: ['discover'] as const,
   receivedInvitations: ['invitations'] as const,
   ai: (workspaceId: string) => ['workspaces', workspaceId, 'ai'] as const,
   ideas: (workspaceId: string, query: string) => ['ideas', workspaceId, query] as const,
@@ -182,6 +188,60 @@ export function useJoinByLink() {
   return useMutation({
     mutationFn: (token: string) => request<Workspace>('POST', `/api/v1/join/${encodeURIComponent(token)}`),
     onSuccess: () => void client.invalidateQueries({ queryKey: keys.workspaces }),
+  });
+}
+
+export function useDiscoverySettings(workspaceId: string) {
+  return useQuery({
+    queryKey: keys.discovery(workspaceId),
+    queryFn: () => request<DiscoverySettings>('GET', `/api/v1/workspaces/${workspaceId}/discovery`),
+  });
+}
+
+export function useSaveDiscoverySettings(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (settings: { domain: string | null; discoverable: boolean }) =>
+      request<DiscoverySettings>('PUT', `/api/v1/workspaces/${workspaceId}/discovery`, settings),
+    onSuccess: (settings) => client.setQueryData(keys.discovery(workspaceId), settings),
+  });
+}
+
+/** The workspaces at the signed-in user's company they can ask to join. */
+export function useDiscoveredWorkspaces() {
+  return useQuery({ queryKey: keys.discover, queryFn: () => request<DiscoveredWorkspace[]>('GET', '/api/v1/discover') });
+}
+
+/** Asks to join a workspace found by company domain, or withdraws the request. */
+export function useRequestToJoin() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ workspaceId, ask }: { workspaceId: string; ask: boolean }) =>
+      request<void>(ask ? 'POST' : 'DELETE', `/api/v1/discover/${workspaceId}/request`),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.discover }),
+  });
+}
+
+export function useJoinRequests(workspaceId: string) {
+  return useQuery({
+    queryKey: keys.joinRequests(workspaceId),
+    queryFn: () => request<JoinRequest[]>('GET', `/api/v1/workspaces/${workspaceId}/join-requests`),
+  });
+}
+
+/** Approves or declines a request to join. */
+export function useAnswerJoinRequest(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ requestId, approve }: { requestId: string; approve: boolean }) =>
+      approve
+        ? request<void>('POST', `/api/v1/workspaces/${workspaceId}/join-requests/${requestId}/approve`)
+        : request<void>('DELETE', `/api/v1/workspaces/${workspaceId}/join-requests/${requestId}`),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.joinRequests(workspaceId) });
+      void client.invalidateQueries({ queryKey: keys.workspaceMembers(workspaceId) });
+      void client.invalidateQueries({ queryKey: keys.workspaces, exact: true });
+    },
   });
 }
 

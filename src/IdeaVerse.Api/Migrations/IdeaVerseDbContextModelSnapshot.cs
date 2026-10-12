@@ -358,6 +358,32 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("Pouspourika.IdeaVerse.Api.Discovery.JoinRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("WorkspaceId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("JoinRequests");
+                });
+
             modelBuilder.Entity("Pouspourika.IdeaVerse.Api.Ideas.Idea", b =>
                 {
                     b.Property<Guid>("Id")
@@ -564,8 +590,15 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CompanyDomain")
+                        .HasMaxLength(253)
+                        .HasColumnType("character varying(253)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Discoverable")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("InviteToken")
                         .HasMaxLength(22)
@@ -577,6 +610,8 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompanyDomain");
 
                     b.HasIndex("InviteToken")
                         .IsUnique();
@@ -721,6 +756,25 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                     b.Navigation("Assignee");
 
                     b.Navigation("Idea");
+                });
+
+            modelBuilder.Entity("Pouspourika.IdeaVerse.Api.Discovery.JoinRequest", b =>
+                {
+                    b.HasOne("Pouspourika.IdeaVerse.Api.Data.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Pouspourika.IdeaVerse.Api.Workspaces.Workspace", "Workspace")
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+
+                    b.Navigation("Workspace");
                 });
 
             modelBuilder.Entity("Pouspourika.IdeaVerse.Api.Ideas.Idea", b =>

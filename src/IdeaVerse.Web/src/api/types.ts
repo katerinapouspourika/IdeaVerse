@@ -323,3 +323,27 @@ export interface JoinPreview {
   memberCount: number;
   alreadyMember: boolean;
 }
+
+/** Which company's people can find a workspace. */
+export interface DiscoverySettings {
+  domain: string | null;
+  discoverable: boolean;
+  /** The domain of the signed-in user's own email, when it is a company's. */
+  suggestedDomain: string | null;
+}
+
+/** A workspace at the signed-in user's company that they can ask to join. */
+export interface DiscoveredWorkspace {
+  id: string;
+  name: string;
+  memberCount: number;
+  requested: boolean;
+}
+
+/** Someone asking to join a workspace. */
+export interface JoinRequest {
+  id: string;
+  email: string;
+  name: string | null;
+  createdAt: string;
+}

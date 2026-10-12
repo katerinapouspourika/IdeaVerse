@@ -21,7 +21,9 @@ import { useConfirm, useToast } from '../components/Feedback';
 import { Skeleton } from '../components/Skeleton';
 import { usePageMeta } from '../seo/usePageMeta';
 import { canManageWorkspace, useWorkspace } from '../workspaces/WorkspaceContext';
+import { CompanyDomainCard } from '../workspaces/CompanyDomainCard';
 import { InviteLinkCard } from '../workspaces/InviteLinkCard';
+import { JoinRequestsCard } from '../workspaces/JoinRequestsCard';
 
 /** The current workspace's people and invitations; owners and admins manage them here. */
 export function PeoplePage() {
@@ -49,7 +51,9 @@ function People({ workspace }: { workspace: Workspace }) {
       {canManage ? (
         <>
           <InviteForm workspaceId={workspace.id} />
+          <JoinRequestsCard workspaceId={workspace.id} />
           <InviteLinkCard workspaceId={workspace.id} />
+          <CompanyDomainCard workspaceId={workspace.id} />
           <OpenInvitations workspaceId={workspace.id} />
         </>
       ) : (
