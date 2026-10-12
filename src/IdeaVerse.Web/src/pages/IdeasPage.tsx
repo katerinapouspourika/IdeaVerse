@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Archive, Lightbulb, Plus, SearchX } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 
 import { daysUntil, describeDue, formatDate } from '../api/dates';
 import { BrainstormPanel, describeBrainstormed } from '../ai/BrainstormPanel';
@@ -17,6 +17,7 @@ import { useIdeaPanel } from '../panel/useIdeaPanel';
 import { IdeaMatrix } from '../priority/IdeaMatrix';
 import { VoteButton } from '../priority/VoteButton';
 import { usePageMeta } from '../seo/usePageMeta';
+import { forgetPendingTemplate, pendingTemplate } from '../templates/pendingTemplate';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { IdeaBoard } from './IdeaBoard';
 import { IdeaCalendar } from './IdeaCalendar';
@@ -27,6 +28,7 @@ import { WelcomePage } from './WelcomePage';
 export function IdeasPage() {
   usePageMeta('Ideas', { index: false });
   const { current, isLoading, error } = useWorkspace();
+  const location = useLocation();
 
   if (isLoading) {
     return <Skeleton variant="cards" />;
@@ -34,6 +36,12 @@ export function IdeasPage() {
 
   if (!current) {
     return error ? <ErrorMessage error={error} /> : <WelcomePage />;
+  }
+
+  // A template chosen before signing up opens in the New idea form as soon as there is a workspace to add it to.
+  const waiting = pendingTemplate();
+  if (waiting && !location.state) {
+    return <Navigate to="/ideas" replace state={{ adding: true, template: waiting.slug }} />;
   }
 
   return <WorkspaceIdeas key={current.id} workspace={current} />;
@@ -65,6 +73,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   // Opened by "New idea" elsewhere: forget the request, so going back or reloading does not open the form again.
   useEffect(() => {
     if (openForm) {
+      forgetPendingTemplate();
       void navigate('.', { replace: true, state: null });
     }
   }, [openForm, navigate]);
