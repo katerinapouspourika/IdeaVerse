@@ -9,7 +9,7 @@ import { usePageMeta } from '../seo/usePageMeta';
 export function ForgotPasswordPage() {
   usePageMeta('Forgot your password', { index: false });
   const location = useLocation();
-  // Filled in from the sign-in form, where they may have typed it already.
+  // Filled in when they came from "Forgot your password?" after finding their email already has an account.
   const [email, setEmail] = useState((location.state as { email?: string } | null)?.email ?? '');
   const [sent, setSent] = useState(false);
   const [pending, setPending] = useState(false);

@@ -21,7 +21,7 @@ describe('Account settings', () => {
     expect(calls.find((c) => c.path === '/api/v1/account/profile')?.body).toEqual({ displayName: 'Katerina' });
   });
 
-  it('changes the password and shows Identity’s reason when it fails', async () => {
+  it('changes the password, and says when the current one is wrong', async () => {
     let attempts = 0;
     const calls = fakeApi({
       ...signedIn,
@@ -34,7 +34,7 @@ describe('Account settings', () => {
     await userEvent.type(within(form).getByLabelText('Current password'), 'Wrong1!');
     await userEvent.type(within(form).getByLabelText('New password'), 'Newpass1!');
     await userEvent.click(within(form).getByRole('button', { name: 'Change password' }));
-    expect(await within(form).findByRole('alert')).toHaveTextContent('Incorrect password.');
+    await waitFor(() => expect(within(form).getByLabelText('Current password')).toHaveAccessibleDescription('That isn’t your current password.'));
 
     await userEvent.clear(within(form).getByLabelText('Current password'));
     await userEvent.type(within(form).getByLabelText('Current password'), 'Passw0rd!');

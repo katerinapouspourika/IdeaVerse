@@ -36,7 +36,7 @@ function TemplateDetail({ template }: { template: IdeaTemplate }) {
             </button>
           ) : (
             <Link to={`/register?template=${template.slug}`} className="button primary" onClick={() => rememberTemplate(template.slug)}>
-              Sign up free to use it
+              Get started free
             </Link>
           )}
         </div>
