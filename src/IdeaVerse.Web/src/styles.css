@@ -870,7 +870,22 @@ h3 {
   color: var(--ok);
 }
 
+/* On narrow screens the month buttons show only their arrows, so the month's name fits between them. */
+.calendar-nav .button {
+  position: relative;
+  flex: none;
+}
+
 @media (max-width: 600px) {
+  .calendar-nav .calendar-nav-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
   .calendar td {
     height: 56px;
     padding: 2px;
@@ -2289,6 +2304,8 @@ a:focus-visible {
 
 /* Board view: a column per status, scrolling sideways on narrow screens. */
 .board {
+  /* Positioned, so the cards' visually hidden labels scroll with the board instead of widening the page. */
+  position: relative;
   display: grid;
   grid-template-columns: repeat(4, minmax(220px, 1fr));
   gap: 14px;
