@@ -245,7 +245,7 @@ function ComponentItem({ ideaId, workspaceId, component, canEdit, reorder, onTog
         reorder?.onDrop();
       }}
     >
-      <div className="row spread wrap">
+      <div className={reorder ? 'component-row reorderable' : 'component-row'}>
         {reorder && (
           <button
             type="button"
@@ -261,7 +261,7 @@ function ComponentItem({ ideaId, workspaceId, component, canEdit, reorder, onTog
             <GripVertical aria-hidden="true" size={16} />
           </button>
         )}
-        <label className="check grow">
+        <label className="check">
           <input type="checkbox" checked={checked} onChange={toggle} disabled={!canEdit} />
           <span>
             <span className="check-title">{component.title}</span>
@@ -276,7 +276,7 @@ function ComponentItem({ ideaId, workspaceId, component, canEdit, reorder, onTog
           </span>
         </label>
         {canEdit && (
-          <span className="row">
+          <span className="row component-actions">
             <button ref={editButton} type="button" className="button ghost small" aria-label={`Edit ${component.title}`} onClick={() => setEditing(true)}>
               Edit
             </button>
@@ -317,7 +317,7 @@ function EditComponentForm({ ideaId, component, onDone }: { ideaId: string; comp
 
   return (
     <form
-      className="row wrap end grow"
+      className="row wrap end"
       onSubmit={submit}
       aria-label={`Edit ${component.title}`}
       onKeyDown={(event) => {

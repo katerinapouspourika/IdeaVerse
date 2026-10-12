@@ -555,6 +555,7 @@ textarea:focus-visible,
 }
 
 .check input {
+  flex-shrink: 0;
   margin-top: 4px;
   width: 18px;
   height: 18px;
@@ -2649,6 +2650,59 @@ a:focus-visible {
   flex: none;
   cursor: grab;
   color: var(--muted);
+}
+
+/* A component's row: its handle, its checkbox and title, then its actions, which move under the title on narrow screens. */
+.component-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'check actions';
+  align-items: start;
+  gap: 4px 8px;
+}
+
+.component-row.reorderable {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'handle check actions';
+}
+
+/* The handle, the checkbox, and the title's first line share a centre line. */
+.component-row .move-handle {
+  grid-area: handle;
+  margin-top: -6px;
+}
+
+.component-row .check {
+  grid-area: check;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.component-row .check input {
+  margin-top: 1px;
+  /* The label is the touch target, so the box keeps its size beside phone-sized inputs. */
+  min-height: 0;
+}
+
+.component-actions {
+  grid-area: actions;
+  margin-top: -6px;
+}
+
+@media (max-width: 600px) {
+  .component-row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'check' 'actions';
+  }
+
+  .component-row.reorderable {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: 'handle check' '. actions';
+  }
+
+  .component-actions {
+    margin-top: 0;
+  }
 }
 
 .checklist li.dragging {
