@@ -172,6 +172,13 @@ export function AuthPage({ mode }: { mode: Mode }) {
             />
           )}
         </Field>
+        {mode === 'login' && (
+          <p className="field-after">
+            <Link to="/forgot-password" state={{ email }}>
+              Forgot your password?
+            </Link>
+          </p>
+        )}
         {error && (
           <p role="alert" className="error">
             {error}
@@ -185,11 +192,6 @@ export function AuthPage({ mode }: { mode: Mode }) {
       <p className="muted small">
         {text.switchText} <Link to={switchTo}>{text.switchLink}</Link>
       </p>
-      {mode === 'login' && (
-        <p className="muted small">
-          <Link to="/forgot-password">Forgot your password?</Link>
-        </p>
-      )}
       </section>
     </div>
   );

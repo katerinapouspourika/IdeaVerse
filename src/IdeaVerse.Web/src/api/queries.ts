@@ -13,6 +13,7 @@ import type {
   ComponentOrder,
   ComponentUpdate,
   ContactMessage,
+  ContactStatus,
   DiscoveredWorkspace,
   DiscoverySettings,
   InviteLink,
@@ -609,6 +610,14 @@ export function useAssignments(workspaceId: string) {
   return useQuery({
     queryKey: keys.assignments(workspaceId),
     queryFn: () => request<Assignment[]>('GET', `/api/v1/workspaces/${workspaceId}/assignments`),
+  });
+}
+
+export function useContactStatus() {
+  return useQuery({
+    queryKey: ['contact'],
+    queryFn: () => request<ContactStatus>('GET', '/api/v1/contact'),
+    staleTime: Infinity,
   });
 }
 
