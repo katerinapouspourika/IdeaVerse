@@ -621,6 +621,7 @@ textarea:focus-visible,
 
 .notification-message {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .notification.unread .notification-message {
@@ -753,6 +754,8 @@ h3 {
   gap: 6px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
+  /* A long word, such as a pasted link, wraps rather than running out of the card. */
+  overflow-wrap: anywhere;
 }
 
 .comment p {
@@ -1344,6 +1347,8 @@ h3 {
   padding: 0;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .mini-list li {
