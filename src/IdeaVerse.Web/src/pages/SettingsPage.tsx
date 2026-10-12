@@ -5,6 +5,9 @@ import { request } from '../api/client';
 import { browserTimeZone } from '../api/dates';
 import type { Account, ReminderKind } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
+import { readAccountProblems } from '../auth/identityErrors';
+import { meetsPasswordRules } from '../auth/passwordRules';
+import { PasswordRules } from '../auth/PasswordRules';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { useConfirm } from '../components/Feedback';
@@ -268,10 +271,17 @@ function EmailForm({ account }: { account: Account }) {
 function PasswordForm() {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [weak, setWeak] = useState(false);
   const save = useSave();
+  const problems = save.error ? readAccountProblems(save.error) : null;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    // Checked here first, so a weak new password is not reported as a wrong current one.
+    setWeak(!meetsPasswordRules(newPassword));
+    if (!meetsPasswordRules(newPassword)) {
+      return;
+    }
     void save.run(async () => {
       await request('POST', '/api/v1/auth/manage/info', { oldPassword, newPassword });
       setOldPassword('');
@@ -282,17 +292,25 @@ function PasswordForm() {
   return (
     <form className="card stack" onSubmit={submit} aria-label="Password">
       <h2>Password</h2>
-      <Field label="Current password">
+      <Field label="Current password" error={problems?.currentPassword}>
         {(props) => (
           <input {...props} type="password" required autoComplete="current-password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} />
         )}
       </Field>
-      <Field label="New password" hint="At least 6 characters, with an uppercase letter, a digit, and a symbol.">
+      <Field
+        label="New password"
+        hint={<PasswordRules password={newPassword} />}
+        error={weak ? 'Your new password doesn’t meet every rule yet.' : problems?.password}
+      >
         {(props) => (
           <input {...props} type="password" required autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
         )}
       </Field>
-      <ErrorMessage error={save.error} includeFieldErrors />
+      {problems?.other && (
+        <p role="alert" className="error">
+          {problems.other}
+        </p>
+      )}
       {save.done && (
         <p role="status" className="success">
           Password changed.

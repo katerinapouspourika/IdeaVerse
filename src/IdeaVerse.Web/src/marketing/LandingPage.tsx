@@ -97,7 +97,7 @@ export function LandingPage() {
             <p className="lead">Free to start. Invite your team whenever you’re ready.</p>
             <div className="row wrap center-row">
               <Link to="/register" className="button light large">
-                Create your account
+                Get started free
               </Link>
               <Link to="/contact" className="button outline-light large">
                 Talk to us
