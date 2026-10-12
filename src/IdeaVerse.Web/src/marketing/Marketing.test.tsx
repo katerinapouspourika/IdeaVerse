@@ -141,3 +141,47 @@ describe('Contact page', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Please try again in an hour.');
   });
 });
+
+describe('Contact page when sending is not possible', () => {
+  const available = { 'GET /api/v1/contact': { status: 200, body: { available: true, email: 'hello@ideaverse.example' } } };
+
+  async function writeAndSend() {
+    const form = await screen.findByRole('form', { name: 'Contact us' });
+    await userEvent.type(within(form).getByLabelText('Your name'), 'Mia');
+    await userEvent.type(within(form).getByLabelText('Email'), 'mia@example.com');
+    await userEvent.type(within(form).getByLabelText('Message'), 'Do you have a team plan?');
+    await userEvent.click(within(form).getByRole('button', { name: 'Send message' }));
+  }
+
+  it('offers the email address beside the form', async () => {
+    fakeApi({ ...signedOut, ...available });
+    renderApp('/contact');
+
+    expect(await screen.findByRole('link', { name: 'hello@ideaverse.example' })).toHaveAttribute('href', 'mailto:hello@ideaverse.example');
+    expect(screen.getByRole('form', { name: 'Contact us' })).toBeInTheDocument();
+  });
+
+  it('says so before anyone writes, and gives the email address instead', async () => {
+    fakeApi({ ...signedOut, 'GET /api/v1/contact': { status: 200, body: { available: false, email: 'hello@ideaverse.example' } } });
+    renderApp('/contact');
+
+    expect(await screen.findByRole('heading', { name: 'Our contact form isn’t available right now' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'hello@ideaverse.example' })).toHaveAttribute('href', 'mailto:hello@ideaverse.example');
+    expect(screen.queryByRole('form', { name: 'Contact us' })).not.toBeInTheDocument();
+  });
+
+  it('keeps a message that failed to send, ready to email or copy', async () => {
+    fakeApi({ ...signedOut, ...available, 'POST /api/v1/contact': { status: 500 } });
+    renderApp('/contact');
+
+    await writeAndSend();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Your message wasn’t sent, but it’s still here.');
+    expect(within(alert).getByRole('link', { name: 'Email it instead' })).toHaveAttribute(
+      'href',
+      'mailto:hello@ideaverse.example?subject=Message%20from%20Mia&body=Do%20you%20have%20a%20team%20plan%3F',
+    );
+    expect(screen.getByLabelText('Message')).toHaveValue('Do you have a team plan?');
+  });
+});

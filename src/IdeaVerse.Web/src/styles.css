@@ -3188,8 +3188,30 @@ a:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 14px;
+}
+
+/* A link just under a field, such as "Forgot your password?" under the password. */
+.field-after {
+  margin: -8px 0 0;
+  text-align: right;
   font-size: 0.85rem;
   font-weight: 700;
+}
+
+/* The contact form's way out when a message could not be sent. */
+.contact-failed {
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  border-radius: var(--radius-small);
+  background: var(--danger-soft);
+}
+
+.contact-failed p {
+  margin: 0;
+}
+
+.contact-direct {
+  margin: 16px 0 0;
 }
 
 .invite-link-row input {

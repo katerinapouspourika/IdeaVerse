@@ -1,11 +1,11 @@
-import { MailCheck } from 'lucide-react';
+import { Copy, Mail, MailCheck, MailX } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { ApiError } from '../api/client';
-import { useSendContactMessage } from '../api/queries';
+import { useContactStatus, useSendContactMessage } from '../api/queries';
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
-import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { fieldError } from '../components/ErrorMessage';
 import { publicPages } from '../seo/pages';
 import { usePageMeta } from '../seo/usePageMeta';
 
@@ -14,6 +14,9 @@ export function ContactPage() {
   usePageMeta(publicPages['/contact'].title, { description: publicPages['/contact'].description });
   const { account } = useAuth();
   const send = useSendContactMessage();
+  const status = useContactStatus();
+  const directEmail = status.data?.email ?? null;
+  const [copied, setCopied] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [prefilled, setPrefilled] = useState(false);
@@ -37,7 +40,22 @@ export function ContactPage() {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    setCopied(false);
     send.mutate({ name, email, message, website: website || undefined });
+  };
+
+  // A message that could not be sent stays in the form, ready to copy or to send by email instead.
+  const failed = send.error && !(send.error instanceof ApiError && (send.error.status === 400 || send.error.status === 429));
+  const mailto = directEmail
+    ? `mailto:${directEmail}?subject=${encodeURIComponent(`Message from ${name || 'the IdeaVerse website'}`)}&body=${encodeURIComponent(message)}`
+    : null;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
   };
 
   return (
@@ -52,7 +70,21 @@ export function ContactPage() {
 
       <section className="landing-section">
         <div className="landing-inner contact-inner">
-          {send.isSuccess ? (
+          {status.data && !status.data.available ? (
+            <div className="card stack center" role="status">
+              <span className="feature-icon big" aria-hidden="true">
+                <Mail size={36} />
+              </span>
+              <h2>Our contact form isn’t available right now</h2>
+              {directEmail ? (
+                <p>
+                  Please email us at <a href={`mailto:${directEmail}`}>{directEmail}</a> instead. We’ll reply as soon as we can.
+                </p>
+              ) : (
+                <p>Please try again a little later.</p>
+              )}
+            </div>
+          ) : send.isSuccess ? (
             <div className="card stack center" role="status">
               <span className="feature-icon big" aria-hidden="true">
                 <MailCheck size={36} />
@@ -86,12 +118,29 @@ export function ContactPage() {
                 <label htmlFor="contact-website">Website</label>
                 <input id="contact-website" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} />
               </div>
-              {send.error instanceof ApiError && send.error.status === 429 ? (
+              {send.error instanceof ApiError && send.error.status === 429 && (
                 <p role="alert" className="error">
                   You’ve sent a few messages already. Please try again in an hour.
                 </p>
-              ) : (
-                <ErrorMessage error={send.error} />
+              )}
+              {failed && (
+                <div role="alert" className="contact-failed stack tight">
+                  <p className="row">
+                    <MailX aria-hidden="true" size={18} />
+                    <strong>Your message wasn’t sent, but it’s still here.</strong>
+                  </p>
+                  <p className="small">Try again in a moment{mailto ? ', or send it to us by email.' : '.'}</p>
+                  <div className="row wrap">
+                    {mailto && (
+                      <a href={mailto} className="button ghost small">
+                        <Mail aria-hidden="true" size={16} /> Email it instead
+                      </a>
+                    )}
+                    <button type="button" className="button ghost small" onClick={() => void copy()}>
+                      <Copy aria-hidden="true" size={16} /> {copied ? 'Copied' : 'Copy message'}
+                    </button>
+                  </div>
+                </div>
               )}
               <div className="row">
                 <button type="submit" className="button primary" disabled={send.isPending}>
@@ -99,6 +148,11 @@ export function ContactPage() {
                 </button>
               </div>
             </form>
+          )}
+          {directEmail && status.data?.available && !send.isSuccess && (
+            <p className="muted center-text contact-direct">
+              Prefer email? Write to <a href={`mailto:${directEmail}`}>{directEmail}</a>.
+            </p>
           )}
         </div>
       </section>
