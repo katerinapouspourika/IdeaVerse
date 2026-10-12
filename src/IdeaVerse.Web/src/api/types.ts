@@ -198,11 +198,14 @@ export interface Account {
   emailReminders: boolean;
   /** The reminder kinds the user gets, in stage order. */
   reminderKinds: ReminderKind[];
+  /** Whether comments on the user's ideas are emailed too (mentions are emailed regardless). */
+  emailComments: boolean;
 }
 
 export interface ReminderSettings {
   emailReminders: boolean;
   reminderKinds: ReminderKind[];
+  emailComments: boolean;
 }
 
 export const statusLabels: Record<IdeaStatus, string> = {

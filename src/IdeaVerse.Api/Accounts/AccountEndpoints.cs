@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 using Pouspourika.IdeaVerse.Api.Auth;
 using Pouspourika.IdeaVerse.Api.Data;
+using Pouspourika.IdeaVerse.Api.Notifications;
 using Pouspourika.IdeaVerse.Api.Validation;
 
 /// <summary>
@@ -83,7 +84,7 @@ internal static class AccountEndpoints
   /// Chooses which reminders the signed-in user gets and whether they are emailed.
   /// </summary>
   /// <remarks>
-  /// Turning emails back on settles the reminders raised while they were off, so only new reminders are emailed.
+  /// Turning emails (or comment emails) back on settles the reminders (or comments) raised while they were off, so only new ones are emailed.
   /// </remarks>
   /// <param name="request">The validated request.</param>
   /// <param name="user">The signed-in user.</param>
@@ -113,8 +114,17 @@ internal static class AccountEndpoints
         .ExecuteUpdateAsync(set => set.SetProperty(n => n.EmailedAt, now), cancellationToken)
         .ConfigureAwait(false);
     }
+    else if (request.EmailComments && !account.EmailComments)
+    {
+      var now = timeProvider.GetUtcNow();
+      await context.Notifications
+        .Where(n => n.UserId == userId && n.EmailedAt == null && n.Kind == ReminderKind.Commented)
+        .ExecuteUpdateAsync(set => set.SetProperty(n => n.EmailedAt, now), cancellationToken)
+        .ConfigureAwait(false);
+    }
 
     account.EmailReminders = request.EmailReminders;
+    account.EmailComments = request.EmailComments;
     account.MutedReminderKinds = User.MuteAllBut(request.ReminderKinds);
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     return TypedResults.Ok(AccountResponse.From(account));

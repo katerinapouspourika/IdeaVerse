@@ -113,6 +113,7 @@ function RemindersForm({ account }: { account: Account }) {
   const { updateReminders } = useAuth();
   const [email, setEmail] = useState(account.emailReminders);
   const [kinds, setKinds] = useState<ReminderKind[]>(account.reminderKinds);
+  const [comments, setComments] = useState(account.emailComments);
   const [error, setError] = useState<unknown>(null);
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
@@ -126,7 +127,7 @@ function RemindersForm({ account }: { account: Account }) {
     setError(null);
     setDone(false);
     try {
-      await updateReminders({ emailReminders: email, reminderKinds: kinds });
+      await updateReminders({ emailReminders: email, reminderKinds: kinds, emailComments: email && comments });
       setDone(true);
     } catch (caught) {
       setError(caught);
@@ -154,6 +155,13 @@ function RemindersForm({ account }: { account: Account }) {
       <label className="check">
         <input type="checkbox" checked={email} onChange={(e) => setEmail(e.target.checked)} />
         <span>Also email me these reminders</span>
+      </label>
+      <label className="check">
+        <input type="checkbox" checked={email && comments} disabled={!email} onChange={(e) => setComments(e.target.checked)} />
+        <span>
+          Email me about new comments too
+          <span className="muted small block">Comments on ideas you own or are on the team of. Mentions are always emailed.</span>
+        </span>
       </label>
       {kinds.length === 0 && (
         <p className="muted small" role="note">
