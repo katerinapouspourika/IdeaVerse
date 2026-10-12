@@ -20,11 +20,16 @@ export function Field({ label, hint, error, className, children }: FieldProps) {
     <div className={className ? `field ${className}` : 'field'}>
       <label htmlFor={id}>{label}</label>
       {children({ id, 'aria-describedby': describedBy, 'aria-invalid': error ? true : undefined })}
-      {hint && (
-        <small id={hintId} className="muted">
-          {hint}
-        </small>
-      )}
+      {hint &&
+        (typeof hint === 'string' ? (
+          <small id={hintId} className="muted">
+            {hint}
+          </small>
+        ) : (
+          <div id={hintId} className="field-hint">
+            {hint}
+          </div>
+        ))}
       {error && (
         <small id={errorId} className="error">
           {error}
