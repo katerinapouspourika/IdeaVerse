@@ -25,7 +25,7 @@ describe('Use case pages', () => {
     }
     const templates = screen.getByRole('region', { name: 'Templates to start with' });
     expect(within(templates).getByRole('link', { name: /Marketing campaign/ })).toHaveAttribute('href', '/templates/marketing-campaign');
-    expect(screen.getByRole('link', { name: 'Get started free' })).toHaveAttribute('href', '/register');
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Get started free' })).toHaveAttribute('href', '/register');
   });
 
   it('offers signed-in people their ideas instead of sign-up', async () => {

@@ -2,23 +2,11 @@ import { useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
 import { resetPassword } from '../api/account';
-import { ApiError } from '../api/client';
+import { readAccountProblems, type AccountProblems } from '../auth/identityErrors';
+import { meetsPasswordRules } from '../auth/passwordRules';
+import { PasswordRules } from '../auth/PasswordRules';
 import { Field } from '../components/Field';
 import { usePageMeta } from '../seo/usePageMeta';
-
-/** Turns a reset failure into one readable message. */
-function describe(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.fieldErrors.InvalidToken) {
-      return 'This reset link has expired or was already used. Ask for a new one.';
-    }
-    const messages = Object.values(error.fieldErrors).flat();
-    if (messages.length > 0) {
-      return messages.join(' ');
-    }
-  }
-  return error instanceof Error ? error.message : 'Something went wrong.';
-}
 
 /** Opened from the password reset email; sets a new password with the link's code. */
 export function ResetPasswordPage() {
@@ -30,7 +18,8 @@ export function ResetPasswordPage() {
   const [confirmation, setConfirmation] = useState('');
   const [done, setDone] = useState(false);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [problems, setProblems] = useState<AccountProblems | null>(null);
+  const [mismatch, setMismatch] = useState(false);
 
   if (!email || !code) {
     return (
@@ -56,17 +45,17 @@ export function ResetPasswordPage() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (password !== confirmation) {
-      setError('The two passwords don’t match.');
+    setProblems(meetsPasswordRules(password) ? null : { duplicateEmail: false, expiredLink: false, password: 'Your password doesn’t meet every rule yet.' });
+    setMismatch(password !== confirmation);
+    if (password !== confirmation || !meetsPasswordRules(password)) {
       return;
     }
     setPending(true);
-    setError(null);
     try {
       await resetPassword(email, code, password);
       setDone(true);
     } catch (caught) {
-      setError(describe(caught));
+      setProblems(readAccountProblems(caught));
     } finally {
       setPending(false);
     }
@@ -79,19 +68,24 @@ export function ResetPasswordPage() {
         For <strong>{email}</strong>
       </p>
       <form onSubmit={(event) => void submit(event)} className="stack">
-        <Field label="New password" hint="At least 6 characters, with an uppercase letter, a digit, and a symbol.">
+        <Field label="New password" hint={<PasswordRules password={password} />} error={problems?.password}>
           {(props) => (
             <input {...props} type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           )}
         </Field>
-        <Field label="Repeat new password">
+        <Field label="Repeat new password" error={mismatch ? 'The two passwords don’t match.' : undefined}>
           {(props) => (
             <input {...props} type="password" autoComplete="new-password" required value={confirmation} onChange={(e) => setConfirmation(e.target.value)} />
           )}
         </Field>
-        {error && (
+        {problems?.expiredLink && (
           <p role="alert" className="error">
-            {error} {error.includes('expired') && <Link to="/forgot-password">Send a new link</Link>}
+            This reset link has expired or was already used. <Link to="/forgot-password" state={{ email }}>Send a new link</Link>
+          </p>
+        )}
+        {problems?.other && (
+          <p role="alert" className="error">
+            {problems.other}
           </p>
         )}
         <button type="submit" className="button primary" disabled={pending}>
