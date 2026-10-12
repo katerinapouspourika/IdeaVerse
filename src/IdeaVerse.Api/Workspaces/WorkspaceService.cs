@@ -36,7 +36,14 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
       .Where(m => m.UserId == userId)
       .OrderBy(m => m.Workspace!.Name)
       .ThenBy(m => m.Workspace!.CreatedAt)
-      .Select(m => new WorkspaceResponse(m.WorkspaceId, m.Workspace!.Name, m.Role, m.Workspace.Members.Count, m.Workspace.CreatedAt))
+      .Select(m => new WorkspaceResponse(
+        m.WorkspaceId,
+        m.Workspace!.Name,
+        m.Role,
+        m.Workspace.Members.Count,
+        m.Workspace.CreatedAt,
+        m.Workspace.Color,
+        m.Workspace.LogoUpdatedAt))
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
 

@@ -3165,3 +3165,73 @@ a:focus-visible {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.85rem;
 }
+
+/* A workspace's logo, or its initial on its colour. */
+.workspace-badge {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-weight: 900;
+  object-fit: cover;
+  background: var(--surface);
+}
+
+.switcher-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.swatch {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.swatch input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.swatch-dot {
+  display: block;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 3px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.swatch input:checked + .swatch-dot {
+  box-shadow: 0 0 0 3px var(--accent);
+}
+
+.swatch input:focus-visible + .swatch-dot {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+legend,
+.label {
+  padding: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}

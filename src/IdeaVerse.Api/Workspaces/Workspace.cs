@@ -33,6 +33,16 @@ public sealed class Workspace
   public required string Name { get; set; }
 
   /// <summary>
+  /// Gets or sets the workspace's colour, one of <see cref="Branding.WorkspaceColors.All"/>, or <see langword="null"/> for the default.
+  /// </summary>
+  public string? Color { get; set; }
+
+  /// <summary>
+  /// Gets or sets when the workspace's logo was last uploaded, or <see langword="null"/> while it has none.
+  /// </summary>
+  public DateTimeOffset? LogoUpdatedAt { get; set; }
+
+  /// <summary>
   /// Gets or sets the company email domain, such as <c>acme.com</c>, whose people may find the workspace and ask to join,
   /// or <see langword="null"/> when it has none.
   /// </summary>

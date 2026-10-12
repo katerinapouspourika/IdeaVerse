@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router';
 
+import { WorkspaceBadge } from './WorkspaceBadge';
 import { useWorkspace } from './WorkspaceContext';
 
 const newWorkspace = 'new';
@@ -27,13 +28,16 @@ export function WorkspaceSwitcher() {
   };
 
   return (
-    <select className="switcher" aria-label="Workspace" value={current.id} onChange={(e) => change(e.target.value)}>
+    <span className="switcher-group">
+      <WorkspaceBadge workspace={current} size={28} />
+      <select className="switcher" aria-label="Workspace" value={current.id} onChange={(e) => change(e.target.value)}>
       {all.map((workspace) => (
         <option key={workspace.id} value={workspace.id}>
           {workspace.name}
         </option>
       ))}
-      <option value={newWorkspace}>+ New workspace…</option>
-    </select>
+        <option value={newWorkspace}>+ New workspace…</option>
+      </select>
+    </span>
   );
 }

@@ -13,6 +13,10 @@ export interface Workspace {
   role: WorkspaceRole;
   memberCount: number;
   createdAt: string;
+  /** One of the preset workspace colours, or null for the default. */
+  color?: string | null;
+  /** When the logo was last uploaded; null while there is none. */
+  logoUpdatedAt?: string | null;
 }
 
 export interface WorkspaceMember {

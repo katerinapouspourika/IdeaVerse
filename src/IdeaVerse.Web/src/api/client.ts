@@ -25,17 +25,23 @@ export class ApiError extends Error {
 
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
+/** The request headers and body: JSON for data, or a file sent as it is, with its own type. */
+function encode(body: unknown): { headers: Record<string, string>; body?: BodyInit } {
+  if (body === undefined) {
+    return { headers: { Accept: 'application/json' } };
+  }
+  if (body instanceof Blob) {
+    return { headers: { Accept: 'application/json', 'Content-Type': body.type || 'application/octet-stream' }, body };
+  }
+  return { headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+}
+
 /**
- * Calls the API on the same origin, sending the login cookie.
- * Resolves with the parsed JSON body, or `undefined` for empty or non-JSON responses.
+ * Calls the API on the same origin, sending the login cookie. A `Blob` body, such as an uploaded file, is sent as it is;
+ * anything else as JSON. Resolves with the parsed JSON body, or `undefined` for empty or non-JSON responses.
  */
 export async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
-  const response = await fetch(path, {
-    method,
-    credentials: 'same-origin',
-    headers: body === undefined ? { Accept: 'application/json' } : { Accept: 'application/json', 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  const response = await fetch(path, { method, credentials: 'same-origin', ...encode(body) });
 
   const text = await response.text();
   const isJson = response.headers.get('Content-Type')?.includes('json') ?? false;
