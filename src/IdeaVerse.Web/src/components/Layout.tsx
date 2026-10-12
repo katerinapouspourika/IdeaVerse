@@ -5,6 +5,7 @@ import { Link, NavLink, Outlet, ScrollRestoration, useLocation, useMatches, useN
 import { useReceivedInvitations } from '../api/queries';
 import { personLabel } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
+import { hadSession } from '../auth/sessionHint';
 import { Commands } from '../commands/Commands';
 import { useWorkspace, WorkspaceProvider } from '../workspaces/WorkspaceContext';
 import { WorkspaceSwitcher } from '../workspaces/WorkspaceSwitcher';
@@ -23,11 +24,14 @@ export interface PageHandle {
 }
 
 export function Layout() {
-  const { account } = useAuth();
+  const { account, isLoading, unreachable } = useAuth();
   const { pathname } = useLocation();
   const matches = useMatches();
+  // Someone signed in last time is probably still signed in, so they don't see the public header while their account loads.
+  const returning = !account && (isLoading || unreachable) && hadSession();
   // The home page is the full-width public landing page for visitors, and the dashboard once signed in.
-  const fullWidth = matches.some((match) => (match.handle as PageHandle | undefined)?.fullWidth) || (pathname === '/' && !account);
+  const fullWidth =
+    matches.some((match) => (match.handle as PageHandle | undefined)?.fullWidth) || (pathname === '/' && !account && !returning);
   const main = useFocusOnNavigation();
 
   return (
@@ -37,8 +41,13 @@ export function Layout() {
           <a href="#main" className="skip-link">
             Skip to content
           </a>
-          {account ? <AppBar /> : <PublicBar />}
-          <main id="main" ref={main} tabIndex={-1} className={fullWidth ? 'content full' : account ? 'content wide' : 'content'}>
+          {account ? <AppBar /> : returning ? <LoadingBar /> : <PublicBar />}
+          <main
+            id="main"
+            ref={main}
+            tabIndex={-1}
+            className={fullWidth ? 'content full' : account || returning ? 'content wide' : 'content'}
+          >
             <Outlet />
           </main>
           <Footer />
@@ -161,6 +170,18 @@ function AppBar() {
           />
         )}
         <MenuButton {...menu} />
+      </div>
+    </header>
+  );
+}
+
+/** A plain header for a returning user while their account loads: neither the public links nor the app's yet. */
+function LoadingBar() {
+  return (
+    <header className="topbar">
+      <Brand />
+      <div className="account">
+        <ThemeToggle />
       </div>
     </header>
   );
