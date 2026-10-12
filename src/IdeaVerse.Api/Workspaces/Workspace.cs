@@ -13,6 +13,11 @@ public sealed class Workspace
   public const int NameMaxLength = 100;
 
   /// <summary>
+  /// Length of <see cref="InviteToken"/>: 128 random bits, Base64Url-encoded.
+  /// </summary>
+  public const int InviteTokenLength = 22;
+
+  /// <summary>
   /// Gets the identifier.
   /// </summary>
   public Guid Id { get; init; } = Guid.CreateVersion7();
@@ -21,6 +26,12 @@ public sealed class Workspace
   /// Gets or sets the name.
   /// </summary>
   public required string Name { get; set; }
+
+  /// <summary>
+  /// Gets or sets the secret in the workspace's invite link, which lets anyone signed in who has it join as a member,
+  /// or <see langword="null"/> while the link is turned off.
+  /// </summary>
+  public string? InviteToken { get; set; }
 
   /// <summary>
   /// Gets the people in the workspace.

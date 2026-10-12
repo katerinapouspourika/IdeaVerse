@@ -3,6 +3,7 @@ import { AlarmClock, Lightbulb, Puzzle, Users } from 'lucide-react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router';
 
 import { ApiError } from '../api/client';
+import { afterSignIn } from '../auth/afterSignIn';
 import { useAuth } from '../auth/AuthContext';
 import { readAccountProblems, type AccountProblems } from '../auth/identityErrors';
 import { meetsPasswordRules } from '../auth/passwordRules';
@@ -10,7 +11,7 @@ import { PasswordRules } from '../auth/PasswordRules';
 import { Field } from '../components/Field';
 import { ResendConfirmation } from '../components/ResendConfirmation';
 import { usePageMeta } from '../seo/usePageMeta';
-import { pendingTemplate, rememberTemplate } from '../templates/pendingTemplate';
+import { rememberTemplate } from '../templates/pendingTemplate';
 import { findTemplate } from '../templates/templates';
 
 type Mode = 'login' | 'register';
@@ -72,7 +73,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const switchTo = chosen ? `${text.switchTo}?template=${chosen.slug}` : text.switchTo;
 
   // Someone who chose a template before signing up goes straight to their ideas, where it opens.
-  const destination = state?.from ?? (pendingTemplate() ? '/ideas' : '/');
+  const destination = state?.from ?? afterSignIn();
 
   if (account && !state?.signedOut) {
     return <Navigate to={destination} replace />;

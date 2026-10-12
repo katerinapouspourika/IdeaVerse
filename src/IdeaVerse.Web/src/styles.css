@@ -3270,3 +3270,8 @@ a:focus-visible {
 .invite-row .icon-button {
   margin-bottom: 4px;
 }
+
+.invite-link-row input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+}

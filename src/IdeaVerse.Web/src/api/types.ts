@@ -310,3 +310,16 @@ export interface ContactMessage {
   /** Left empty by people; filled in only by bots. */
   website?: string;
 }
+
+/** A workspace's invite link; `url` is null while it is turned off. */
+export interface InviteLink {
+  url: string | null;
+}
+
+/** The workspace behind an invite link. */
+export interface JoinPreview {
+  workspaceId: string;
+  name: string;
+  memberCount: number;
+  alreadyMember: boolean;
+}
