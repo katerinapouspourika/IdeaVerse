@@ -34,6 +34,9 @@ internal static class ContactEndpoints
       .Validate(
         o => string.IsNullOrWhiteSpace(o.Recipient) || new EmailAddressAttribute().IsValid(o.Recipient),
         $"{ContactOptions.SectionName}:{nameof(ContactOptions.Recipient)} must be an email address, or empty to turn the form off.")
+      .Validate(
+        o => string.IsNullOrWhiteSpace(o.PublicEmail) || new EmailAddressAttribute().IsValid(o.PublicEmail),
+        $"{ContactOptions.SectionName}:{nameof(ContactOptions.PublicEmail)} must be an email address, or empty to offer none.")
       .ValidateOnStart();
     services.AddRateLimiter(o =>
     {
@@ -50,18 +53,34 @@ internal static class ContactEndpoints
   }
 
   /// <summary>
-  /// Maps the contact endpoint. It is open to everyone and rate limited per address.
+  /// Maps the contact endpoints. Both are open to everyone; sending is rate limited per address.
   /// </summary>
   /// <param name="endpoints">The route builder.</param>
   /// <returns>The same route builder.</returns>
   public static IEndpointRouteBuilder MapContactEndpoints(this IEndpointRouteBuilder endpoints)
   {
+    endpoints.MapGet("/api/v1/contact", GetStatus)
+      .WithTags("Contact")
+      .AllowAnonymous();
     endpoints.MapPost("/api/v1/contact", SendAsync)
       .WithTags("Contact")
       .AllowAnonymous()
       .RequireRateLimiting(RateLimitPolicy)
       .WithValidation<ContactRequest>();
     return endpoints;
+  }
+
+  /// <summary>
+  /// Says whether the form can send messages, and which address visitors may write to instead, so the page can say so
+  /// before anyone types a message.
+  /// </summary>
+  /// <param name="options">The contact settings.</param>
+  /// <returns>The form's status.</returns>
+  private static Ok<ContactStatusResponse> GetStatus(IOptions<ContactOptions> options)
+  {
+    var settings = options.Value;
+    var email = string.IsNullOrWhiteSpace(settings.PublicEmail) ? null : settings.PublicEmail.Trim();
+    return TypedResults.Ok(new ContactStatusResponse(!string.IsNullOrWhiteSpace(settings.Recipient), email));
   }
 
   /// <summary>

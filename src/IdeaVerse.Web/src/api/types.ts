@@ -297,6 +297,12 @@ export interface Assignment {
   ideaTargetDate: string;
 }
 
+/** Whether the contact form can send messages, and the address visitors may write to directly. */
+export interface ContactStatus {
+  available: boolean;
+  email: string | null;
+}
+
 export interface ContactMessage {
   name: string;
   email: string;
