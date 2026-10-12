@@ -69,6 +69,7 @@ It needs an ffmpeg with libx264, libvpx-vp9 and libwebp (set `FFMPEG` when it is
 - `components/Feedback.tsx`: `useConfirm()` opens a styled confirmation dialog (focus trapped, Escape cancels) and resolves to the answer; `useToast()` shows a short message at the bottom, optionally with Undo. Use them instead of `window.confirm` and inline success text; reversible actions (archive, removing a component) offer Undo rather than asking first.
 - `components/Menu.tsx`: a "⋯"-style menu of actions, keyboard friendly; used for the idea's less frequent actions and the account menu.
 - `components/Skeleton.tsx`: loading placeholders in the shape of the content.
+- `components/ErrorMessage.tsx`: `ErrorMessage` shows why a form submission failed; `LoadError` shows that something on the page couldn't load, in plain words, with Try again to load it again (a refusal the API explains, such as a 403, shows its own message instead). Use `LoadError` for query failures.
 - Icons come from `lucide-react`; mark decorative ones `aria-hidden`.
 - The header's theme button cycles between the device's colour scheme, light, and dark (`src/theme.ts`), remembered in the browser and applied by `index.html` before the page paints.
 - The layout has a "Skip to content" link, moves focus to the page after each navigation, and honours "reduce motion".

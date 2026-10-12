@@ -10,7 +10,7 @@ import { personLabel, statuses, statusLabels, type Idea, type IdeaStatus } from 
 import { useConfirm, useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
 import { Menu } from '../components/Menu';
-import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 import { Progress } from '../components/Progress';
 import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
@@ -43,7 +43,7 @@ export function IdeaPage() {
   }
 
   if (!idea.data) {
-    return <ErrorMessage error={idea.error} />;
+    return <LoadError queries={idea} />;
   }
 
   return <IdeaDetail idea={idea.data} />;

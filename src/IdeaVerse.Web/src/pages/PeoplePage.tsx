@@ -16,7 +16,7 @@ import {
 import { personLabel, type Workspace, type WorkspaceMember, type WorkspaceRole } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
-import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 import { useConfirm, useToast } from '../components/Feedback';
 import { Skeleton } from '../components/Skeleton';
 import { usePageMeta } from '../seo/usePageMeta';
@@ -258,7 +258,8 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
           })}
         </ul>
       )}
-      <ErrorMessage error={members.error ?? changeRole.error ?? remove.error} />
+      <LoadError queries={members} />
+      <ErrorMessage error={changeRole.error ?? remove.error} />
     </section>
   );
 }
@@ -320,7 +321,7 @@ function OpenInvitations({ workspaceId }: { workspaceId: string }) {
   const revoke = useRevokeInvitation(workspaceId);
 
   if (!invitations.data?.length) {
-    return <ErrorMessage error={invitations.error} />;
+    return <LoadError queries={invitations} />;
   }
 
   return (

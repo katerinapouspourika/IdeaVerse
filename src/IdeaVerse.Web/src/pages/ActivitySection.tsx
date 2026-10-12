@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { formatDate, formatMoment } from '../api/dates';
 import { useActivity } from '../api/queries';
 import { personLabel, statusLabels, type ActivityEntry, type IdeaStatus } from '../api/types';
-import { ErrorMessage } from '../components/ErrorMessage';
+import { LoadError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
 
 /** Turns a history entry into a sentence, such as "Mia ticked off “Budget”". */
@@ -72,7 +72,7 @@ export function ActivitySection({ ideaId }: { ideaId: string }) {
           ))}
         </ol>
       )}
-      <ErrorMessage error={activity.error} />
+      <LoadError queries={activity} />
     </section>
   );
 }

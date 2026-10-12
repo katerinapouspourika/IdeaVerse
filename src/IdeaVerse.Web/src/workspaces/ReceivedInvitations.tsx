@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { formatDate } from '../api/dates';
 import { useAcceptInvitation, useDeclineInvitation, useReceivedInvitations } from '../api/queries';
 import { personLabel, type ReceivedInvitation } from '../api/types';
-import { ErrorMessage } from '../components/ErrorMessage';
+import { ErrorMessage, LoadError } from '../components/ErrorMessage';
 import { useWorkspace } from './WorkspaceContext';
 
 /** The user's open invitations, each with Join and Decline; joining opens the workspace. */
@@ -30,7 +30,7 @@ export function ReceivedInvitations({ emptyText }: { emptyText?: string }) {
   if (!invitations.data?.length) {
     return (
       <>
-        <ErrorMessage error={invitations.error} />
+        <LoadError queries={invitations} />
         {emptyText && <p className="muted">{emptyText}</p>}
       </>
     );

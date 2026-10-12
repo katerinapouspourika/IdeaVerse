@@ -5,7 +5,7 @@ import { personLabel, type Idea, type Member } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { useConfirm, useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
-import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
 
 export function TeamSection({ idea }: { idea: Idea }) {
@@ -57,7 +57,8 @@ export function TeamSection({ idea }: { idea: Idea }) {
           })}
         </ul>
       )}
-      <ErrorMessage error={members.error ?? remove.error} />
+      <LoadError queries={members} />
+      <ErrorMessage error={remove.error} />
       {idea.canManage ? (
         <AddMemberForm idea={idea} team={members.data ?? []} />
       ) : (
@@ -100,7 +101,8 @@ function AddMemberForm({ idea, team }: { idea: Idea; team: Member[] }) {
       <button type="submit" className="button" disabled={add.isPending || !email}>
         Add
       </button>
-      <ErrorMessage error={add.error ?? people.error} />
+      <ErrorMessage error={add.error} />
+      <LoadError queries={people} />
     </form>
   );
 }

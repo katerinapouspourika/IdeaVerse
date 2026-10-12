@@ -2,7 +2,7 @@ import { Copy, Link2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { useChangeInviteLink, useInviteLink } from '../api/queries';
-import { ErrorMessage } from '../components/ErrorMessage';
+import { ErrorMessage, LoadError } from '../components/ErrorMessage';
 import { useConfirm } from '../components/Feedback';
 
 /**
@@ -83,7 +83,8 @@ export function InviteLinkCard({ workspaceId }: { workspaceId: string }) {
           </div>
         </>
       )}
-      <ErrorMessage error={link.error ?? change.error} />
+      <LoadError queries={link} />
+      <ErrorMessage error={change.error} />
     </section>
   );
 }

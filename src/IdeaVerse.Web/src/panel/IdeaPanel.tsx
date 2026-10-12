@@ -5,7 +5,7 @@ import { Link } from 'react-router';
 import { ApiError } from '../api/client';
 import { describeDue, formatDate } from '../api/dates';
 import { useIdea } from '../api/queries';
-import { ErrorMessage } from '../components/ErrorMessage';
+import { LoadError } from '../components/ErrorMessage';
 import { Progress } from '../components/Progress';
 import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
@@ -76,7 +76,7 @@ export function IdeaPanel({ id, onClose }: { id: string; onClose: () => void }) 
             {idea.error instanceof ApiError && idea.error.status === 404 ? (
               <p className="muted">This idea doesn’t exist or isn’t in one of your workspaces.</p>
             ) : (
-              <ErrorMessage error={idea.error} />
+              <LoadError queries={idea} />
             )}
           </>
         )}
