@@ -59,6 +59,26 @@ describe('IdeasPage', () => {
     expect(calls.some((c) => c.path === '/api/v1/workspaces/ws-1/ideas?status=Done')).toBe(true);
   });
 
+  it('confirms a new idea in a toast naming it, whose Open goes to the idea', async () => {
+    fakeApi({
+      ...signedIn,
+      [ideasRoute]: { status: 200, body: [] },
+      'POST /api/v1/workspaces/ws-1/ideas': { status: 201, body: anIdea({ id: 'idea-9', title: 'Webinar series' }) },
+    });
+    const router = renderApp('/ideas');
+    await userEvent.click(await screen.findByRole('button', { name: 'New idea' }));
+
+    const form = screen.getByRole('form', { name: 'New idea' });
+    await userEvent.type(within(form).getByLabelText('Title'), 'Webinar series');
+    await userEvent.click(within(form).getByRole('button', { name: 'Add idea' }));
+
+    expect(await screen.findByText('Added “Webinar series”')).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'New idea' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Open' }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/ideas/idea-9'));
+  });
+
   it('creates an idea in the current workspace and shows the API validation message for a bad date', async () => {
     const calls = fakeApi({
       ...signedIn,

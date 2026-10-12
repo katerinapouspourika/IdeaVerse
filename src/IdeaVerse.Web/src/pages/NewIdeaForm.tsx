@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router';
 
 import { addDays, todayIso } from '../api/dates';
 import { useAddComponents, useCreateIdea } from '../api/queries';
@@ -19,12 +20,13 @@ interface NewIdeaFormProps {
 
 /**
  * Adds an idea, either blank or from a template. A template fills in the fields, which can still be changed, and its
- * checklist is added to the idea once it is saved.
+ * checklist is added to the idea once it is saved. A toast then names the new idea, with Open to go to its page.
  */
 export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, onDone }: NewIdeaFormProps) {
   const create = useCreateIdea(workspaceId);
   const addComponents = useAddComponents();
   const toast = useToast();
+  const navigate = useNavigate();
   const today = todayIso();
   const starting = findTemplate(initialTemplate);
   const [templateSlug, setTemplateSlug] = useState(starting?.slug ?? '');
@@ -51,11 +53,18 @@ export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, o
     if (!idea) {
       return;
     }
-    if (template) {
-      await addComponents
-        .mutateAsync({ ideaId: idea.id, components: template.components.map((c) => ({ title: c.title, notes: c.notes ?? null })) })
-        .catch(() => toast({ message: `Added “${idea.title}”, but not all of its checklist. Add the rest on its page.`, tone: 'error' }));
-    }
+    const open = { label: 'Open', run: () => void navigate(`/ideas/${idea.id}`) };
+    const checklistAdded = template
+      ? await addComponents
+          .mutateAsync({ ideaId: idea.id, components: template.components.map((c) => ({ title: c.title, notes: c.notes ?? null })) })
+          .then(() => true)
+          .catch(() => false)
+      : true;
+    toast(
+      checklistAdded
+        ? { message: `Added “${idea.title}”`, tone: 'success', action: open }
+        : { message: `Added “${idea.title}”, but not all of its checklist. Add the rest on its page.`, tone: 'error', action: open },
+    );
     onDone();
   };
   const saving = create.isPending || addComponents.isPending;
