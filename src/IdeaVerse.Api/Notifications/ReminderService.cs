@@ -265,7 +265,7 @@ public sealed partial class ReminderService(
         : notification.ComponentId is null
           ? "You get this because you are on this idea's team in IdeaVerse."
           : "You get this because this is assigned to you in IdeaVerse.";
-      var mail = new MailMessage(item.Email!, Subject(content), $"{message}\n\nOpen the idea: {link}\n\n{reason}");
+      var mail = EmailLayout.Compose(item.Email!, Subject(content), new EmailContent(item.IdeaTitle, [message], new EmailAction("Open the idea", new Uri(link)), reason), app.Value);
 
       try
       {

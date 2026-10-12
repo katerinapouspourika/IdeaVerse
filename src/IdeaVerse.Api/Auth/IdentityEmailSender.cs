@@ -12,7 +12,8 @@ using Pouspourika.IdeaVerse.Api.Email;
 /// Sends ASP.NET Core Identity's account emails, with links that open the web app's pages rather than API endpoints.
 /// </summary>
 /// <remarks>
-/// Identity HTML-encodes the links and codes it passes in, so they are decoded before being placed in plain-text email.
+/// Identity HTML-encodes the links and codes it passes in, so they are decoded before being placed in the email, which
+/// <see cref="EmailLayout"/> encodes again for its HTML version.
 /// </remarks>
 /// <param name="mailSender">Sends the email.</param>
 /// <param name="app">Application settings, for the web app's address.</param>
@@ -46,14 +47,24 @@ internal sealed class IdentityEmailSender(IMailSender mailSender, IOptions<AppOp
     var link = app.Value.Link($"/confirm-email{query}");
     var changing = user.EmailConfirmed && !string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase);
     var message = changing
-      ? new MailMessage(
+      ? EmailLayout.Compose(
         email,
         ChangeEmailSubject,
-        $"Someone asked to change the email address of an IdeaVerse account to this one.\n\nConfirm it to make the change:\n{link}\n\nUntil you do, the account keeps its current address. If this wasn't you, ignore this email.")
-      : new MailMessage(
+        new EmailContent(
+          "Confirm your new email address",
+          ["Someone asked to change the email address of an IdeaVerse account to this one. Confirm it to make the change."],
+          new EmailAction("Confirm new email", new Uri(link)),
+          "Until you do, the account keeps its current address. If this wasn't you, ignore this email."),
+        app.Value)
+      : EmailLayout.Compose(
         email,
         ConfirmationSubject,
-        $"Welcome to IdeaVerse!\n\nConfirm your email address to start using your account:\n{link}\n\nIf you didn't sign up, you can ignore this email.");
+        new EmailContent(
+          "Welcome to IdeaVerse!",
+          ["Confirm your email address to start using your account."],
+          new EmailAction("Confirm your email", new Uri(link)),
+          "If you didn't sign up, you can ignore this email."),
+        app.Value);
     return mailSender.SendAsync(message, CancellationToken.None);
   }
 
@@ -77,9 +88,14 @@ internal sealed class IdentityEmailSender(IMailSender mailSender, IOptions<AppOp
   /// <returns>A task that completes when the email is sent.</returns>
   private Task SendResetAsync(string email, string link)
     => mailSender.SendAsync(
-      new MailMessage(
+      EmailLayout.Compose(
         email,
         PasswordResetSubject,
-        $"Someone asked to reset the password for your IdeaVerse account.\n\nChoose a new password here:\n{link}\n\nThe link works for one day. If you didn't ask for this, ignore this email; your password stays the same."),
+        new EmailContent(
+          "Reset your password",
+          ["Someone asked to reset the password for your IdeaVerse account. The link works for one day."],
+          new EmailAction("Choose a new password", new Uri(link)),
+          "If you didn't ask for this, ignore this email; your password stays the same."),
+        app.Value),
       CancellationToken.None);
 }

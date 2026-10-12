@@ -113,6 +113,17 @@ async function type(page, locator, text) {
   await page.waitForTimeout(300);
 }
 
+/** When each page's recording first showed the app, so the blank frames before it can be cut. */
+const shownAt = new WeakMap();
+
+/** Opens a page of the app and waits until it has drawn, marking where the video should start. */
+async function open(page, path) {
+  await page.goto(`${base}${path}`);
+  await page.locator('main h1').first().waitFor();
+  await page.waitForLoadState('networkidle');
+  if (!shownAt.has(page)) shownAt.set(page, Date.now());
+}
+
 /** Captures the poster image, without the pointer. */
 async function poster(page) {
   await page.evaluate(() => document.getElementById('walkthrough-pointer')?.style.setProperty('visibility', 'hidden'));
@@ -151,8 +162,7 @@ async function openIdea(page, title) {
 
 const walkthroughs = {
   async 'capture-an-idea'(page) {
-    await page.goto(`${base}/ideas`);
-    await page.getByRole('heading', { name: 'Ideas' }).waitFor();
+    await open(page, '/ideas');
     await page.waitForTimeout(800);
     await click(page, page.getByRole('button', { name: 'New idea' }));
     const form = page.getByRole('form', { name: 'New idea' });
@@ -168,7 +178,7 @@ const walkthroughs = {
   },
 
   async 'plan-what-it-needs'(page) {
-    await page.goto(`${base}/ideas`);
+    await open(page, '/ideas');
     await openIdea(page, 'Spring product launch');
     const add = page.getByRole('form', { name: 'Add component' });
     for (const component of ['Budget sign-off', 'Teaser video', 'Launch venue']) {
@@ -183,7 +193,7 @@ const walkthroughs = {
   },
 
   async 'work-as-a-team'(page) {
-    await page.goto(`${base}/ideas`);
+    await open(page, '/ideas');
     await openIdea(page, 'Spring product launch');
     const team = page.getByRole('form', { name: 'Add team member' });
     await team.scrollIntoViewIfNeeded();
@@ -217,7 +227,7 @@ const walkthroughs = {
   },
 
   async 'stay-on-track'(page) {
-    await page.goto(`${base}/`);
+    await open(page, '/');
     await page.waitForTimeout(1500);
     const image = await poster(page);
     await click(page, page.getByRole('link', { name: 'Ideas', exact: true }));
@@ -241,13 +251,16 @@ for (const [slug, record] of Object.entries(walkthroughs)) {
   const context = await browser.newContext({ viewport: size, storageState: katState, recordVideo: { dir: videoDir, size } });
   await context.addInitScript(showPointer);
   const page = await context.newPage();
+  const recordingStarted = Date.now();
   const image = await record(page);
+  // Starts the video once the app is on screen, rather than on the blank page the browser opens with.
+  const start = ((shownAt.get(page) - recordingStarted) / 1000).toFixed(2);
   const video = page.video();
   await context.close();
   // Re-encoded, both are several times smaller than the WebM Playwright records.
   const recording = await video.path();
-  convert('-i', recording, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '28', '-preset', 'slow', '-movflags', '+faststart', '-an', join(out, `${slug}.mp4`));
-  convert('-i', recording, '-c:v', 'libvpx-vp9', '-crf', '42', '-b:v', '0', '-row-mt', '1', '-an', join(out, `${slug}.webm`));
+  convert('-ss', start, '-i', recording, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '28', '-preset', 'slow', '-movflags', '+faststart', '-an', join(out, `${slug}.mp4`));
+  convert('-ss', start, '-i', recording, '-c:v', 'libvpx-vp9', '-crf', '42', '-b:v', '0', '-row-mt', '1', '-an', join(out, `${slug}.webm`));
   const png = join(videoDir, 'poster.png');
   await writeFile(png, image);
   convert('-i', png, '-c:v', 'libwebp', '-quality', '80', join(out, `${slug}.webp`));

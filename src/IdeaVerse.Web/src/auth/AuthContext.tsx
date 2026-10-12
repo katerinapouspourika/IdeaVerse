@@ -14,6 +14,8 @@ interface Auth {
   /** Asks the API again who is signed in, as it also does once the connection comes back. */
   retry: () => void;
   login: (email: string, password: string) => Promise<void>;
+  /** Confirms an email from its link's query; a new account comes back signed in. */
+  confirmEmail: (query: string) => Promise<{ signedIn: boolean }>;
   /** Creates an account; the user must confirm their email before signing in. */
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -94,6 +96,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     client.setQueryData(accountKey, await fetchAccount());
   };
 
+  const confirmEmail = async (query: string) => {
+    const params = new URLSearchParams(query);
+    const result = await request<{ signedIn: boolean }>('POST', '/api/v1/auth/confirm', {
+      userId: params.get('userId') ?? '',
+      code: params.get('code') ?? '',
+      changedEmail: params.get('changedEmail'),
+    });
+    if (result.signedIn) {
+      forgetOtherData();
+      client.setQueryData(accountKey, await fetchAccount());
+    }
+    return result;
+  };
+
   const register = async (email: string, password: string) => {
     await request('POST', '/api/v1/auth/register', { email, password });
   };
@@ -118,6 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     unreachable: error !== null && data === undefined,
     retry: () => void refetch(),
     login,
+    confirmEmail,
     register,
     logout,
     updateTimeZone: (timeZone) => saveTimeZone(client, timeZone),

@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 
+import { cardGridClass } from '../components/cardGrid';
 import { publicPages } from '../seo/pages';
 import { usePageMeta } from '../seo/usePageMeta';
 import { templates } from './templates';
@@ -19,7 +20,7 @@ export function TemplatesPage() {
       </section>
 
       <section className="landing-section">
-        <ul className="landing-inner template-grid">
+        <ul className={`landing-inner ${cardGridClass(templates.length)}`}>
           {templates.map((t) => (
             <li key={t.slug}>
               <Link to={`/templates/${t.slug}`} className="card stack template-card">

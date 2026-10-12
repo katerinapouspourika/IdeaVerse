@@ -46,7 +46,7 @@ describe('Notifications', () => {
 
     renderApp('/notifications');
 
-    const items = await screen.findAllByRole('listitem');
+    const items = await within(screen.getByRole('main')).findAllByRole('listitem');
     expect(items[0]).toHaveTextContent('Tomorrow');
     expect(items[0]).toHaveTextContent('is due tomorrow');
     expect(items[1]).toHaveTextContent('Coming up');

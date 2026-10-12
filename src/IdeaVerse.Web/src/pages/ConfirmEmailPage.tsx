@@ -1,28 +1,45 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router';
+import { Link, Navigate, useLocation } from 'react-router';
 
-import { confirmEmail } from '../api/account';
+import { useAuth } from '../auth/AuthContext';
+import { useToast } from '../components/Feedback';
 import { usePageMeta } from '../seo/usePageMeta';
 
-type State = 'confirming' | 'confirmed' | 'failed';
+type State = 'confirming' | 'signedIn' | 'confirmed' | 'failed' | 'incomplete';
 
-/** Opened from the confirmation email; confirms the account with the link's code. */
+/**
+ * Opened from the confirmation email; confirms the account with the link's code. A new account is signed in and taken
+ * to its ideas; a link for an address already confirmed, or a change of address, asks them to sign in as usual.
+ */
 export function ConfirmEmailPage() {
   usePageMeta('Confirm your email', { index: false });
   const { search } = useLocation();
-  const [state, setState] = useState<State>('confirming');
+  const { confirmEmail } = useAuth();
+  const toast = useToast();
+  const params = new URLSearchParams(search);
+  const complete = Boolean(params.get('userId') && params.get('code'));
+  const [state, setState] = useState<State>(complete ? 'confirming' : 'incomplete');
   const started = useRef(false);
 
   useEffect(() => {
-    if (started.current) {
+    if (started.current || !complete) {
       return;
     }
     started.current = true;
     confirmEmail(search).then(
-      () => setState('confirmed'),
+      ({ signedIn }) => {
+        if (signedIn) {
+          toast({ message: 'Email confirmed. Welcome to IdeaVerse!', tone: 'success' });
+        }
+        setState(signedIn ? 'signedIn' : 'confirmed');
+      },
       () => setState('failed'),
     );
-  }, [search]);
+  }, [search, complete, confirmEmail, toast]);
+
+  if (state === 'signedIn') {
+    return <Navigate to="/ideas" replace />;
+  }
 
   return (
     <section className="card auth">
@@ -40,6 +57,15 @@ export function ConfirmEmailPage() {
         <>
           <h1>This link didn’t work</h1>
           <p>It may have expired or already been used. Try signing in; if your email still needs confirming, you can ask for a new link there.</p>
+          <Link to="/login" className="button">
+            Go to sign in
+          </Link>
+        </>
+      )}
+      {state === 'incomplete' && (
+        <>
+          <h1>This link is incomplete</h1>
+          <p>Open the link from your confirmation email again. If it still doesn’t work, sign in to ask for a new one.</p>
           <Link to="/login" className="button">
             Go to sign in
           </Link>

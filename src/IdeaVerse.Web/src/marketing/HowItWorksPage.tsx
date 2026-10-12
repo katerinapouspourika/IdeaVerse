@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { publicPages } from '../seo/pages';
 import { usePageMeta } from '../seo/usePageMeta';
+import { WalkthroughVideo } from './WalkthroughVideo';
 import { walkthroughs } from './walkthroughs';
 
 /** Short recorded walkthroughs of the real app, one per step of working with ideas. */
@@ -24,12 +25,7 @@ export function HowItWorksPage() {
         <ol className="landing-inner walkthroughs">
           {walkthroughs.map((w, i) => (
             <li key={w.slug} className="walkthrough">
-              <div className="walkthrough-video">
-                <video controls muted loop playsInline preload="metadata" width={1024} height={640} poster={`/how-it-works/${w.slug}.webp`} aria-label={`Video: ${w.title}`}>
-                  <source src={`/how-it-works/${w.slug}.mp4`} type="video/mp4" />
-                  <source src={`/how-it-works/${w.slug}.webm`} type="video/webm" />
-                </video>
-              </div>
+              <WalkthroughVideo walkthrough={w} />
               <div className="stack tight">
                 <p className="eyebrow">Step {i + 1}</p>
                 <h2 className="section-title small-title">{w.title}</h2>
