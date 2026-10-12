@@ -8,6 +8,7 @@ using Pouspourika.IdeaVerse.Api.Activity;
 using Pouspourika.IdeaVerse.Api.Ai;
 using Pouspourika.IdeaVerse.Api.Comments;
 using Pouspourika.IdeaVerse.Api.Components;
+using Pouspourika.IdeaVerse.Api.Discovery;
 using Pouspourika.IdeaVerse.Api.Ideas;
 using Pouspourika.IdeaVerse.Api.Invitations;
 using Pouspourika.IdeaVerse.Api.Members;
@@ -80,6 +81,11 @@ public sealed class IdeaVerseDbContext(DbContextOptions<IdeaVerseDbContext> opti
   /// Gets the votes cast for ideas.
   /// </summary>
   public DbSet<IdeaVote> IdeaVotes => Set<IdeaVote>();
+
+  /// <summary>
+  /// Gets the requests to join workspaces from people at their companies.
+  /// </summary>
+  public DbSet<JoinRequest> JoinRequests => Set<JoinRequest>();
 
   /// <inheritdoc/>
   /// <remarks>

@@ -18,6 +18,11 @@ public sealed class Workspace
   public const int InviteTokenLength = 22;
 
   /// <summary>
+  /// Maximum length of <see cref="CompanyDomain"/>, the longest a domain name can be.
+  /// </summary>
+  public const int CompanyDomainMaxLength = 253;
+
+  /// <summary>
   /// Gets the identifier.
   /// </summary>
   public Guid Id { get; init; } = Guid.CreateVersion7();
@@ -26,6 +31,18 @@ public sealed class Workspace
   /// Gets or sets the name.
   /// </summary>
   public required string Name { get; set; }
+
+  /// <summary>
+  /// Gets or sets the company email domain, such as <c>acme.com</c>, whose people may find the workspace and ask to join,
+  /// or <see langword="null"/> when it has none.
+  /// </summary>
+  public string? CompanyDomain { get; set; }
+
+  /// <summary>
+  /// Gets or sets a value indicating whether people with an address at <see cref="CompanyDomain"/> can find the
+  /// workspace. Turning it off hides it from them without forgetting the domain.
+  /// </summary>
+  public bool Discoverable { get; set; }
 
   /// <summary>
   /// Gets or sets the secret in the workspace's invite link, which lets anyone signed in who has it join as a member,
