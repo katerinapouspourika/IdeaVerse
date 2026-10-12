@@ -6,8 +6,8 @@ import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { useWorkspace } from './WorkspaceContext';
 
-/** Creates a workspace owned by the user, then opens it. */
-export function CreateWorkspaceForm({ onCancel }: { onCancel?: () => void }) {
+/** Creates a workspace owned by the user, opens it, and moves on to inviting the team. */
+export function CreateWorkspaceForm({ onCancel, heading = 'Create a workspace' }: { onCancel?: () => void; heading?: string }) {
   const create = useCreateWorkspace();
   const { select } = useWorkspace();
   const navigate = useNavigate();
@@ -18,15 +18,15 @@ export function CreateWorkspaceForm({ onCancel }: { onCancel?: () => void }) {
     create.mutate(name, {
       onSuccess: (workspace) => {
         select(workspace.id);
-        void navigate('/ideas');
+        void navigate(`/workspaces/${workspace.id}/invite`);
       },
     });
   };
 
   return (
     <form className="card stack" onSubmit={submit} aria-label="Create workspace">
-      <h2>Create a workspace</h2>
-      <p className="muted small">A workspace holds your company’s or team’s ideas. You can invite people once it exists.</p>
+      <h2>{heading}</h2>
+      <p className="muted small">A workspace holds your company’s or team’s ideas. Name it after your company or team, and change it any time.</p>
       <Field label="Workspace name" error={fieldError(create.error, 'name')}>
         {(props) => (
           <input {...props} required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Acme Marketing" />
