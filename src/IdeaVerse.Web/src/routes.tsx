@@ -32,6 +32,7 @@ const signedIn: RouteObject[] = [
   { path: '/notifications', lazy: async () => ({ Component: (await import('./pages/NotificationsPage')).NotificationsPage }) },
   { path: '/people', lazy: async () => ({ Component: (await import('./pages/PeoplePage')).PeoplePage }) },
   { path: '/invitations', lazy: async () => ({ Component: (await import('./pages/InvitationsPage')).InvitationsPage }) },
+  { path: '/workspaces/:id/invite', lazy: async () => ({ Component: (await import('./pages/InviteTeamPage')).InviteTeamPage }) },
   { path: '/workspaces/new', lazy: async () => ({ Component: (await import('./pages/NewWorkspacePage')).NewWorkspacePage }) },
   { path: '/settings', lazy: async () => ({ Component: (await import('./pages/SettingsPage')).SettingsPage }) },
 ];
