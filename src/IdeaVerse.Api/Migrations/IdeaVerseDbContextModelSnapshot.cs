@@ -567,12 +567,19 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("InviteToken")
+                        .HasMaxLength(22)
+                        .HasColumnType("character varying(22)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("InviteToken")
+                        .IsUnique();
 
                     b.ToTable("Workspaces");
                 });

@@ -52,6 +52,7 @@ The API also serves the web app (`src/IdeaVerse.Web`) from `wwwroot` when one is
 | `DELETE` | `/api/v1/workspaces/{id}/members/{userId}` | Owner or admin removes someone, or anyone leaves. Takes them off the teams of its ideas; ideas they own stay. The owner cannot leave (409). |
 
 - **Invitations** — owners and admins invite people by email, whether or not they have an account yet. The email links to the web app's `/invitations` page. An invitation belongs to the email address: whoever signs in with that confirmed address sees it, so someone new signs up first and finds it waiting. Invitations last seven days; inviting the same address again renews and resends it. Accepting, declining, or revoking deletes it, and so does removing the admin who sent it or making them a member.
+- **Invite links** — a workspace's owner and admins can also share one link instead of inviting each address. `GET /api/v1/workspaces/{id}/invite-link` returns its `url` (`null` while off); `POST` turns it on with a new address, so any earlier link stops working; `DELETE` turns it off. The link opens the web app's `/join/<token>` page, which shows the workspace with `GET /api/v1/join/{token}` (`name`, `memberCount`, `alreadyMember`) and joins with `POST /api/v1/join/{token}`, always as a `Member`; someone already in keeps their role. Both need a signed-in user; a link that was turned off or replaced returns 404. The token is 128 random bits.
 
 | Method | Route | Purpose |
 | --- | --- | --- |

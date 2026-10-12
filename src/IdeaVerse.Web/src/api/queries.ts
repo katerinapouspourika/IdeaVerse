@@ -13,6 +13,8 @@ import type {
   ComponentOrder,
   ComponentUpdate,
   ContactMessage,
+  InviteLink,
+  JoinPreview,
   Idea,
   IdeaImprovement,
   IdeaFilter,
@@ -33,6 +35,7 @@ export const keys = {
   workspaces: ['workspaces'] as const,
   workspaceMembers: (workspaceId: string) => ['workspaces', workspaceId, 'members'] as const,
   invitations: (workspaceId: string) => ['workspaces', workspaceId, 'invitations'] as const,
+  inviteLink: (workspaceId: string) => ['workspaces', workspaceId, 'invite-link'] as const,
   receivedInvitations: ['invitations'] as const,
   ai: (workspaceId: string) => ['workspaces', workspaceId, 'ai'] as const,
   ideas: (workspaceId: string, query: string) => ['ideas', workspaceId, query] as const,
@@ -143,6 +146,41 @@ export function useAcceptInvitation() {
       void client.invalidateQueries({ queryKey: keys.receivedInvitations });
       void client.invalidateQueries({ queryKey: keys.workspaces });
     },
+  });
+}
+
+export function useInviteLink(workspaceId: string) {
+  return useQuery({
+    queryKey: keys.inviteLink(workspaceId),
+    queryFn: () => request<InviteLink>('GET', `/api/v1/workspaces/${workspaceId}/invite-link`),
+  });
+}
+
+/** Turns the invite link on with a new address (replacing any earlier one), or off. */
+export function useChangeInviteLink(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (on: boolean) =>
+      on
+        ? await request<InviteLink>('POST', `/api/v1/workspaces/${workspaceId}/invite-link`)
+        : (await request<void>('DELETE', `/api/v1/workspaces/${workspaceId}/invite-link`), { url: null }),
+    onSuccess: (link) => client.setQueryData(keys.inviteLink(workspaceId), link),
+  });
+}
+
+export function useJoinPreview(token: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['join', token],
+    queryFn: () => request<JoinPreview>('GET', `/api/v1/join/${encodeURIComponent(token)}`),
+    enabled,
+  });
+}
+
+export function useJoinByLink() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (token: string) => request<Workspace>('POST', `/api/v1/join/${encodeURIComponent(token)}`),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.workspaces }),
   });
 }
 

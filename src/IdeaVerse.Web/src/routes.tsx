@@ -51,6 +51,7 @@ export const routes: RouteObject[] = [
       { path: '/confirm-email', element: <ConfirmEmailPage /> },
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
+      { path: '/join/:token', lazy: async () => ({ Component: (await import('./pages/JoinPage')).JoinPage }) },
       { path: '/', element: <HomePage /> },
       { path: '/how-it-works', handle: fullWidth, element: <HowItWorksPage /> },
       { path: '/contact', handle: fullWidth, element: <ContactPage /> },

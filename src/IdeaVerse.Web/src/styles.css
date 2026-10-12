@@ -3160,3 +3160,8 @@ a:focus-visible {
   background: var(--accent-soft);
   color: var(--text);
 }
+
+.invite-link-row input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+}

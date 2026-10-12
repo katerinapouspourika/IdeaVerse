@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router';
 
+import { afterSignIn } from '../auth/afterSignIn';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../components/Feedback';
 import { usePageMeta } from '../seo/usePageMeta';
@@ -38,7 +39,7 @@ export function ConfirmEmailPage() {
   }, [search, complete, confirmEmail, toast]);
 
   if (state === 'signedIn') {
-    return <Navigate to="/ideas" replace />;
+    return <Navigate to={afterSignIn('/ideas')} replace />;
   }
 
   return (
