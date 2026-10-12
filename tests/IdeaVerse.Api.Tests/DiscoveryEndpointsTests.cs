@@ -84,9 +84,9 @@ public class DiscoveryEndpointsTests
     using var request = await colleague.PostAsync($"/api/v1/discover/{workspace.Id}/request", content: null);
     using var again = await colleague.PostAsync($"/api/v1/discover/{workspace.Id}/request", content: null);
     var found = await DiscoverAsync(colleague);
-    var pending = await owner.GetFromJsonAsync<JoinRequestResponse[]>($"/api/v1/workspaces/{workspace.Id}/join-requests", Json.Options);
+    var pending = (await owner.GetFromJsonAsync<JoinRequestResponse[]>($"/api/v1/workspaces/{workspace.Id}/join-requests", Json.Options))!;
     var notice = factory.Mail.Take("owner@acme.test", DiscoveryService.RequestSubject(workspace.Name));
-    using var approve = await owner.PostAsync($"/api/v1/workspaces/{workspace.Id}/join-requests/{pending!.Single().Id}/approve", content: null);
+    using var approve = await owner.PostAsync($"/api/v1/workspaces/{workspace.Id}/join-requests/{pending.Single().Id}/approve", content: null);
     var welcome = factory.Mail.Take("mia@acme.test", DiscoveryService.ApprovedSubject(workspace.Name));
     var mine = await colleague.GetFromJsonAsync<WorkspaceResponse[]>("/api/v1/workspaces", Json.Options);
     var left = await owner.GetFromJsonAsync<JoinRequestResponse[]>($"/api/v1/workspaces/{workspace.Id}/join-requests", Json.Options);
