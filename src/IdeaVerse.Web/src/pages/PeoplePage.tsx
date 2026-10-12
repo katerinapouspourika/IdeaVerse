@@ -10,10 +10,11 @@ import {
   useInvite,
   useRemoveWorkspaceMember,
   useRenameWorkspace,
+  useResendInvitation,
   useRevokeInvitation,
   useWorkspaceMembers,
 } from '../api/queries';
-import { personLabel, type Workspace, type WorkspaceMember, type WorkspaceRole } from '../api/types';
+import { personLabel, type Invitation, type Workspace, type WorkspaceMember, type WorkspaceRole } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
 import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
@@ -318,7 +319,12 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
 
 function OpenInvitations({ workspaceId }: { workspaceId: string }) {
   const invitations = useInvitations(workspaceId, true);
+  const resend = useResendInvitation(workspaceId);
   const revoke = useRevokeInvitation(workspaceId);
+  const toast = useToast();
+
+  const resendTo = (invitation: Invitation) =>
+    resend.mutate(invitation.id, { onSuccess: () => toast({ message: `Invitation sent again to ${invitation.email}`, tone: 'success' }) });
 
   if (!invitations.data?.length) {
     return <LoadError queries={invitations} />;
@@ -336,19 +342,30 @@ function OpenInvitations({ workspaceId }: { workspaceId: string }) {
                 {invitation.role} · invited by {personLabel(invitation.invitedByName, invitation.invitedByEmail)} · until {formatDate(invitation.expiresAt.slice(0, 10))}
               </span>
             </span>
-            <button
-              type="button"
-              className="button ghost small"
-              aria-label={`Revoke invitation for ${invitation.email}`}
-              disabled={revoke.isPending}
-              onClick={() => revoke.mutate(invitation.id)}
-            >
-              Revoke
-            </button>
+            <span className="row">
+              <button
+                type="button"
+                className="button ghost small"
+                aria-label={`Resend invitation to ${invitation.email}`}
+                disabled={resend.isPending}
+                onClick={() => resendTo(invitation)}
+              >
+                Resend
+              </button>
+              <button
+                type="button"
+                className="button ghost small"
+                aria-label={`Revoke invitation for ${invitation.email}`}
+                disabled={revoke.isPending}
+                onClick={() => revoke.mutate(invitation.id)}
+              >
+                Revoke
+              </button>
+            </span>
           </li>
         ))}
       </ul>
-      <ErrorMessage error={revoke.error} />
+      <ErrorMessage error={resend.error ?? revoke.error} />
     </section>
   );
 }
