@@ -47,6 +47,29 @@ describe('Pricing page', () => {
   });
 });
 
+describe('Footer', () => {
+  it('is a slim line with help and the legal pages on signed-in app pages', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
+    renderApp('/ideas');
+
+    await screen.findByRole('link', { name: 'Help' });
+    const footer = screen.getByRole('navigation', { name: 'Footer' });
+    expect(within(footer).getAllByRole('link').map((link) => link.textContent)).toEqual(['Help', 'Privacy', 'Terms']);
+    expect(within(footer).getByRole('link', { name: 'Help' })).toHaveAttribute('href', '/how-it-works');
+    expect(within(footer).queryByRole('link', { name: 'Pricing' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the full footer on public pages for someone signed in', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
+    renderApp('/pricing');
+
+    await screen.findByRole('link', { name: 'Go to your ideas' });
+    const footer = screen.getByRole('navigation', { name: 'Footer' });
+    expect(within(footer).getByRole('link', { name: 'Pricing' })).toHaveAttribute('href', '/pricing');
+    expect(within(footer).getByRole('link', { name: 'Compare' })).toHaveAttribute('href', '/compare');
+  });
+});
+
 describe('Legal pages', () => {
   it.each([
     ['/privacy', privacyPolicy],

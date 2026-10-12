@@ -19,7 +19,10 @@ import { useInstallPrompt } from './useInstallPrompt';
 
 /** What a route can tell the layout about its page. */
 export interface PageHandle {
-  /** The page lays itself out across the full width, like the public pages, rather than in the content column. */
+  /**
+   * The page lays itself out across the full width, like the public pages, rather than in the content column.
+   * These are the public pages, so they keep the full footer even for a signed-in user.
+   */
   fullWidth?: boolean;
 }
 
@@ -50,7 +53,7 @@ export function Layout() {
           >
             <Outlet />
           </main>
-          <Footer />
+          {account && !fullWidth ? <AppFooter /> : <Footer />}
         </div>
         <ScrollRestoration getKey={scrollKey} />
       </FeedbackProvider>
@@ -268,6 +271,30 @@ function Footer() {
               </ul>
             </div>
           ))}
+        </nav>
+      </div>
+    </footer>
+  );
+}
+
+/** The signed-in app's one-line footer: help and the legal pages, without the marketing links. */
+function AppFooter() {
+  return (
+    <footer className="footer slim">
+      <div className="footer-inner">
+        <p className="muted small">© {new Date().getFullYear()} IdeaVerse</p>
+        <nav aria-label="Footer">
+          <ul className="footer-slim-links">
+            <li>
+              <Link to="/how-it-works">Help</Link>
+            </li>
+            <li>
+              <Link to="/privacy">Privacy</Link>
+            </li>
+            <li>
+              <Link to="/terms">Terms</Link>
+            </li>
+          </ul>
         </nav>
       </div>
     </footer>
