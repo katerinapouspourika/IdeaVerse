@@ -28,6 +28,25 @@ describe('Public pages', () => {
     }
   });
 
+  it('plays a walkthrough from the button in its middle, showing the controls once it has started', async () => {
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(function (this: HTMLMediaElement) {
+      this.dispatchEvent(new Event('play'));
+      return Promise.resolve();
+    });
+    fakeApi(signedOut);
+    renderApp('/how-it-works');
+    const [first] = walkthroughs;
+    const video = await screen.findByLabelText(`Video: ${first!.title}`);
+    expect(video).not.toHaveAttribute('controls');
+
+    await userEvent.click(screen.getByRole('button', { name: `Play video: ${first!.title}` }));
+
+    expect(play).toHaveBeenCalled();
+    expect(video).toHaveAttribute('controls');
+    expect(screen.queryByRole('button', { name: `Play video: ${first!.title}` })).not.toBeInTheDocument();
+    play.mockRestore();
+  });
+
   it('opens the menu on small screens and closes it after navigating', async () => {
     fakeApi(signedOut);
     renderApp('/');
@@ -41,6 +60,48 @@ describe('Public pages', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'We’d love to hear from you' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Menu' })).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('opens Explore in the header, closes it with Escape, and goes to a page from it', async () => {
+    fakeApi(signedOut);
+    const router = renderApp('/');
+    const nav = within(await screen.findByRole('navigation', { name: 'Main' }));
+
+    const explore = nav.getByRole('button', { name: 'Explore' });
+    await userEvent.click(explore);
+    expect(explore).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.keyboard('{Escape}');
+    expect(explore).toHaveAttribute('aria-expanded', 'false');
+    expect(explore).toHaveFocus();
+
+    await userEvent.click(explore);
+    await userEvent.click(nav.getByRole('link', { name: /Use cases/ }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Made for teams with more ideas than time' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/use-cases');
+    expect(nav.getByRole('button', { name: 'Explore' })).toHaveAttribute('aria-expanded', 'false');
+    expect(nav.getByRole('button', { name: 'Explore' })).toHaveClass('active');
+  });
+});
+
+describe('Public page layout', () => {
+  it.each(['/pricing', '/templates', '/templates/product-launch', '/use-cases/marketing-teams', '/compare', '/privacy'])(
+    'runs %s edge to edge, like the home page',
+    async (path) => {
+      fakeApi(signedOut);
+      renderApp(path);
+
+      await screen.findByRole('heading', { level: 1 });
+      expect(screen.getByRole('main')).toHaveClass('full');
+    },
+  );
+
+  it('keeps signed-in pages in the content column', async () => {
+    fakeApi({ ...signedIn, 'GET /api/v1/workspaces/ws-1/members': { status: 200, body: [] } });
+    renderApp('/settings');
+
+    await screen.findByRole('heading', { level: 1, name: 'Settings' });
+    expect(screen.getByRole('main')).not.toHaveClass('full');
   });
 });
 

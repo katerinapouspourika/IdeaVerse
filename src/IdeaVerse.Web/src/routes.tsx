@@ -1,6 +1,6 @@
 import type { RouteObject } from 'react-router';
 
-import { Layout } from './components/Layout';
+import { Layout, type PageHandle } from './components/Layout';
 import { RequireAuth } from './components/RequireAuth';
 import { Skeleton } from './components/Skeleton';
 import { ContactPage } from './marketing/ContactPage';
@@ -18,6 +18,9 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { publicPages } from './seo/pages';
+
+/** Marks a page that lays itself out across the full width, with its hero and bands running edge to edge. */
+const fullWidth: PageHandle = { fullWidth: true };
 
 /**
  * Signed-in pages load on first visit, so the public pages do not download the whole app.
@@ -49,17 +52,17 @@ export const routes: RouteObject[] = [
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
       { path: '/', element: <HomePage /> },
-      { path: '/how-it-works', element: <HowItWorksPage /> },
-      { path: '/contact', element: <ContactPage /> },
-      { path: '/pricing', element: <PricingPage /> },
-      { path: '/privacy', element: <LegalPage document={privacyPolicy} description={publicPages['/privacy'].description} /> },
-      { path: '/terms', element: <LegalPage document={terms} description={publicPages['/terms'].description} /> },
-      { path: '/templates', element: <TemplatesPage /> },
-      { path: '/templates/:slug', element: <TemplatePage /> },
-      { path: '/use-cases', element: <UseCasesPage /> },
-      { path: '/use-cases/:slug', element: <UseCasePage /> },
-      { path: '/compare', element: <ComparisonsPage /> },
-      { path: '/compare/:slug', element: <ComparisonPage /> },
+      { path: '/how-it-works', handle: fullWidth, element: <HowItWorksPage /> },
+      { path: '/contact', handle: fullWidth, element: <ContactPage /> },
+      { path: '/pricing', handle: fullWidth, element: <PricingPage /> },
+      { path: '/privacy', handle: fullWidth, element: <LegalPage document={privacyPolicy} description={publicPages['/privacy'].description} /> },
+      { path: '/terms', handle: fullWidth, element: <LegalPage document={terms} description={publicPages['/terms'].description} /> },
+      { path: '/templates', handle: fullWidth, element: <TemplatesPage /> },
+      { path: '/templates/:slug', handle: fullWidth, element: <TemplatePage /> },
+      { path: '/use-cases', handle: fullWidth, element: <UseCasesPage /> },
+      { path: '/use-cases/:slug', handle: fullWidth, element: <UseCasePage /> },
+      { path: '/compare', handle: fullWidth, element: <ComparisonsPage /> },
+      { path: '/compare/:slug', handle: fullWidth, element: <ComparisonPage /> },
       { element: <RequireAuth />, HydrateFallback: Loading, children: signedIn },
       { path: '*', element: <NotFoundPage /> },
     ],

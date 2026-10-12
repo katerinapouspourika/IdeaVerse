@@ -22,7 +22,7 @@ describe('Template gallery', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/templates/product-launch'));
     expect(await screen.findByRole('heading', { level: 1, name: 'Product launch' })).toBeInTheDocument();
     await waitFor(() => expect(document.title).toBe('Product launch template · IdeaVerse'));
-    const items = within(screen.getByRole('list')).getAllByRole('listitem');
+    const items = within(within(screen.getByRole('main')).getByRole('list')).getAllByRole('listitem');
     expect(items).toHaveLength(launch.components.length);
   });
 
@@ -30,7 +30,7 @@ describe('Template gallery', () => {
     fakeApi(signedOut);
     renderApp('/templates/product-launch');
 
-    expect(await screen.findByRole('link', { name: 'Sign up free to use it' })).toHaveAttribute('href', '/register');
+    expect(await screen.findByRole('link', { name: 'Sign up free to use it' })).toHaveAttribute('href', '/register?template=product-launch');
   });
 
   it('shows the not found page for an unknown template', async () => {
@@ -38,6 +38,42 @@ describe('Template gallery', () => {
     renderApp('/templates/no-such-thing');
 
     expect(await screen.findByRole('heading', { name: /not found|doesn’t exist/i })).toBeInTheDocument();
+  });
+});
+
+describe('Choosing a template before signing up', () => {
+  afterEach(() => localStorage.clear());
+
+  it('says which template is waiting while they sign up, and keeps it when they switch to signing in', async () => {
+    fakeApi(signedOut);
+    const router = renderApp('/templates/product-launch');
+
+    await userEvent.click(await screen.findByRole('link', { name: 'Sign up free to use it' }));
+
+    expect(await screen.findByText(/once you’re in/)).toHaveTextContent('You’ll start with the Product launch template once you’re in.');
+    await userEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Sign in' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
+    expect(router.state.location.search).toBe('?template=product-launch');
+    expect(await screen.findByText(/once you’re in/)).toBeInTheDocument();
+  });
+
+  it('opens the template in the New idea form once they reach their ideas, then forgets it', async () => {
+    localStorage.setItem('ideaverse.pendingTemplate', 'product-launch');
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
+    renderApp('/ideas');
+
+    const form = await screen.findByRole('form', { name: 'New idea' });
+    expect(within(form).getByLabelText('Start from')).toHaveValue('product-launch');
+    await waitFor(() => expect(localStorage.getItem('ideaverse.pendingTemplate')).toBeNull());
+  });
+
+  it('waits while they create their first workspace', async () => {
+    localStorage.setItem('ideaverse.pendingTemplate', 'product-launch');
+    fakeApi({ ...signedIn, 'GET /api/v1/workspaces': { status: 200, body: [] } });
+    renderApp('/ideas');
+
+    expect(await screen.findByRole('form', { name: 'Create workspace' })).toBeInTheDocument();
+    expect(localStorage.getItem('ideaverse.pendingTemplate')).toBe('product-launch');
   });
 });
 
