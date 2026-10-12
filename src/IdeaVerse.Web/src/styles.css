@@ -3191,3 +3191,19 @@ a:focus-visible {
   font-size: 0.85rem;
   font-weight: 700;
 }
+
+/* The contact form's way out when a message could not be sent. */
+.contact-failed {
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  border-radius: var(--radius-small);
+  background: var(--danger-soft);
+}
+
+.contact-failed p {
+  margin: 0;
+}
+
+.contact-direct {
+  margin: 16px 0 0;
+}
