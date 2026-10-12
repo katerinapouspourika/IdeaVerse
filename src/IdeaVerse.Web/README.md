@@ -71,7 +71,7 @@ It needs an ffmpeg with libx264, libvpx-vp9 and libwebp (set `FFMPEG` when it is
 - `components/Skeleton.tsx`: loading placeholders in the shape of the content.
 - Icons come from `lucide-react`; mark decorative ones `aria-hidden`.
 - The header's theme button cycles between the device's colour scheme, light, and dark (`src/theme.ts`), remembered in the browser and applied by `index.html` before the page paints.
-- The layout has a "Skip to content" link, moves focus to the page after each navigation, and honours "reduce motion".
+- The layout has a "Skip to content" link, moves focus to the page after each navigation, and honours "reduce motion". Public pages (those whose route `handle` is `fullWidth`) end with the full footer of Product, Explore, and Company links; signed-in app pages get a slim one-line footer with Help (the How it works page), Privacy, and Terms.
 
 ### Search engines and link previews
 
