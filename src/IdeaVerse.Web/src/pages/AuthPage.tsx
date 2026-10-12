@@ -1,12 +1,14 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { AlarmClock, Lightbulb, Puzzle, Users } from 'lucide-react';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router';
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router';
 
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
 import { ResendConfirmation } from '../components/ResendConfirmation';
 import { usePageMeta } from '../seo/usePageMeta';
+import { pendingTemplate, rememberTemplate } from '../templates/pendingTemplate';
+import { findTemplate } from '../templates/templates';
 
 type Mode = 'login' | 'register';
 
@@ -54,10 +56,21 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const [pending, setPending] = useState(false);
   const text = copy[mode];
   const state = location.state as { from?: string; signedOut?: boolean } | null;
-  const from = state?.from ?? '/';
+  // A template chosen before signing up: kept for when they reach their ideas, and carried between sign-up and sign-in.
+  const [params] = useSearchParams();
+  const chosen = findTemplate(params.get('template') ?? undefined);
+  useEffect(() => {
+    if (chosen) {
+      rememberTemplate(chosen.slug);
+    }
+  }, [chosen]);
+  const switchTo = chosen ? `${text.switchTo}?template=${chosen.slug}` : text.switchTo;
+
+  // Someone who chose a template before signing up goes straight to their ideas, where it opens.
+  const destination = state?.from ?? (pendingTemplate() ? '/ideas' : '/');
 
   if (account && !state?.signedOut) {
-    return <Navigate to={from} replace />;
+    return <Navigate to={destination} replace />;
   }
 
   if (registered) {
@@ -67,10 +80,15 @@ export function AuthPage({ mode }: { mode: Mode }) {
         <p>
           We sent a confirmation link to <strong>{email}</strong>. Open it to activate your account, then sign in.
         </p>
+        {chosen && (
+          <p className="note">
+            Your <strong>{chosen.name}</strong> template will be ready when you sign in.
+          </p>
+        )}
         <p className="muted small">Nothing there? Check your spam folder, or send it again.</p>
         <ResendConfirmation email={email} />
         <p className="muted small">
-          Confirmed already? <Link to="/login">Sign in</Link>
+          Confirmed already? <Link to={switchTo}>Sign in</Link>
         </p>
       </section>
     );
@@ -88,7 +106,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
         return;
       }
       await login(email, password);
-      await navigate(from, { replace: true });
+      await navigate(destination, { replace: true });
     } catch (caught) {
       setError(describe(caught, mode));
       setNeedsConfirmation(caught instanceof ApiError && caught.status === 401 && caught.message === notConfirmed);
@@ -104,6 +122,11 @@ export function AuthPage({ mode }: { mode: Mode }) {
       <img src="/logo.png" alt="" className="logo auth-logo" width="72" height="72" />
       <h1>{text.title}</h1>
       <p className="muted">Plan ideas, line up what they need, and never lose track of a date.</p>
+      {chosen && (
+        <p className="note">
+          You’ll start with the <strong>{chosen.name}</strong> template once you’re in.
+        </p>
+      )}
       <form onSubmit={(event) => void submit(event)} className="stack">
         <Field label="Email">
           {(props) => (
@@ -136,7 +159,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
         </button>
       </form>
       <p className="muted small">
-        {text.switchText} <Link to={text.switchTo}>{text.switchLink}</Link>
+        {text.switchText} <Link to={switchTo}>{text.switchLink}</Link>
       </p>
       {mode === 'login' && (
         <p className="muted small">

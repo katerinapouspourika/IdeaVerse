@@ -29,7 +29,7 @@ internal sealed class SmtpMailSender(IOptions<EmailOptions> options) : IMailSend
     }
 
     mime.Subject = message.Subject;
-    mime.Body = new TextPart("plain") { Text = message.Body };
+    mime.Body = Body(message);
 
     using var client = new SmtpClient();
     var security = settings.RequireTls ? SecureSocketOptions.StartTls : SecureSocketOptions.StartTlsWhenAvailable;
@@ -41,5 +41,16 @@ internal sealed class SmtpMailSender(IOptions<EmailOptions> options) : IMailSend
 
     await client.SendAsync(mime, cancellationToken).ConfigureAwait(false);
     await client.DisconnectAsync(quit: true, cancellationToken).ConfigureAwait(false);
+  }
+
+  /// <summary>
+  /// The message's body: plain text alone, or plain text and HTML as alternatives, so each client shows what it can.
+  /// </summary>
+  /// <param name="message">The message.</param>
+  /// <returns>The MIME body.</returns>
+  private static MimeEntity Body(MailMessage message)
+  {
+    var builder = new BodyBuilder { TextBody = message.Body, HtmlBody = message.Html };
+    return builder.ToMessageBody();
   }
 }

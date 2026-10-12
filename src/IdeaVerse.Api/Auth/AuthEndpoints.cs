@@ -1,7 +1,10 @@
 namespace Pouspourika.IdeaVerse.Api.Auth;
 
+using System.Text;
+
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
 
 using Pouspourika.IdeaVerse.Api.Data;
 
@@ -23,7 +26,86 @@ internal static class AuthEndpoints
     var group = endpoints.MapGroup("/api/v1/auth").WithTags("Auth");
     group.MapIdentityApi<User>();
     group.MapPost("/logout", LogoutAsync).RequireAuthorization();
+    group.MapPost("/confirm", ConfirmAsync).AllowAnonymous();
     return endpoints;
+  }
+
+  /// <summary>
+  /// Confirms an email address from a confirmation link and, for a new account, signs it in.
+  /// </summary>
+  /// <remarks>
+  /// Opening the link proves the person owns the inbox, so a new account starts signed in rather than being sent to the
+  /// sign-in form. Only the first confirmation signs in: Identity's confirmation codes stay valid for their lifetime, so
+  /// opening the link again, or a link for an address already confirmed, confirms nothing and signs no one in. A change
+  /// of address is confirmed without signing in, since the person already has a session where they asked for it.
+  /// </remarks>
+  /// <param name="request">The values from the link.</param>
+  /// <param name="userManager">The user manager.</param>
+  /// <param name="signInManager">The sign-in manager.</param>
+  /// <returns>Whether the user is now signed in, or 401 when the link is not valid.</returns>
+  private static async Task<Results<Ok<ConfirmEmailResponse>, UnauthorizedHttpResult>> ConfirmAsync(
+    ConfirmEmailRequest request,
+    UserManager<User> userManager,
+    SignInManager<User> signInManager)
+  {
+    var user = await userManager.FindByIdAsync(request.UserId).ConfigureAwait(false);
+    var code = Decode(request.Code);
+    if (user is null || code is null)
+    {
+      return TypedResults.Unauthorized();
+    }
+
+    if (request.ChangedEmail is { } changed)
+    {
+      return await ChangeEmailAsync(userManager, user, changed, code).ConfigureAwait(false)
+        ? TypedResults.Ok(new ConfirmEmailResponse(SignedIn: false))
+        : TypedResults.Unauthorized();
+    }
+
+    if (user.EmailConfirmed)
+    {
+      return TypedResults.Ok(new ConfirmEmailResponse(SignedIn: false));
+    }
+
+    var confirmed = await userManager.ConfirmEmailAsync(user, code).ConfigureAwait(false);
+    if (!confirmed.Succeeded)
+    {
+      return TypedResults.Unauthorized();
+    }
+
+    await signInManager.SignInAsync(user, isPersistent: true).ConfigureAwait(false);
+    return TypedResults.Ok(new ConfirmEmailResponse(SignedIn: true));
+  }
+
+  /// <summary>
+  /// Changes the account's email, and with it the sign-in name, as Identity's own confirmation endpoint does.
+  /// </summary>
+  /// <param name="userManager">The user manager.</param>
+  /// <param name="user">The account.</param>
+  /// <param name="email">The new address.</param>
+  /// <param name="code">The decoded change-of-email code.</param>
+  /// <returns>Whether the change was made.</returns>
+  private static async Task<bool> ChangeEmailAsync(UserManager<User> userManager, User user, string email, string code)
+  {
+    var changed = await userManager.ChangeEmailAsync(user, email, code).ConfigureAwait(false);
+    return changed.Succeeded && (await userManager.SetUserNameAsync(user, email).ConfigureAwait(false)).Succeeded;
+  }
+
+  /// <summary>
+  /// Decodes a code from a link, which Identity Base64Url-encodes.
+  /// </summary>
+  /// <param name="code">The code as it appears in the link.</param>
+  /// <returns>The code, or <see langword="null"/> when it is not valid Base64Url.</returns>
+  private static string? Decode(string code)
+  {
+    try
+    {
+      return Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
+    }
+    catch (FormatException)
+    {
+      return null;
+    }
   }
 
   /// <summary>

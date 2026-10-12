@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { usePageMeta } from '../seo/usePageMeta';
+import { rememberTemplate } from './pendingTemplate';
 import { findTemplate, type IdeaTemplate } from './templates';
 
 /** One template: what it includes, and a way to start an idea from it. */
@@ -26,11 +27,15 @@ function TemplateDetail({ template }: { template: IdeaTemplate }) {
           <h1 className="display">{template.name}</h1>
           <p className="lead">{template.summary}</p>
           {account ? (
-            <button type="button" className="button primary" onClick={() => void navigate('/ideas', { state: { adding: true, template: template.slug } })}>
+            <button type="button" className="button primary" onClick={() => {
+                // Also remembered, in case they still need to create a workspace before the form can open.
+                rememberTemplate(template.slug);
+                void navigate('/ideas', { state: { adding: true, template: template.slug } });
+              }}>
               Use this template
             </button>
           ) : (
-            <Link to="/register" className="button primary">
+            <Link to={`/register?template=${template.slug}`} className="button primary" onClick={() => rememberTemplate(template.slug)}>
               Get started free
             </Link>
           )}

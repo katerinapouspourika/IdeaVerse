@@ -284,10 +284,14 @@ public sealed class InvitationService(
   {
     var link = app.Value.Link("/invitations");
     var expires = invitation.ExpiresAt.ToString("dddd d MMMM yyyy", CultureInfo.InvariantCulture);
-    var body = $"{inviter} invited you to join {workspaceName} on IdeaVerse, where the team plans its ideas together.\n\n"
-      + $"Open your invitations to accept:\n{link}\n\n"
-      + $"New to IdeaVerse? Create an account with this email address ({invitation.Email}) and the invitation will be waiting for you.\n\n"
-      + $"The invitation expires on {expires}. If you weren't expecting it, you can ignore this email.";
-    return new MailMessage(invitation.Email, Subject(workspaceName), body);
+    var content = new EmailContent(
+      $"Join {workspaceName} on IdeaVerse",
+      [
+        $"{inviter} invited you to join {workspaceName} on IdeaVerse, where the team plans its ideas together.",
+        $"New to IdeaVerse? Create an account with this email address ({invitation.Email}) and the invitation will be waiting for you.",
+      ],
+      new EmailAction("Open your invitations", new Uri(link)),
+      $"The invitation expires on {expires}. If you weren't expecting it, you can ignore this email.");
+    return EmailLayout.Compose(invitation.Email, Subject(workspaceName), content, app.Value);
   }
 }
