@@ -2441,6 +2441,12 @@ a:focus-visible {
   --quadrant-soft: var(--warn-soft);
 }
 
+.quadrant-tag.Balanced,
+.matrix-cell.Balanced {
+  --quadrant: var(--text);
+  --quadrant-soft: var(--bg-tint);
+}
+
 .quadrant-tag {
   background: var(--quadrant-soft);
   color: var(--quadrant);
@@ -2480,6 +2486,10 @@ a:focus-visible {
 
 .matrix-cell.TimeSink {
   grid-area: sink;
+}
+
+.matrix-cell.Balanced {
+  min-height: 0;
 }
 
 .matrix-axis {
