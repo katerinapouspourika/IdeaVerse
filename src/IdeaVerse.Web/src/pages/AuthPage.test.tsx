@@ -135,7 +135,7 @@ describe('AuthPage', () => {
     await userEvent.type(screen.getByLabelText('Password'), 'nope');
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     await screen.findByRole('alert');
-    await userEvent.click(screen.getByRole('link', { name: 'Create an account' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Create account' }));
 
     expect(await screen.findByRole('heading', { name: 'Create your account' })).toBeInTheDocument();
     expect(screen.getByLabelText('Email')).toHaveValue('');

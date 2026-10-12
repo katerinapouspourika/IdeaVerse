@@ -30,7 +30,7 @@ describe('Template gallery', () => {
     fakeApi(signedOut);
     renderApp('/templates/product-launch');
 
-    expect(await screen.findByRole('link', { name: 'Sign up free to use it' })).toHaveAttribute('href', '/register?template=product-launch');
+    expect(await within(screen.getByRole('main')).findByRole('link', { name: 'Get started free' })).toHaveAttribute('href', '/register?template=product-launch');
   });
 
   it('shows the not found page for an unknown template', async () => {
@@ -48,7 +48,7 @@ describe('Choosing a template before signing up', () => {
     fakeApi(signedOut);
     const router = renderApp('/templates/product-launch');
 
-    await userEvent.click(await screen.findByRole('link', { name: 'Sign up free to use it' }));
+    await userEvent.click(await within(screen.getByRole('main')).findByRole('link', { name: 'Get started free' }));
 
     expect(await screen.findByText(/once you’re in/)).toHaveTextContent('You’ll start with the Product launch template once you’re in.');
     await userEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Sign in' }));

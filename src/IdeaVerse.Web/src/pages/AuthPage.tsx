@@ -16,7 +16,7 @@ import { findTemplate } from '../templates/templates';
 type Mode = 'login' | 'register';
 
 const copy: Record<Mode, { title: string; action: string; switchText: string; switchLink: string; switchTo: string }> = {
-  login: { title: 'Sign in', action: 'Sign in', switchText: 'New to IdeaVerse?', switchLink: 'Create an account', switchTo: '/register' },
+  login: { title: 'Sign in', action: 'Sign in', switchText: 'New to IdeaVerse?', switchLink: 'Create account', switchTo: '/register' },
   register: { title: 'Create your account', action: 'Create account', switchText: 'Already have an account?', switchLink: 'Sign in', switchTo: '/login' },
 };
 

@@ -23,7 +23,7 @@ describe('Pricing page', () => {
     await userEvent.click(within(first).getByText(faq[0]!.question));
     expect(first).toHaveAttribute('open');
 
-    await userEvent.click(screen.getByRole('link', { name: 'Get started free' }));
+    await userEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Get started free' }));
     expect(router.state.location.pathname).toBe('/register');
   });
 
