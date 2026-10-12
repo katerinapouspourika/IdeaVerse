@@ -3161,6 +3161,37 @@ a:focus-visible {
   color: var(--text);
 }
 
+/* The password rules under a new password, ticked off as they are met. */
+.password-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.password-rules li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.password-rules li.met {
+  color: var(--ok);
+}
+
+/* What to do when an email already has an account. */
+.account-exists {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
 .invite-link-row input {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.85rem;
