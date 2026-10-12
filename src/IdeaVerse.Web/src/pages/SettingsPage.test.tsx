@@ -69,7 +69,28 @@ describe('SettingsPage', () => {
     await userEvent.click(within(form).getByRole('button', { name: 'Save' }));
 
     expect(await within(form).findByRole('status')).toHaveTextContent('Saved.');
-    expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ emailReminders: false, reminderKinds: ['Today', 'Overdue'] });
+    expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ emailReminders: false, reminderKinds: ['Today', 'Overdue'], emailComments: false });
+  });
+
+  it('turns comment emails on, only while reminders are emailed', async () => {
+    const calls = fakeApi({
+      ...signedIn,
+      'PUT /api/v1/account/reminders': (body) => ({ status: 200, body: { ...signedInAccount, ...(body as object) } }),
+    });
+    renderApp('/settings');
+
+    const form = await screen.findByRole('form', { name: 'Reminders' });
+    const comments = within(form).getByRole('checkbox', { name: /Email me about new comments too/ });
+    expect(comments).not.toBeChecked();
+    await userEvent.click(comments);
+    await userEvent.click(within(form).getByRole('button', { name: 'Save' }));
+
+    expect(await within(form).findByRole('status')).toHaveTextContent('Saved.');
+    expect(calls.find((c) => c.method === 'PUT')?.body).toMatchObject({ emailReminders: true, emailComments: true });
+
+    await userEvent.click(within(form).getByRole('checkbox', { name: 'Also email me these reminders' }));
+    expect(comments).toBeDisabled();
+    expect(comments).not.toBeChecked();
   });
 
   it('warns before turning every reminder off', async () => {

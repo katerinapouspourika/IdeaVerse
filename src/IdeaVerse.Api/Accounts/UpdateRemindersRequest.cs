@@ -9,7 +9,9 @@ using Pouspourika.IdeaVerse.Api.Notifications;
 /// </summary>
 /// <param name="EmailReminders">Whether reminders are emailed as well as shown in the app.</param>
 /// <param name="ReminderKinds">The reminder kinds to get; an empty list turns reminders off.</param>
-public sealed record UpdateRemindersRequest(bool EmailReminders, [property: Required] IReadOnlyList<ReminderKind> ReminderKinds) : IValidatableObject
+/// <param name="EmailComments">Whether comments on the user's ideas are emailed too; off when left out.</param>
+public sealed record UpdateRemindersRequest(bool EmailReminders, [property: Required] IReadOnlyList<ReminderKind> ReminderKinds, bool EmailComments = false)
+  : IValidatableObject
 {
   /// <inheritdoc/>
   public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
