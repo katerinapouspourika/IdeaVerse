@@ -18,6 +18,12 @@ public sealed class ContactOptions
   public string? Recipient { get; set; }
 
   /// <summary>
+  /// Gets or sets the address visitors are offered for writing to the team directly, beside the form and in its place
+  /// while the form is off. Empty offers none.
+  /// </summary>
+  public string? PublicEmail { get; set; }
+
+  /// <summary>
   /// Gets or sets how many messages one address may send per hour.
   /// </summary>
   [Range(1, 1000)]
