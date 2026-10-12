@@ -16,5 +16,6 @@ internal sealed class WorkspaceConfiguration : IEntityTypeConfiguration<Workspac
     builder.HasIndex(w => w.InviteToken).IsUnique();
     builder.Property(w => w.CompanyDomain).HasMaxLength(Workspace.CompanyDomainMaxLength);
     builder.HasIndex(w => w.CompanyDomain);
+    builder.Property(w => w.Color).HasMaxLength(20);
   }
 }

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 using Pouspourika.IdeaVerse.Api.Activity;
 using Pouspourika.IdeaVerse.Api.Ai;
+using Pouspourika.IdeaVerse.Api.Branding;
 using Pouspourika.IdeaVerse.Api.Comments;
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Discovery;
@@ -86,6 +87,11 @@ public sealed class IdeaVerseDbContext(DbContextOptions<IdeaVerseDbContext> opti
   /// Gets the requests to join workspaces from people at their companies.
   /// </summary>
   public DbSet<JoinRequest> JoinRequests => Set<JoinRequest>();
+
+  /// <summary>
+  /// Gets the workspaces' logos.
+  /// </summary>
+  public DbSet<WorkspaceLogo> WorkspaceLogos => Set<WorkspaceLogo>();
 
   /// <inheritdoc/>
   /// <remarks>

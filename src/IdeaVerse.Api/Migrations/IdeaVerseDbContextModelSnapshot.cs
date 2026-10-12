@@ -203,6 +203,25 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                     b.ToTable("AiUsage");
                 });
 
+            modelBuilder.Entity("Pouspourika.IdeaVerse.Api.Branding.WorkspaceLogo", b =>
+                {
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("WorkspaceId");
+
+                    b.ToTable("WorkspaceLogos");
+                });
+
             modelBuilder.Entity("Pouspourika.IdeaVerse.Api.Comments.Comment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -590,6 +609,10 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Color")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("CompanyDomain")
                         .HasMaxLength(253)
                         .HasColumnType("character varying(253)");
@@ -603,6 +626,9 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                     b.Property<string>("InviteToken")
                         .HasMaxLength(22)
                         .HasColumnType("character varying(22)");
+
+                    b.Property<DateTimeOffset?>("LogoUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -716,6 +742,17 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                     b.HasOne("Pouspourika.IdeaVerse.Api.Workspaces.Workspace", "Workspace")
                         .WithMany()
                         .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Workspace");
+                });
+
+            modelBuilder.Entity("Pouspourika.IdeaVerse.Api.Branding.WorkspaceLogo", b =>
+                {
+                    b.HasOne("Pouspourika.IdeaVerse.Api.Workspaces.Workspace", "Workspace")
+                        .WithOne()
+                        .HasForeignKey("Pouspourika.IdeaVerse.Api.Branding.WorkspaceLogo", "WorkspaceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

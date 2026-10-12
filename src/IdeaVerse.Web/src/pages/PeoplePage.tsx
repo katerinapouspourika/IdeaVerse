@@ -21,6 +21,7 @@ import { useConfirm, useToast } from '../components/Feedback';
 import { Skeleton } from '../components/Skeleton';
 import { usePageMeta } from '../seo/usePageMeta';
 import { canManageWorkspace, useWorkspace } from '../workspaces/WorkspaceContext';
+import { BrandingCard } from '../workspaces/BrandingCard';
 import { CompanyDomainCard } from '../workspaces/CompanyDomainCard';
 import { InviteLinkCard } from '../workspaces/InviteLinkCard';
 import { JoinRequestsCard } from '../workspaces/JoinRequestsCard';
@@ -54,6 +55,7 @@ function People({ workspace }: { workspace: Workspace }) {
           <JoinRequestsCard workspaceId={workspace.id} />
           <InviteLinkCard workspaceId={workspace.id} />
           <CompanyDomainCard workspaceId={workspace.id} />
+          <BrandingCard workspace={workspace} />
           <OpenInvitations workspaceId={workspace.id} />
         </>
       ) : (

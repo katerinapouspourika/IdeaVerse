@@ -245,6 +245,20 @@ export function useAnswerJoinRequest(workspaceId: string) {
   });
 }
 
+/** Sets the workspace's colour, uploads a new logo, or removes the logo. */
+export function useChangeBranding(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (change: { color: string | null } | { logo: File | null }) =>
+      'color' in change
+        ? request<void>('PUT', `/api/v1/workspaces/${workspaceId}/color`, { color: change.color })
+        : change.logo
+          ? request<void>('PUT', `/api/v1/workspaces/${workspaceId}/logo`, change.logo)
+          : request<void>('DELETE', `/api/v1/workspaces/${workspaceId}/logo`),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.workspaces, exact: true }),
+  });
+}
+
 export function useDeclineInvitation() {
   const client = useQueryClient();
   return useMutation({
