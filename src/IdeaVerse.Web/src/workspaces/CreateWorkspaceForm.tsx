@@ -6,8 +6,19 @@ import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { useWorkspace } from './WorkspaceContext';
 
-/** Creates a workspace owned by the user, opens it, and moves on to inviting the team. */
-export function CreateWorkspaceForm({ onCancel, heading = 'Create a workspace' }: { onCancel?: () => void; heading?: string }) {
+/**
+ * Creates a workspace owned by the user, opens it, and moves on to inviting the team. `onCreated` runs first, so
+ * the page holding the form can stand aside while the invite step opens.
+ */
+export function CreateWorkspaceForm({
+  onCancel,
+  onCreated,
+  heading = 'Create a workspace',
+}: {
+  onCancel?: () => void;
+  onCreated?: () => void;
+  heading?: string;
+}) {
   const create = useCreateWorkspace();
   const { select } = useWorkspace();
   const navigate = useNavigate();
@@ -17,6 +28,7 @@ export function CreateWorkspaceForm({ onCancel, heading = 'Create a workspace' }
     event.preventDefault();
     create.mutate(name, {
       onSuccess: (workspace) => {
+        onCreated?.();
         select(workspace.id);
         void navigate(`/workspaces/${workspace.id}/invite`);
       },
