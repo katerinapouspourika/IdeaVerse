@@ -56,11 +56,12 @@ export const publicPages = {
   '/templates': {
     title: 'Templates',
     description:
-      'Free idea templates for product launches, campaigns, events, hiring, website refreshes, and newsletters, each with a checklist of everything it needs.',
+      'Free idea templates for product launches, campaigns, events, hiring, website refreshes, newsletters, trade shows, customer research, and office moves, each with a checklist of everything it needs.',
   },
   '/use-cases': {
     title: 'Use cases',
-    description: 'How marketing teams, product teams, event planners, and small businesses use IdeaVerse to plan ideas and finish them on time.',
+    description:
+      'How marketing teams, product teams, event planners, small businesses, people teams, and nonprofits use IdeaVerse to plan ideas and finish them on time.',
   },
   '/compare': {
     title: 'Compare',

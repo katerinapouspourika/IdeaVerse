@@ -104,6 +104,42 @@ export const useCases: UseCase[] = [
     ],
     templates: ['customer-newsletter', 'marketing-campaign', 'website-refresh'],
   },
+  {
+    slug: 'people-teams',
+    audience: 'People and HR teams',
+    headline: 'Hiring, onboarding, and team events, all on schedule',
+    summary: 'Plan every hire, team event, and office change with the steps it needs, an owner for each, and reminders before dates.',
+    problems: [
+      'Each hire involves many people, and steps get dropped between them.',
+      'Team events and office changes compete with day-to-day work.',
+      'Nobody has one view of everything the people team has planned.',
+    ],
+    helps: [
+      { title: 'A plan for every hire', text: 'Start from the hiring template, from agreeing the role to a planned first week.' },
+      { title: 'Everyone knows their part', text: 'Assign each step to the hiring manager, the panel, or IT, with its own due date and reminders.' },
+      { title: 'Plan ahead', text: 'Set when work on an idea should start, and the team is reminded as that day approaches.' },
+      { title: 'One view of the year', text: 'The calendar and timeline show every hire, event, and move against its date.' },
+    ],
+    templates: ['hiring', 'company-event', 'office-move'],
+  },
+  {
+    slug: 'nonprofits',
+    audience: 'Nonprofits and community groups',
+    headline: 'Keep volunteers and plans moving in the same direction',
+    summary: 'Collect ideas from your members, agree which to do, and give every task an owner and a date, free while in early access.',
+    problems: [
+      'Ideas come from many volunteers, in many places.',
+      'People give their time in bursts, so work stalls between meetings.',
+      'Events, appeals, and newsletters all need doing at once.',
+    ],
+    helps: [
+      { title: 'Everyone’s ideas in one place', text: 'Invite members to a workspace, or let people with your organisation’s email address find it and ask to join.' },
+      { title: 'Decide together', text: 'Vote for ideas and discuss them, @mentioning the people who should weigh in.' },
+      { title: 'Small, clear tasks', text: 'Break each idea into the things it needs, and assign each to a volunteer with a due date.' },
+      { title: 'Reminders that keep things moving', text: 'Everyone on an idea is reminded before its dates, so work carries on between meetings.' },
+    ],
+    templates: ['company-event', 'marketing-campaign', 'customer-newsletter'],
+  },
 ];
 
 export const comparisons: Comparison[] = [
