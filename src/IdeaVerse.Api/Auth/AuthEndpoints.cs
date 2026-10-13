@@ -17,15 +17,16 @@ internal static class AuthEndpoints
   /// Maps the Identity endpoints (register, login, password reset, account info) plus logout.
   /// </summary>
   /// <remarks>
-  /// The web app signs in with <c>POST /api/v1/auth/login?useCookies=true</c>, which issues an HTTP-only cookie.
-  /// Password reset and confirmation emails are limited per address (<see cref="AccountEmailThrottleFilter"/>).
+  /// The web app signs in with <c>POST /api/v1/auth/login?useCookies=true</c>, which issues an HTTP-only cookie. A
+  /// successful password reset also unlocks the account (<see cref="ResetPasswordUnlockFilter"/>). Password reset and
+  /// confirmation emails are limited per address (<see cref="AccountEmailThrottleFilter"/>).
   /// </remarks>
   /// <param name="endpoints">The route builder.</param>
   /// <returns>The same route builder.</returns>
   public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder endpoints)
   {
     var group = endpoints.MapGroup("/api/v1/auth").WithTags("Auth");
-    group.MapIdentityApi<User>();
+    group.MapGroup(string.Empty).AddEndpointFilter<ResetPasswordUnlockFilter>().MapIdentityApi<User>();
     group.MapPost("/logout", LogoutAsync).RequireAuthorization();
     group.MapPost("/confirm", ConfirmAsync).AllowAnonymous();
     group.AddEndpointFilter<AccountEmailThrottleFilter>();

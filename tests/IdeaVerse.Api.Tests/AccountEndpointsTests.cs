@@ -90,6 +90,21 @@ public class AccountEndpointsTests
   }
 
   [Test]
+  [Arguments("utc", "UTC")]
+  [Arguments("europe/athens", "Europe/Athens")]
+  public async Task Update_TimeZoneInOtherCase_SavesItsIanaName(string sent, string saved)
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+
+    using var response = await client.PutAsJsonAsync("/api/v1/account", new UpdateAccountRequest(sent), Json.Options);
+    var account = await client.GetFromJsonAsync<AccountResponse>("/api/v1/account", Json.Options);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+    await Assert.That(account!.TimeZone).IsEqualTo(saved);
+  }
+
+  [Test]
   [Arguments("Mars/Olympus_Mons")]
   [Arguments("GTB Standard Time")]
   [Arguments("")]

@@ -61,6 +61,26 @@ public class ArchivedIdeaTests
   }
 
   [Test]
+  public async Task TeamChange_ArchivedIdeaByTeamMember_IsForbiddenButLeavingIsArchived()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var member = await factory.CreateSignedInClientAsync("member@example.com");
+    await factory.JoinAsync(owner, member, "member@example.com", WorkspaceRole.Member);
+    using var other = await factory.CreateSignedInClientAsync("other@example.com");
+    await factory.JoinAsync(owner, other, "other@example.com", WorkspaceRole.Member);
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    var added = await (await owner.AddMemberAsync(idea.Id, "member@example.com")).ReadMemberAsync();
+    (await owner.PostAsync($"/api/v1/ideas/{idea.Id}/archive", null)).Dispose();
+
+    using var add = await member.AddMemberAsync(idea.Id, "other@example.com");
+    using var leave = await member.DeleteAsync($"/api/v1/ideas/{idea.Id}/members/{added.UserId}");
+
+    await Assert.That(add.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+    await Assert.That(leave.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+  }
+
+  [Test]
   public async Task Comment_OnArchivedIdea_IsStillAllowed()
   {
     await using var factory = new IdeaVerseApiFactory();

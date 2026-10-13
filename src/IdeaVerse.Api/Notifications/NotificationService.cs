@@ -23,7 +23,8 @@ public sealed class NotificationService(IdeaVerseDbContext context, UserCalendar
   public const int PageSize = 50;
 
   /// <summary>
-  /// Lists the user's most recent reminders, newest first and most urgent first within a run, and counts the unread ones.
+  /// Lists the user's most recent reminders, newest first and most urgent first within a run (the soonest start, then the
+  /// soonest target date), and counts the unread ones.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="cancellationToken">Token to cancel the query.</param>
@@ -34,6 +35,8 @@ public sealed class NotificationService(IdeaVerseDbContext context, UserCalendar
     var unread = await visible.CountAsync(n => n.ReadAt == null, cancellationToken).ConfigureAwait(false);
     var rows = await visible
       .OrderByDescending(n => n.CreatedAt)
+      .ThenBy(n => n.StartsAt == null)
+      .ThenBy(n => n.StartsAt)
       .ThenBy(n => n.TargetDate)
       .ThenBy(n => n.Id)
       .Take(PageSize)

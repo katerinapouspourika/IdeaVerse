@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { addDays, todayIso } from '../api/dates';
-import { anIdea, fakeApi, ideasRoute, signedIn, signedOut } from '../test/fakeApi';
+import { aWorkspace, anIdea, fakeApi, ideasRoute, signedIn, signedOut } from '../test/fakeApi';
 import { renderApp } from '../test/render';
 import { findTemplate, templates } from './templates';
 
@@ -74,6 +74,32 @@ describe('Choosing a template before signing up', () => {
 
     expect(await screen.findByRole('form', { name: 'Create workspace' })).toBeInTheDocument();
     expect(localStorage.getItem('ideaverse.pendingTemplate')).toBe('product-launch');
+  });
+
+  it('asks them to invite their team before opening the template', async () => {
+    localStorage.setItem('ideaverse.pendingTemplate', 'product-launch');
+    let workspaces: unknown[] = [];
+    fakeApi({
+      ...signedIn,
+      'GET /api/v1/workspaces': () => ({ status: 200, body: workspaces }),
+      'POST /api/v1/workspaces': () => {
+        workspaces = [aWorkspace({ name: 'Acme Marketing' })];
+        return { status: 201, body: workspaces[0] };
+      },
+      [ideasRoute]: { status: 200, body: [] },
+    });
+    renderApp('/ideas');
+
+    const create = await screen.findByRole('form', { name: 'Create workspace' });
+    await userEvent.type(within(create).getByLabelText('Workspace name'), 'Acme Marketing');
+    await userEvent.click(within(create).getByRole('button', { name: 'Create workspace' }));
+
+    expect(await screen.findByRole('heading', { name: 'Invite your team to Acme Marketing' })).toBeInTheDocument();
+    expect(localStorage.getItem('ideaverse.pendingTemplate')).toBe('product-launch');
+    await userEvent.click(screen.getByRole('button', { name: 'Skip for now' }));
+
+    const form = await screen.findByRole('form', { name: 'New idea' });
+    expect(within(form).getByLabelText('Start from')).toHaveValue('product-launch');
   });
 });
 
