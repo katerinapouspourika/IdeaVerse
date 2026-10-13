@@ -67,7 +67,7 @@ The API also serves the web app (`src/IdeaVerse.Web`) from `wwwroot` when one is
 | `POST` | `/api/v1/invitations/{invitationId}/accept` | Join the workspace with the invited role; returns the workspace. |
 | `DELETE` | `/api/v1/invitations/{invitationId}` | Decline an invitation. |
 
-- **Ideas** — every idea belongs to a workspace, and everyone in it sees the idea; anyone else gets 404. The idea's owner, its team, and the workspace's owner and admins can edit and postpone it; the idea's owner and the workspace's owner and admins can archive, restore, and delete it. Others get 403. An archived idea is read-only: changing it, its priority, components, or team (and asking AI help about it) answers 409 "This idea is archived. Restore it to make changes." to anyone who could otherwise make the change (`ArchivedIdeaFilter`); reading it, discussing it in comments, voting for it, restoring it, and deleting it still work.
+- **Ideas** — every idea belongs to a workspace, and everyone in it sees the idea; anyone else gets 404. The idea's owner, its team, and the workspace's owner and admins can edit and postpone it; the idea's owner and the workspace's owner and admins can archive, restore, and delete it. Others get 403. An archived idea is read-only: changing it, its priority, components, or team, voting on it (and asking AI help about it) answers 409 "This idea is archived. Restore it to make changes." to anyone who could otherwise make the change (`ArchivedIdeaFilter`); reading it, discussing it in comments, voting for it, restoring it, and deleting it still work.
 
 | Method | Route | Purpose |
 | --- | --- | --- |
@@ -79,8 +79,8 @@ The API also serves the web app (`src/IdeaVerse.Web`) from `wwwroot` when one is
 | `POST` | `/api/v1/ideas/{id}/postpone` | Move to a later date, mark `Postponed`, and count the postponement. Completed ideas cannot be postponed. |
 | `PUT` | `/api/v1/ideas/{id}/priority` | Score impact and effort, each 1–5 or `null` to clear; the idea's team and the workspace's owner and admins only. Changes are recorded as `Rescored` activity. |
 | `PUT` | `/api/v1/ideas/{id}/start` | Plan when work starts: `startDate` (on or before the target date, not in the past) and an optional `startTime` (`HH:mm`, in the caller's time zone; one already passed is refused); a `null` date clears it. Without a time the idea starts at 9:00 in the caller's time zone. Ideas return `startDate`, `startTime` and `startsAt` (the moment, in UTC); creating an idea also takes an optional `startDate` and `startTime`. A target date before the start date is refused. Changes are recorded as `StartChanged` activity. The idea's team and the workspace's owner and admins only. |
-| `PUT` | `/api/v1/ideas/{id}/vote` | Vote for an idea; anyone in its workspace may, once. Voting again changes nothing. |
-| `DELETE` | `/api/v1/ideas/{id}/vote` | Withdraw the caller's vote; nothing changes when there was none. |
+| `PUT` | `/api/v1/ideas/{id}/vote` | Vote for an idea; anyone in its workspace may, once. Voting again changes nothing. An archived idea answers 409. |
+| `DELETE` | `/api/v1/ideas/{id}/vote` | Withdraw the caller's vote; nothing changes when there was none. An archived idea answers 409. |
 | `POST` | `/api/v1/ideas/{id}/archive` | Archive an idea: it leaves the list, is no longer overdue, its team and assignees get no reminders, and it is read-only until restored. 409 when already archived. |
 | `POST` | `/api/v1/ideas/{id}/restore` | Bring an archived idea back. 409 when it is not archived. |
 | `DELETE` | `/api/v1/ideas/{id}` | Delete an idea. |
