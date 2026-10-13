@@ -15,6 +15,7 @@ internal static class EmailServiceCollectionExtensions
   public static IServiceCollection AddEmail(this IServiceCollection services)
   {
     services.AddOptions<EmailOptions>().BindConfiguration(EmailOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
+    services.AddSingleton<EmailThrottle>();
     services.AddSingleton<SmtpMailSender>();
     services.AddSingleton<LoggingMailSender>();
     services.AddSingleton<IMailSender>(provider => string.IsNullOrWhiteSpace(provider.GetRequiredService<IOptions<EmailOptions>>().Value.SmtpHost)

@@ -107,6 +107,43 @@ public class AccountEmailTests
   }
 
   [Test]
+  public async Task ForgotPassword_AskedRepeatedly_EmailsAFewTimesAnHourAtMost()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    var client = factory.CreateClient();
+    await factory.RegisterAndConfirmAsync(client, Email);
+
+    for (var attempt = 0; attempt <= AccountEmailThrottleFilter.EmailsPerHour; attempt++)
+    {
+      using var forgot = await client.PostAsJsonAsync("/api/v1/auth/forgotPassword", new { email = Email.ToUpperInvariant() });
+      await Assert.That(forgot.StatusCode).IsEqualTo(HttpStatusCode.OK);
+    }
+
+    var limited = factory.Mail.Sent.Count;
+    factory.Time.Advance(TimeSpan.FromHours(1));
+    (await client.PostAsJsonAsync("/api/v1/auth/forgotPassword", new { email = Email })).Dispose();
+
+    await Assert.That(limited).IsEqualTo(AccountEmailThrottleFilter.EmailsPerHour);
+    await Assert.That(factory.Mail.Sent.Count).IsEqualTo(AccountEmailThrottleFilter.EmailsPerHour + 1);
+  }
+
+  [Test]
+  public async Task ResendConfirmationEmail_AskedRepeatedly_EmailsAFewTimesAnHourAtMost()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    var client = factory.CreateClient();
+    (await client.PostAsJsonAsync("/api/v1/auth/register", Credentials)).Dispose();
+    factory.Mail.Take(Email, IdentityEmailSender.ConfirmationSubject);
+
+    for (var attempt = 0; attempt <= AccountEmailThrottleFilter.EmailsPerHour; attempt++)
+    {
+      (await client.PostAsJsonAsync("/api/v1/auth/resendConfirmationEmail", new { email = Email })).Dispose();
+    }
+
+    await Assert.That(factory.Mail.Sent.Count).IsEqualTo(AccountEmailThrottleFilter.EmailsPerHour);
+  }
+
+  [Test]
   public async Task ResetPassword_WithCodeFromEmail_ReplacesThePassword()
   {
     await using var factory = new IdeaVerseApiFactory();

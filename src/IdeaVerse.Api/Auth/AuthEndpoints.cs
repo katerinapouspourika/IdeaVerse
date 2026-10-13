@@ -18,6 +18,7 @@ internal static class AuthEndpoints
   /// </summary>
   /// <remarks>
   /// The web app signs in with <c>POST /api/v1/auth/login?useCookies=true</c>, which issues an HTTP-only cookie.
+  /// Password reset and confirmation emails are limited per address (<see cref="AccountEmailThrottleFilter"/>).
   /// </remarks>
   /// <param name="endpoints">The route builder.</param>
   /// <returns>The same route builder.</returns>
@@ -27,6 +28,7 @@ internal static class AuthEndpoints
     group.MapIdentityApi<User>();
     group.MapPost("/logout", LogoutAsync).RequireAuthorization();
     group.MapPost("/confirm", ConfirmAsync).AllowAnonymous();
+    group.AddEndpointFilter<AccountEmailThrottleFilter>();
     return endpoints;
   }
 

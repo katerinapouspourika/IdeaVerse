@@ -142,6 +142,28 @@ public class DiscoveryEndpointsTests
   }
 
   [Test]
+  public async Task Request_AskedAgainAfterWithdrawing_EmailsTheOwnerAFewTimesADayAtMost()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync("owner@acme.test");
+    using var colleague = await factory.CreateSignedInClientAsync("mia@acme.test", withWorkspace: false);
+    var workspaceId = await owner.WorkspaceIdAsync();
+    await SetAsync(owner, workspaceId, "acme.test", discoverable: true);
+
+    for (var attempt = 0; attempt <= DiscoveryService.RequestEmailsPerDay; attempt++)
+    {
+      (await colleague.PostAsync($"/api/v1/discover/{workspaceId}/request", content: null)).Dispose();
+      (await colleague.DeleteAsync($"/api/v1/discover/{workspaceId}/request")).Dispose();
+    }
+
+    using var request = await colleague.PostAsync($"/api/v1/discover/{workspaceId}/request", content: null);
+    var pending = await owner.GetFromJsonAsync<JoinRequestResponse[]>($"/api/v1/workspaces/{workspaceId}/join-requests", Json.Options);
+
+    await Assert.That(factory.Mail.Sent.Count(m => m.To == "owner@acme.test")).IsEqualTo(DiscoveryService.RequestEmailsPerDay);
+    await Assert.That(pending!).HasSingleItem();
+  }
+
+  [Test]
   public async Task Discover_PublicEmailProvider_FindsNothing()
   {
     await using var factory = new IdeaVerseApiFactory();
