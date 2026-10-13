@@ -565,6 +565,9 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                     b.Property<DateTimeOffset?>("DueAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("EmailFailedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTimeOffset?>("EmailedAt")
                         .HasColumnType("timestamp with time zone");
 

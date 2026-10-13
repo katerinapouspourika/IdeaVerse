@@ -70,7 +70,7 @@ public sealed partial class ReminderService(
   /// <param name="logger">Target logger.</param>
   /// <param name="exception">The failure.</param>
   /// <param name="notificationId">The notification whose email failed.</param>
-  [LoggerMessage(Level = LogLevel.Warning, Message = "Could not email reminder {NotificationId}; it will be retried on the next run")]
+  [LoggerMessage(Level = LogLevel.Warning, Message = "Could not email reminder {NotificationId}; it will be retried later")]
   private static partial void LogEmailFailed(ILogger logger, Exception exception, Guid notificationId);
 
   /// <summary>
@@ -184,6 +184,7 @@ public sealed partial class ReminderService(
       var team = idea.Members
         .Select(m => (m.UserId, NoticeFrom: m.AddedAt > idea.StartSetAt ? m.AddedAt : idea.StartSetAt))
         .Prepend((UserId: idea.OwnerId, NoticeFrom: idea.StartSetAt))
+        .DistinctBy(p => p.UserId, StringComparer.Ordinal)
         .Where(p => idea.WorkspaceUserIds.Contains(p.UserId, StringComparer.Ordinal));
       foreach (var (userId, noticeFrom) in team)
       {
@@ -202,7 +203,7 @@ public sealed partial class ReminderService(
         if (!idea.HasComponents
           && StartSchedule.NudgeAt(idea.StartsAt, noticeFrom, zone) is { } nudgeAt
           && nudgeAt <= now
-          && !idea.Sent.Any(s => s.UserId == userId && s.Kind == ReminderKind.AddComponents))
+          && !idea.Sent.Any(s => s.UserId == userId && s.Kind == ReminderKind.AddComponents && s.DueAt > noticeFrom))
         {
           Add(ReminderKind.AddComponents, nudgeAt);
         }
@@ -311,7 +312,7 @@ public sealed partial class ReminderService(
   /// Emails notifications that have not been emailed yet and are recent enough to still be useful.
   /// </summary>
   /// <remarks>
-  /// A failed email is logged and left for the next run; one failure does not stop the rest.
+  /// A failed email is logged and tried again once <see cref="ReminderOptions.EmailRetryInterval"/> has passed; one failure does not stop the rest.
   /// Notifications that no longer concern their recipient (see <see cref="NotificationAccess.StillRelevant"/>), about archived ideas, or for people
   /// who turned reminder emails off, are not emailed; nor are comments, unless the recipient asked for comment emails.
   /// </remarks>
@@ -322,10 +323,12 @@ public sealed partial class ReminderService(
     var settings = options.Value;
     var now = timeProvider.GetUtcNow();
     var oldest = now - settings.EmailRetryWindow;
+    var lastFailure = now - settings.EmailRetryInterval;
 
     var pending = await context.StillRelevant()
       .Where(n => n.EmailedAt == null && n.CreatedAt >= oldest && n.User!.EmailReminders && n.Idea!.ArchivedAt == null)
       .Where(n => n.Kind != ReminderKind.Commented || n.User!.EmailComments)
+      .Where(n => n.EmailFailedAt == null || n.EmailFailedAt <= lastFailure)
       .Select(n => new
       {
         Notification = n,
@@ -335,6 +338,7 @@ public sealed partial class ReminderService(
         ComponentTitle = n.Component!.Title,
         ActorName = n.Actor!.DisplayName,
         ActorEmail = n.Actor.Email,
+        n.Idea.StartDate,
         StartHasTime = n.Idea.StartTime != null,
       })
       .ToListAsync(cancellationToken)
@@ -352,7 +356,7 @@ public sealed partial class ReminderService(
         item.ComponentTitle,
         item.ActorName ?? item.ActorEmail,
         notification.Detail,
-        StartContent.For(notification.StartsAt, notification.CreatedAt, zone, item.StartHasTime));
+        StartContent.For(notification.StartsAt, notification.CreatedAt, zone, item.StartDate, item.StartHasTime));
       var message = ReminderSchedule.Message(content, timeProvider.TodayIn(zone));
       var link = app.Value.Link($"/ideas/{notification.IdeaId}");
       var reason = notification.Kind == ReminderKind.Mentioned
@@ -372,6 +376,8 @@ public sealed partial class ReminderService(
       catch (Exception ex) when (ex is not OperationCanceledException)
       {
         LogEmailFailed(logger, ex, notification.Id);
+        notification.EmailFailedAt = timeProvider.GetUtcNow();
+        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
       }
     }
 

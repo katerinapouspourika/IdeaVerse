@@ -51,6 +51,7 @@ public sealed class NotificationService(IdeaVerseDbContext context, UserCalendar
         ActorEmail = n.Actor.Email,
         n.Detail,
         n.StartsAt,
+        n.Idea.StartDate,
         StartHasTime = n.Idea.StartTime != null,
       })
       .ToListAsync(cancellationToken)
@@ -73,7 +74,7 @@ public sealed class NotificationService(IdeaVerseDbContext context, UserCalendar
             n.ComponentTitle,
             n.ActorName ?? n.ActorEmail,
             n.Detail,
-            StartContent.For(n.StartsAt, n.CreatedAt, zone, n.StartHasTime)),
+            StartContent.For(n.StartsAt, n.CreatedAt, zone, n.StartDate, n.StartHasTime)),
           today),
         n.CreatedAt,
         n.ReadAt))

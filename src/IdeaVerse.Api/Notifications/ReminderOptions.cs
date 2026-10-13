@@ -39,4 +39,11 @@ public sealed class ReminderOptions
   /// </summary>
   [Range(typeof(TimeSpan), "00:00:00", "7.00:00:00")]
   public TimeSpan EmailRetryWindow { get; set; } = TimeSpan.FromDays(2);
+
+  /// <summary>
+  /// Gets or sets how long to wait after a failed reminder email before trying it again, so a mail server outage is not
+  /// retried at every run.
+  /// </summary>
+  [Range(typeof(TimeSpan), "00:00:00", "1.00:00:00")]
+  public TimeSpan EmailRetryInterval { get; set; } = TimeSpan.FromHours(1);
 }

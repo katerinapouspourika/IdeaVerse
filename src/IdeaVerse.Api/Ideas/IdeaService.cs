@@ -358,6 +358,11 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
       return IdeaChangeResult.Denied(await context.DenialAsync(userId, id, cancellationToken).ConfigureAwait(false), NotOnTeamMessage);
     }
 
+    if (idea.Status == IdeaStatus.Done || idea.ArchivedAt is not null)
+    {
+      return IdeaChangeResult.Conflict("A completed or archived idea has no start to plan.");
+    }
+
     if (request.StartDate == idea.StartDate && request.StartTime == idea.StartTime)
     {
       return IdeaChangeResult.Changed((await GetAsync(userId, id, cancellationToken).ConfigureAwait(false))!);

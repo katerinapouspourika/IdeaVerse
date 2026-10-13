@@ -13,6 +13,8 @@ namespace Pouspourika.IdeaVerse.Api.Notifications;
 /// <item>15 minutes to 2 hours: 15 minutes before.</item>
 /// <item>Less: none.</item>
 /// </list>
+/// A reminder is only sent strictly after the person learned of the start, so with exactly 24 hours' notice only the
+/// 2-hour reminder is left, and with exactly 15 minutes none is.
 /// </remarks>
 public static class StartSchedule
 {

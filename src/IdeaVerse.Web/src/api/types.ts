@@ -186,7 +186,7 @@ export interface Member {
   addedAt: string;
 }
 
-/** What a notification is about: a countdown stage (the first four), or something a teammate did. */
+/** What a notification is about: a countdown stage (`ComingUp`, `Tomorrow`, `Today`, `Overdue`), a start reminder (`StartingSoon`, `AddComponents`), or something a teammate did. */
 export type ReminderKind =
   | 'ComingUp'
   | 'Tomorrow'

@@ -80,7 +80,8 @@ public static class ReminderSchedule
   }
 
   /// <summary>
-  /// Writes when a start is, such as ", on Mon 2 Nov 2026 at 15:30", or ", at 15:30" when it is less than a day away.
+  /// Writes when a start is, such as ", on Mon 2 Nov 2026 at 15:30", ", at 15:30" when it is less than a day away, or
+  /// ", on Mon 2 Nov 2026" for a start without a time, which is the date as entered whatever the reader's time zone.
   /// </summary>
   /// <param name="start">The start.</param>
   /// <returns>The phrase, starting with a comma.</returns>
@@ -91,14 +92,15 @@ public static class ReminderSchedule
       return string.Empty;
     }
 
-    var time = start.Local.ToString("HH:mm", CultureInfo.InvariantCulture);
-    if (start.Notice < TimeSpan.FromHours(24))
+    if (!start.HasTime)
     {
-      return $", at {time}";
+      return $", on {start.Date.ToString("ddd d MMM yyyy", CultureInfo.InvariantCulture)}";
     }
 
-    var date = start.Local.ToString("ddd d MMM yyyy", CultureInfo.InvariantCulture);
-    return start.HasTime ? $", on {date} at {time}" : $", on {date}";
+    var time = start.Local.ToString("HH:mm", CultureInfo.InvariantCulture);
+    return start.Notice < TimeSpan.FromHours(24)
+      ? $", at {time}"
+      : $", on {start.Local.ToString("ddd d MMM yyyy", CultureInfo.InvariantCulture)} at {time}";
   }
 
   /// <summary>

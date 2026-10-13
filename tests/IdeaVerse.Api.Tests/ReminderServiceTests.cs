@@ -62,6 +62,7 @@ public class ReminderServiceTests
     await factory.RunRemindersAsync();
     factory.Mail.Fail = false;
     (await member.DeleteAsync($"/api/v1/workspaces/{workspaceId}/members/{added.UserId}")).Dispose();
+    factory.Time.Advance(TimeSpan.FromHours(1));
 
     var retry = await factory.RunRemindersAsync();
 
@@ -244,7 +245,7 @@ public class ReminderServiceTests
   }
 
   [Test]
-  public async Task RunAsync_EmailFails_KeepsReminderAndRetriesNextRun()
+  public async Task RunAsync_EmailFails_KeepsReminderAndRetriesAfterTheRetryInterval()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
@@ -253,9 +254,12 @@ public class ReminderServiceTests
 
     var failed = await factory.RunRemindersAsync();
     factory.Mail.Fail = false;
+    var tooSoon = await factory.RunRemindersAsync();
+    factory.Time.Advance(TimeSpan.FromHours(1));
     var retried = await factory.RunRemindersAsync();
 
     await Assert.That(failed).IsEqualTo(new Notifications.ReminderRunResult(1, 0));
+    await Assert.That(tooSoon).IsEqualTo(new Notifications.ReminderRunResult(0, 0));
     await Assert.That(retried).IsEqualTo(new Notifications.ReminderRunResult(0, 1));
   }
 
@@ -299,6 +303,7 @@ public class ReminderServiceTests
     await factory.RunRemindersAsync();
     factory.Mail.Fail = false;
     (await owner.PostAsync($"/api/v1/ideas/{idea.Id}/archive", null)).Dispose();
+    factory.Time.Advance(TimeSpan.FromHours(1));
 
     var retry = await factory.RunRemindersAsync();
 

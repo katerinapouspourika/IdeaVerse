@@ -18,6 +18,12 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                 nullable: true);
 
             migrationBuilder.AddColumn<DateTimeOffset>(
+                name: "EmailFailedAt",
+                table: "Notifications",
+                type: "timestamp with time zone",
+                nullable: true);
+
+            migrationBuilder.AddColumn<DateTimeOffset>(
                 name: "StartsAt",
                 table: "Notifications",
                 type: "timestamp with time zone",
@@ -64,6 +70,10 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
 
             migrationBuilder.DropColumn(
                 name: "DueAt",
+                table: "Notifications");
+
+            migrationBuilder.DropColumn(
+                name: "EmailFailedAt",
                 table: "Notifications");
 
             migrationBuilder.DropColumn(

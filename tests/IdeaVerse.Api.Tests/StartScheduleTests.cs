@@ -59,4 +59,14 @@ public class StartScheduleTests
     await Assert.That(StartSchedule.NudgeAt(Start, Start.AddHours(-36), TimeZoneInfo.Utc)).IsEqualTo(Start.AddHours(-12));
     await Assert.That(StartSchedule.NudgeAt(Start, Start.AddMinutes(-10), TimeZoneInfo.Utc)).IsNull();
   }
+
+  [Test]
+  public async Task ToInstant_TimeSkippedBySpringForward_MovesAnHourLater()
+  {
+    var athens = TimeZoneInfo.FindSystemTimeZoneById("Europe/Athens");
+
+    var instant = StartSchedule.ToInstant(new DateOnly(2027, 3, 28), new TimeOnly(3, 30), athens);
+
+    await Assert.That(instant).IsEqualTo(new DateTimeOffset(2027, 3, 28, 1, 30, 0, TimeSpan.Zero));
+  }
 }

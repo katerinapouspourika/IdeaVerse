@@ -12,7 +12,7 @@ using Pouspourika.IdeaVerse.Api.Data;
 namespace Pouspourika.IdeaVerse.Api.Migrations
 {
     [DbContext(typeof(IdeaVerseDbContext))]
-    [Migration("20261013075652_AddsIdeaStartDates")]
+    [Migration("20261013131309_AddsIdeaStartDates")]
     partial class AddsIdeaStartDates
     {
         /// <inheritdoc />
@@ -566,6 +566,9 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<DateTimeOffset?>("DueAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("EmailFailedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset?>("EmailedAt")

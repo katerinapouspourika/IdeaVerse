@@ -232,6 +232,94 @@ public class StartReminderTests
     await Assert.That(result.Raised).IsEqualTo(0);
   }
 
+  [Test]
+  public async Task SetStart_NotOnTeamOrOutsideWorkspace_ReturnsForbiddenOrNotFound()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var viewer = await factory.CreateSignedInClientAsync("viewer@example.com");
+    using var stranger = await factory.CreateSignedInClientAsync("stranger@example.com");
+    await factory.JoinAsync(owner, viewer, "viewer@example.com");
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(30))).ReadIdeaAsync();
+
+    using var forbidden = await viewer.PutAsJsonAsync($"/api/v1/ideas/{idea.Id}/start", new SetStartRequest(Today.AddDays(20)), Json.Options);
+    using var missing = await stranger.PutAsJsonAsync($"/api/v1/ideas/{idea.Id}/start", new SetStartRequest(Today.AddDays(20)), Json.Options);
+
+    await Assert.That(forbidden.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+    await Assert.That(missing.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+  }
+
+  [Test]
+  public async Task SetStart_DoneIdea_ReturnsConflict()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(30))).ReadIdeaAsync();
+    (await owner.PutAsJsonAsync($"/api/v1/ideas/{idea.Id}", new UpdateIdeaRequest("Launch", null, Today.AddDays(30), IdeaStatus.Done), Json.Options)).Dispose();
+
+    using var response = await owner.PutAsJsonAsync($"/api/v1/ideas/{idea.Id}/start", new SetStartRequest(Today.AddDays(20)), Json.Options);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+  }
+
+  [Test]
+  public async Task SetStart_RecordsActivityOncePerChange()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(30))).ReadIdeaAsync();
+
+    await SetStartAsync(owner, idea.Id, Today.AddDays(20), new TimeOnly(15, 30));
+    await SetStartAsync(owner, idea.Id, Today.AddDays(20), new TimeOnly(15, 30));
+    await SetStartAsync(owner, idea.Id, null);
+
+    var activity = await owner.GetFromJsonAsync<Activity.ActivityResponse[]>($"/api/v1/ideas/{idea.Id}/activity", Json.Options);
+    var starts = activity!.Where(a => a.Kind == Activity.ActivityKind.StartChanged).Select(a => a.Detail ?? string.Empty).ToList();
+    var expected = Today.AddDays(20).ToString("O", CultureInfo.InvariantCulture) + "T15:30";
+    await Assert.That(starts).IsEquivalentTo([string.Empty, expected], CollectionOrdering.Matching);
+  }
+
+  [Test]
+  public async Task RunAsync_StartMoved_DropsOldRemindersAndRemindsForTheNewStart()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(30))).ReadIdeaAsync();
+    await SetStartAsync(owner, idea.Id, Today.AddDays(20));
+    factory.Time.Advance(TimeSpan.FromDays(10));
+    await factory.RunRemindersAsync();
+    var before = await StartRemindersAsync(owner);
+
+    await SetStartAsync(owner, idea.Id, Today.AddDays(15));
+    var afterMove = await StartRemindersAsync(owner);
+    factory.Time.Advance(TimeSpan.FromDays(3));
+    await factory.RunRemindersAsync();
+
+    await Assert.That(before).HasSingleItem();
+    await Assert.That(afterMove).IsEmpty();
+    await Assert.That((await StartRemindersAsync(owner)).Single().Message).StartsWith("“Launch” starts in 2 days");
+  }
+
+  [Test]
+  public async Task RunAsync_StartWithoutTime_ShowsTheEnteredDateInEveryZone()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var member = await factory.CreateSignedInClientAsync("member@example.com");
+    await factory.JoinAsync(owner, member, "member@example.com");
+    await owner.SetTimeZoneAsync("Pacific/Kiritimati");
+    await member.SetTimeZoneAsync("Pacific/Honolulu");
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(30))).ReadIdeaAsync();
+    (await owner.AddMemberAsync(idea.Id, "member@example.com")).Dispose();
+    await SetStartAsync(owner, idea.Id, Today.AddDays(12));
+
+    factory.Time.Advance(TimeSpan.FromDays(3));
+    await factory.RunRemindersAsync();
+
+    var date = Today.AddDays(12).ToString("ddd d MMM yyyy", CultureInfo.InvariantCulture);
+    await Assert.That((await StartRemindersAsync(member)).Single().Message).EndsWith($"on {date}.");
+  }
+
   private static async Task<IdeaResponse> SetStartAsync(HttpClient client, Guid ideaId, DateOnly? date, TimeOnly? time = null)
   {
     using var response = await client.PutAsJsonAsync($"/api/v1/ideas/{ideaId}/start", new SetStartRequest(date, time), Json.Options);

@@ -13,7 +13,7 @@ IdeaVerse uses Claude-powered agents to generate, critique, and refine ideas. Th
 - `tests/IdeaVerse.Agents.Tests/` — TUnit + NSubstitute tests. Agents talk to the model through `IStructuredModelClient`, so tests never call the API.
 - `samples/IdeaVerse.Agents.Sample/` — console app that runs the pipeline end to end (needs `ANTHROPIC_API_KEY`).
 
-`compose.yaml` runs PostgreSQL, the API (which serves the web app and runs the hourly reminder job), and Mailpit, which catches the emails it sends (`docker compose up --build`; emails at `http://localhost:8025`).
+`compose.yaml` runs PostgreSQL, the API (which serves the web app and runs the reminder job every minute), and Mailpit, which catches the emails it sends (`docker compose up --build`; emails at `http://localhost:8025`).
 
 ## Build & test
 
