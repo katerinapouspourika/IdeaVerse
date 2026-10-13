@@ -126,6 +126,28 @@ public class AccountEmailTests
   }
 
   [Test]
+  public async Task ResetPassword_LockedOutAccount_UnlocksIt()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    var client = factory.CreateClient();
+    await factory.RegisterAndConfirmAsync(client, Email);
+    for (var attempt = 0; attempt < 5; attempt++)
+    {
+      (await client.PostAsJsonAsync("/api/v1/auth/login?useCookies=true", new { email = Email, password = "Wr0ng-password!" })).Dispose();
+    }
+
+    using var locked = await client.PostAsJsonAsync("/api/v1/auth/login?useCookies=true", Credentials);
+    (await client.PostAsJsonAsync("/api/v1/auth/forgotPassword", new { email = Email })).Dispose();
+    var link = FakeMailSender.LinkIn(factory.Mail.Take(Email, IdentityEmailSender.PasswordResetSubject), $"{IdeaVerseApiFactory.AppUrl}/reset-password");
+    var code = System.Web.HttpUtility.ParseQueryString(link.Query)["code"];
+    (await client.PostAsJsonAsync("/api/v1/auth/resetPassword", new { email = Email, resetCode = code, newPassword = "N3w-passw0rd!" })).Dispose();
+    using var login = await client.PostAsJsonAsync("/api/v1/auth/login?useCookies=true", new { email = Email, password = "N3w-passw0rd!" });
+
+    await Assert.That(await locked.Content.ReadAsStringAsync()).Contains("LockedOut");
+    await Assert.That(login.StatusCode).IsEqualTo(HttpStatusCode.OK);
+  }
+
+  [Test]
   public async Task ResetPassword_InvalidCode_ReturnsValidationProblem()
   {
     await using var factory = new IdeaVerseApiFactory();
