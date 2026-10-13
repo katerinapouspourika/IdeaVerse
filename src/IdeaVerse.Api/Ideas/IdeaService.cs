@@ -69,20 +69,25 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
       query = query.Where(i => i.Tags.Contains(tag));
     }
 
+    // Titles sort ignoring case, as people read them; EF Core translates ToUpper() to SQL UPPER(), unlike the culture
+    // overloads the analyzers ask for. Ties fall back to the exact title so the order is stable.
+#pragma warning disable CA1304, CA1311
     query = filter.Sort switch
     {
-      IdeaSort.Title => query.OrderBy(i => i.Title).ThenBy(i => i.TargetDate),
-      IdeaSort.Updated => query.OrderByDescending(i => i.UpdatedAt).ThenBy(i => i.Title),
-      IdeaSort.Created => query.OrderByDescending(i => i.CreatedAt).ThenBy(i => i.Title),
-      IdeaSort.Votes => query.OrderByDescending(i => i.Votes.Count).ThenBy(i => i.TargetDate).ThenBy(i => i.Title),
+      IdeaSort.Title => query.OrderBy(i => i.Title.ToUpper()).ThenBy(i => i.Title).ThenBy(i => i.TargetDate),
+      IdeaSort.Updated => query.OrderByDescending(i => i.UpdatedAt).ThenBy(i => i.Title.ToUpper()).ThenBy(i => i.Title),
+      IdeaSort.Created => query.OrderByDescending(i => i.CreatedAt).ThenBy(i => i.Title.ToUpper()).ThenBy(i => i.Title),
+      IdeaSort.Votes => query.OrderByDescending(i => i.Votes.Count).ThenBy(i => i.TargetDate).ThenBy(i => i.Title.ToUpper()).ThenBy(i => i.Title),
       IdeaSort.Priority => query
         .OrderBy(i => i.Impact == null || i.Effort == null)
         .ThenByDescending(i => i.Impact == null || i.Effort == null ? 0 : (double)i.Impact / i.Effort)
         .ThenByDescending(i => i.Impact ?? 0)
         .ThenBy(i => i.TargetDate)
+        .ThenBy(i => i.Title.ToUpper())
         .ThenBy(i => i.Title),
-      IdeaSort.TargetDate or _ => query.OrderBy(i => i.TargetDate).ThenBy(i => i.Title),
+      IdeaSort.TargetDate or _ => query.OrderBy(i => i.TargetDate).ThenBy(i => i.Title.ToUpper()).ThenBy(i => i.Title),
     };
+#pragma warning restore CA1304, CA1311
 
     return await query
       .Select(IdeaResponse.Projection(context, today, userId))
