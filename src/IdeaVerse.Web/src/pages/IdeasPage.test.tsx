@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { ReceivedInvitation } from '../api/types';
@@ -70,6 +70,21 @@ describe('IdeasPage', () => {
     expect(await screen.findByText(/No ideas yet/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Add your first idea' }));
     expect(screen.getByRole('form', { name: 'New idea' })).toBeInTheDocument();
+  });
+
+  it('remembers the view and order after a reload', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [anIdea()] } });
+    renderApp('/ideas');
+    await userEvent.click(await screen.findByRole('button', { name: 'Board' }));
+    await userEvent.selectOptions(screen.getByLabelText('Sort by'), 'Votes');
+
+    cleanup();
+    const calls = fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [anIdea()] } });
+    renderApp('/ideas');
+
+    expect(await screen.findByLabelText('Sort by')).toHaveValue('Votes');
+    expect(screen.getByRole('button', { name: 'Board' })).toHaveAttribute('aria-pressed', 'true');
+    await waitFor(() => expect(calls.some((c) => c.method === 'GET' && c.path.includes('sort=Votes'))).toBe(true));
   });
 
   it('filters by status through the API', async () => {
