@@ -279,6 +279,11 @@ export function personLabel(name: string | null | undefined, email: string): str
   return name?.trim() ? name : email;
 }
 
+/** Whether the user may change the idea now: they can edit it and it is not archived, as archived ideas are read-only until restored. */
+export function canChange(idea: Pick<Idea, 'canEdit' | 'archivedAt'>): boolean {
+  return idea.canEdit && !idea.archivedAt;
+}
+
 export interface Comment {
   id: string;
   body: string;

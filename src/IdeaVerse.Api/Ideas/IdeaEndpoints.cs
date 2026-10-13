@@ -33,10 +33,10 @@ internal static class IdeaEndpoints
 
     var group = endpoints.MapGroup("/api/v1/ideas").WithTags("Ideas").RequireAuthorization();
     group.MapGet("/{id:guid}", GetAsync).WithName(GetIdeaRouteName);
-    group.MapPut("/{id:guid}", UpdateAsync).WithValidation<UpdateIdeaRequest>();
-    group.MapPost("/{id:guid}/postpone", PostponeAsync).WithValidation<PostponeIdeaRequest>();
-    group.MapPut("/{id:guid}/priority", SetPriorityAsync).WithValidation<SetPriorityRequest>();
-    group.MapPut("/{id:guid}/start", SetStartAsync).WithValidation<SetStartRequest>();
+    group.MapPut("/{id:guid}", UpdateAsync).WithValidation<UpdateIdeaRequest>().RejectWhenArchived();
+    group.MapPost("/{id:guid}/postpone", PostponeAsync).WithValidation<PostponeIdeaRequest>().RejectWhenArchived();
+    group.MapPut("/{id:guid}/priority", SetPriorityAsync).WithValidation<SetPriorityRequest>().RejectWhenArchived();
+    group.MapPut("/{id:guid}/start", SetStartAsync).WithValidation<SetStartRequest>().RejectWhenArchived();
     group.MapPut("/{id:guid}/vote", VoteAsync);
     group.MapDelete("/{id:guid}/vote", WithdrawVoteAsync);
     group.MapPost("/{id:guid}/archive", ArchiveAsync);
