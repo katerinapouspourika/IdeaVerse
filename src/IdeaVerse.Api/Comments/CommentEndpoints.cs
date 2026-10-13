@@ -18,11 +18,6 @@ using Pouspourika.IdeaVerse.Api.Validation;
 internal static class CommentEndpoints
 {
   /// <summary>
-  /// How many history entries the activity endpoint returns.
-  /// </summary>
-  private const int ActivityPageSize = 100;
-
-  /// <summary>
   /// Maps the comment and activity endpoints. All require a signed-in user who can see the idea.
   /// </summary>
   /// <param name="endpoints">The route builder.</param>
@@ -35,7 +30,7 @@ internal static class CommentEndpoints
     group.MapPost("/comments", CreateAsync).WithValidation<CommentRequest>();
     group.MapPut("/comments/{commentId:guid}", UpdateAsync).WithValidation<CommentRequest>();
     group.MapDelete("/comments/{commentId:guid}", DeleteAsync);
-    group.MapGet("/activity", ActivityAsync);
+    group.MapGet("/activity", ActivityAsync).WithValidation<ActivityPageQuery>();
 
     return endpoints;
   }
@@ -145,15 +140,17 @@ internal static class CommentEndpoints
     };
 
   /// <summary>
-  /// Lists an idea's history, newest first.
+  /// Lists a page of an idea's history, newest first, with how many entries it holds in all.
   /// </summary>
   /// <param name="ideaId">The idea identifier.</param>
+  /// <param name="query">Which page to return, and its size.</param>
   /// <param name="user">The signed-in user.</param>
   /// <param name="context">The database context.</param>
   /// <param name="cancellationToken">Token to cancel the request.</param>
-  /// <returns>The most recent entries, or 404.</returns>
-  private static async Task<Results<Ok<ActivityResponse[]>, NotFound>> ActivityAsync(
+  /// <returns>The page, or 404.</returns>
+  private static async Task<Results<Ok<ActivityPageResponse>, NotFound>> ActivityAsync(
     Guid ideaId,
+    [AsParameters] ActivityPageQuery query,
     ClaimsPrincipal user,
     IdeaVerseDbContext context,
     CancellationToken cancellationToken)
@@ -163,14 +160,19 @@ internal static class CommentEndpoints
       return TypedResults.NotFound();
     }
 
-    var entries = await context.Activity
-      .Where(a => a.IdeaId == ideaId)
-      .OrderByDescending(a => a.CreatedAt)
-      .ThenByDescending(a => a.Id)
-      .Take(ActivityPageSize)
-      .Select(a => new ActivityResponse(a.Id, a.Kind, a.Detail, a.Actor!.Email, a.Actor.DisplayName, a.CreatedAt))
-      .ToArrayAsync(cancellationToken)
-      .ConfigureAwait(false);
-    return TypedResults.Ok(entries);
+    var history = context.Activity.Where(a => a.IdeaId == ideaId);
+    var totalCount = await history.CountAsync(cancellationToken).ConfigureAwait(false);
+    var skip = (long)(query.Page - 1) * query.PageSize;
+    var entries = skip >= totalCount
+      ? []
+      : await history
+        .OrderByDescending(a => a.CreatedAt)
+        .ThenByDescending(a => a.Id)
+        .Skip((int)skip)
+        .Take(query.PageSize)
+        .Select(a => new ActivityResponse(a.Id, a.Kind, a.Detail, a.Actor!.Email, a.Actor.DisplayName, a.CreatedAt))
+        .ToArrayAsync(cancellationToken)
+        .ConfigureAwait(false);
+    return TypedResults.Ok(new ActivityPageResponse(entries, totalCount, query.Page, query.PageSize));
   }
 }

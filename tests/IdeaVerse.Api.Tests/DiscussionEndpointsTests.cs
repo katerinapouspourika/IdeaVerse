@@ -166,7 +166,7 @@ public class DiscussionEndpointsTests
     Tick(factory);
     (await member.DeleteAsync($"/api/v1/ideas/{idea.Id}/components/{component.Id}")).Dispose();
 
-    var activity = await owner.GetFromJsonAsync<ActivityResponse[]>($"/api/v1/ideas/{idea.Id}/activity", Json.Options);
+    var activity = (await owner.ActivityAsync(idea.Id)).Items;
 
     (ActivityKind Kind, string? Detail, string? Actor)[] expected =
       [
@@ -193,7 +193,7 @@ public class DiscussionEndpointsTests
     var added = await (await owner.AddMemberAsync(idea.Id, "member@example.com")).ReadMemberAsync();
 
     (await member.DeleteAsync($"/api/v1/ideas/{idea.Id}/members/{added.UserId}")).Dispose();
-    var activity = await owner.GetFromJsonAsync<ActivityResponse[]>($"/api/v1/ideas/{idea.Id}/activity", Json.Options);
+    var activity = (await owner.ActivityAsync(idea.Id)).Items;
 
     await Assert.That(activity![0].Kind).IsEqualTo(ActivityKind.MemberLeft);
     await Assert.That(activity[0].ActorEmail).IsEqualTo("member@example.com");
@@ -210,6 +210,49 @@ public class DiscussionEndpointsTests
     using var response = await other.GetAsync($"/api/v1/ideas/{idea.Id}/activity");
 
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+  }
+
+  [Test]
+  public async Task Activity_Paged_ReturnsEachPageNewestFirstWithTheTotal()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    for (var i = 1; i <= 24; i++)
+    {
+      Tick(factory);
+      (await owner.PutAsJsonAsync($"/api/v1/ideas/{idea.Id}", new UpdateIdeaRequest($"Launch {i}", null, Today.AddDays(5), IdeaStatus.Planned), Json.Options)).Dispose();
+    }
+
+    var first = await owner.ActivityAsync(idea.Id, "?page=1&pageSize=10");
+    var third = await owner.ActivityAsync(idea.Id, "?page=3&pageSize=10");
+    var past = await owner.ActivityAsync(idea.Id, "?page=4&pageSize=10");
+    var byDefault = await owner.ActivityAsync(idea.Id);
+
+    await Assert.That(first.TotalCount).IsEqualTo(25);
+    await Assert.That(first.Page).IsEqualTo(1);
+    await Assert.That(first.PageSize).IsEqualTo(10);
+    await Assert.That(first.Items.Select(a => a.Detail)).IsEquivalentTo(Enumerable.Range(15, 10).Reverse().Select(i => (string?)$"Launch {i}"), CollectionOrdering.Matching);
+    await Assert.That(third.Items.Select(a => a.Detail ?? "created")).IsEquivalentTo(["Launch 4", "Launch 3", "Launch 2", "Launch 1", "created"], CollectionOrdering.Matching);
+    await Assert.That(past.Items).IsEmpty();
+    await Assert.That(past.TotalCount).IsEqualTo(25);
+    await Assert.That(byDefault.PageSize).IsEqualTo(ActivityPageQuery.DefaultPageSize);
+    await Assert.That(byDefault.Items.Count).IsEqualTo(ActivityPageQuery.DefaultPageSize);
+  }
+
+  [Test]
+  [Arguments("?page=0")]
+  [Arguments("?pageSize=0")]
+  [Arguments("?pageSize=101")]
+  public async Task Activity_PageOutOfRange_ReturnsValidationProblem(string query)
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+
+    using var response = await owner.GetAsync($"/api/v1/ideas/{idea.Id}/activity{query}");
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
   }
 
   // Entries are ordered by time, so each step gets its own moment.

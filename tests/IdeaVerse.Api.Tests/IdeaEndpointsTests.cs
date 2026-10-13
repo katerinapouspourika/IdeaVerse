@@ -484,7 +484,7 @@ public class IdeaEndpointsTests
     var idea = await CreateTaggedAsync(client, "Launch", Today.AddDays(5), ["marketing"]);
 
     using var response = await client.PutAsJsonAsync($"/api/v1/ideas/{idea.Id}", new UpdateIdeaRequest("Launch", null, idea.TargetDate, idea.Status, ["Design"]), Json.Options);
-    var activity = await client.GetFromJsonAsync<ActivityResponse[]>($"/api/v1/ideas/{idea.Id}/activity", Json.Options);
+    var activity = (await client.ActivityAsync(idea.Id)).Items;
 
     await Assert.That((await response.ReadIdeaAsync()).Tags).IsEquivalentTo(["design"]);
     await Assert.That(activity!.Where(a => a.Kind == ActivityKind.TagsChanged).Select(a => a.Detail ?? string.Empty)).IsEquivalentTo(["design"]);
@@ -598,7 +598,7 @@ public class IdeaEndpointsTests
     using var response = await client.PostAsync($"/api/v1/ideas/{idea.Id}/archive", null);
     var active = await (await client.ListIdeasAsync(workspaceId)).ReadIdeasAsync();
     var archive = await (await client.ListIdeasAsync(workspaceId, "?archived=true")).ReadIdeasAsync();
-    var activity = await client.GetFromJsonAsync<ActivityResponse[]>($"/api/v1/ideas/{idea.Id}/activity", Json.Options);
+    var activity = (await client.ActivityAsync(idea.Id)).Items;
 
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
     await Assert.That((await response.ReadIdeaAsync()).ArchivedAt).IsEqualTo(factory.Time.GetUtcNow());
@@ -693,7 +693,7 @@ public class IdeaEndpointsTests
 
     using var response = await client.PostAsync($"/api/v1/ideas/{idea.Id}/restore", null);
     var active = await (await client.ListIdeasAsync(await client.WorkspaceIdAsync())).ReadIdeasAsync();
-    var activity = await client.GetFromJsonAsync<ActivityResponse[]>($"/api/v1/ideas/{idea.Id}/activity", Json.Options);
+    var activity = (await client.ActivityAsync(idea.Id)).Items;
 
     await Assert.That((await response.ReadIdeaAsync()).ArchivedAt).IsNull();
     await Assert.That(active.Select(i => i.Id)).IsEquivalentTo([idea.Id]);
