@@ -129,4 +129,34 @@ describe('Removing a component', () => {
     );
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ title: 'Budget sign-off', notes: 'Ask finance' });
   });
+
+  it('puts an undone component back in its old place', async () => {
+    const venue: Component = { ...budget, id: 'c-2', title: 'Venue', position: 1, assigneeId: null, assigneeEmail: null, dueDate: null, notes: null };
+    const designer: Component = { ...venue, id: 'c-3', title: 'Designer', position: 2 };
+    let list = [budget, venue, designer];
+    const calls = fakeApi({
+      ...signedIn,
+      'GET /api/v1/ideas/idea-1': { status: 200, body: anIdea({ componentCount: 3 }) },
+      'GET /api/v1/ideas/idea-1/components': () => ({ status: 200, body: list }),
+      'GET /api/v1/ideas/idea-1/comments': { status: 200, body: [] },
+      'GET /api/v1/ideas/idea-1/members': { status: 200, body: [] },
+      'GET /api/v1/workspaces/ws-1/members': { status: 200, body: [] },
+      'DELETE /api/v1/ideas/idea-1/components/c-2': () => {
+        list = [budget, designer];
+        return { status: 204 };
+      },
+      'POST /api/v1/ideas/idea-1/components': () => {
+        const restored = { ...venue, id: 'c-4', position: 2 };
+        list = [budget, designer, restored];
+        return { status: 201, body: restored };
+      },
+      'PUT /api/v1/ideas/idea-1/components/order': { status: 200, body: [] },
+    });
+    renderApp('/ideas/idea-1');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Remove Venue' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Undo' }));
+
+    await waitFor(() => expect(calls.find((c) => c.path.endsWith('/components/order'))?.body).toEqual({ componentIds: ['c-1', 'c-4', 'c-3'] }));
+  });
 });

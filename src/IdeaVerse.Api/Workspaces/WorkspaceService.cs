@@ -267,7 +267,8 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
   /// </summary>
   /// <remarks>
   /// Ideas they own stay in the workspace, where its owner and admins can still manage them.
-  /// The invitations they sent are revoked, so they cannot rejoin through one.
+  /// The invitations they sent are revoked, so they cannot rejoin through one, and the components assigned to them are
+  /// unassigned, keeping their due dates.
   /// </remarks>
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="workspaceId">The workspace identifier.</param>
@@ -308,6 +309,10 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
       await context.IdeaVotes
         .Where(v => v.UserId == memberUserId && v.Idea!.WorkspaceId == workspaceId)
         .ExecuteDeleteAsync(cancellationToken)
+        .ConfigureAwait(false);
+      await context.Components
+        .Where(c => c.AssigneeId == memberUserId && c.Idea!.WorkspaceId == workspaceId)
+        .ExecuteUpdateAsync(set => set.SetProperty(c => c.AssigneeId, (string?)null), cancellationToken)
         .ConfigureAwait(false);
       await context.WorkspaceMembers
         .Where(m => m.WorkspaceId == workspaceId && m.UserId == memberUserId)

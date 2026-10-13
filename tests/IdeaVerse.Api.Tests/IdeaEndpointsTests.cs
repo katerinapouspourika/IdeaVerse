@@ -563,6 +563,22 @@ public class IdeaEndpointsTests
   }
 
   [Test]
+  public async Task List_SortByTitle_IgnoresCase()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    foreach (var title in new[] { "cherry site", "Banana offsite", "apple launch", "Date night" })
+    {
+      await CreateTaggedAsync(client, title, Today.AddDays(5), []);
+    }
+
+    var ideas = await (await client.ListIdeasAsync(await client.WorkspaceIdAsync(), "?sort=Title")).ReadIdeasAsync();
+
+    await Assert.That(ideas.Select(i => i.Title))
+      .IsEquivalentTo(["apple launch", "Banana offsite", "cherry site", "Date night"], CollectionOrdering.Matching);
+  }
+
+  [Test]
   public async Task Tags_IdeasWithTags_ReturnsDistinctTagsAlphabetically()
   {
     await using var factory = new IdeaVerseApiFactory();
