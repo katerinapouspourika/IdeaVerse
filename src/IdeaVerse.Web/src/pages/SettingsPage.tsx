@@ -262,7 +262,7 @@ function ProfileForm({ account }: { account: Account }) {
     <form className="card stack" onSubmit={submit} aria-label="Profile">
       <h2>Profile</h2>
       <Field label="Your name" hint="Shown to your teams instead of your email address." error={fieldError(save.error, 'displayName')}>
-        {(props) => <input {...props} maxLength={100} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Katerina Pouspourika" />}
+        {(props) => <input {...props} maxLength={100} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Alex Morgan" />}
       </Field>
       <ErrorMessage error={save.error} />
       {save.done && (
