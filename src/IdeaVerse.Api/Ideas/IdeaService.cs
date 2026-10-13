@@ -390,7 +390,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
       return IdeaChangeResult.Invalid(nameof(SetStartRequest.StartTime), "Choose a start date for the start time.");
     }
 
-    context.Record(idea.Id, userId, ActivityKind.StartChanged, now, DescribeStart(request.StartDate, request.StartTime));
+    context.Record(idea.Id, userId, ActivityKind.StartChanged, now, DescribeStart(request.StartDate, request.StartTime is null ? null : startsAt));
     idea.StartDate = request.StartDate;
     idea.StartTime = request.StartDate is null ? null : request.StartTime;
     idea.StartsAt = startsAt;
@@ -497,16 +497,18 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
   }
 
   /// <summary>
-  /// Describes a start for the activity history: its date, with its time when one was given, or empty when it was cleared.
+  /// Describes a start for the activity history: the moment in UTC when a time was given, such as
+  /// <c>2026-11-02T13:30Z</c>, so each reader sees it in their own time zone; the date alone otherwise; or empty when it
+  /// was cleared.
   /// </summary>
   /// <param name="date">The start date.</param>
-  /// <param name="time">The start time.</param>
+  /// <param name="startsAt">When the idea starts, when a time was given.</param>
   /// <returns>The detail.</returns>
-  private static string DescribeStart(DateOnly? date, TimeOnly? time)
+  private static string DescribeStart(DateOnly? date, DateTimeOffset? startsAt)
     => date is not { } day
       ? string.Empty
-      : time is { } at
-        ? $"{day.ToString("O", CultureInfo.InvariantCulture)}T{at.ToString("HH:mm", CultureInfo.InvariantCulture)}"
+      : startsAt is { } at
+        ? at.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm'Z'", CultureInfo.InvariantCulture)
         : day.ToString("O", CultureInfo.InvariantCulture);
 
   /// <summary>

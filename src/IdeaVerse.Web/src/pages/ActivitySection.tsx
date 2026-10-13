@@ -48,9 +48,20 @@ export function describeActivity(entry: ActivityEntry): string {
       return detail ? `${who} scored it: ${detail.toLowerCase()}` : `${who} cleared its scores`;
     case 'StartChanged':
       return detail
-        ? `${who} set the start to ${formatDate(detail.slice(0, 10))}${detail.length > 10 ? ` at ${detail.slice(11)}` : ''}`
+        ? `${who} set the start to ${describeStartDetail(detail)}`
         : `${who} cleared the start`;
   }
+}
+
+/**
+ * Describes a recorded start: a moment such as `2026-11-02T13:30Z`, shown in the reader's time zone; a date alone; or, as
+ * recorded before starts were kept as moments, a date with the local time it was set at.
+ */
+function describeStartDetail(detail: string): string {
+  if (detail.endsWith('Z')) {
+    return formatMoment(detail);
+  }
+  return `${formatDate(detail.slice(0, 10))}${detail.length > 10 ? ` at ${detail.slice(11)}` : ''}`;
 }
 
 /** The idea's history, loaded when opened, a page at a time. */
