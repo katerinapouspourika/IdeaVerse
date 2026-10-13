@@ -3286,6 +3286,12 @@ a:focus-visible {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* A grid that is also a public page's content column keeps that column's centring and side padding. */
+.card-grid.landing-inner {
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
 @media (max-width: 860px) {
   .card-grid.threes {
     grid-template-columns: minmax(0, 1fr);
