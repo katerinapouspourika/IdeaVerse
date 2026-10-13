@@ -3,6 +3,7 @@ namespace Pouspourika.IdeaVerse.Api.Tests;
 using System.Net;
 using System.Web;
 
+using Pouspourika.IdeaVerse.Api.Accounts;
 using Pouspourika.IdeaVerse.Api.Auth;
 
 public class ConfirmEmailEndpointTests
@@ -82,6 +83,22 @@ public class ConfirmEmailEndpointTests
     await Assert.That(result).IsEqualTo(new ConfirmEmailResponse(SignedIn: false));
     await Assert.That(account.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
     await Assert.That(login.StatusCode).IsEqualTo(HttpStatusCode.OK);
+  }
+
+  [Test]
+  public async Task Confirm_ChangedEmailInTheSameSession_KeepsItSignedIn()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    (await client.PostAsJsonAsync("/api/v1/auth/manage/info", new { newEmail = "kat@new.example.com" })).Dispose();
+    var link = FakeMailSender.LinkIn(factory.Mail.Take("kat@new.example.com", IdentityEmailSender.ChangeEmailSubject), $"{IdeaVerseApiFactory.AppUrl}/confirm-email");
+
+    using var confirm = await client.PostAsJsonAsync("/api/v1/auth/confirm", RequestFrom(link), Json.Options);
+    factory.Time.Advance(TimeSpan.FromMinutes(2));
+    var account = await client.GetFromJsonAsync<AccountResponse>("/api/v1/account", Json.Options);
+
+    await Assert.That(confirm.StatusCode).IsEqualTo(HttpStatusCode.OK);
+    await Assert.That(account!.Email).IsEqualTo("kat@new.example.com");
   }
 
   private static async Task<ConfirmEmailRequest> RegisterAsync(IdeaVerseApiFactory factory, HttpClient client)

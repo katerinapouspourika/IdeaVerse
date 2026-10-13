@@ -32,7 +32,7 @@ The API also serves the web app (`src/IdeaVerse.Web`) from `wwwroot` when one is
 
 ## Features
 
-- **Accounts** — ASP.NET Core Identity under `/api/v1/auth`: `register`, `login`, `logout`, email confirmation, password reset, and account info. The web app signs in with `POST /api/v1/auth/login?useCookies=true`, which sets an HTTP-only, `SameSite=Strict` cookie named `IdeaVerse.Auth`.
+- **Accounts** — ASP.NET Core Identity under `/api/v1/auth`: `register`, `login`, `logout`, email confirmation, password reset, and account info. The web app signs in with `POST /api/v1/auth/login?useCookies=true`, which sets an HTTP-only, `SameSite=Strict` cookie named `IdeaVerse.Auth`. Changing the password, resetting it, or changing the email signs out the account's other sessions within a minute; the session that changed the password or confirmed the new address stays signed in.
   - **Profile** — `PUT /api/v1/account/profile` sets the `displayName` others see (blank clears it). Responses that show people carry their name next to their email (`name`, `ownerName`, `invitedByName`), `null` when unset; invitation emails name the inviter.
   - **Changing password or email** — Identity's `POST /api/v1/auth/manage/info` with `oldPassword` and `newPassword`, or `newEmail`. A new email gets a "confirm your new email" link and replaces the old one, as the sign-in name too, once confirmed.
   - **Deleting the account** — `POST /api/v1/account/delete` with the current `password` (wrong: 400). Someone who owns a workspace other people are in gets 409 naming it, and must hand it over first. Workspaces only they are in are deleted; ideas they own elsewhere pass to each workspace's owner; then they are signed out.

@@ -18,13 +18,15 @@ internal static class AuthEndpoints
   /// </summary>
   /// <remarks>
   /// The web app signs in with <c>POST /api/v1/auth/login?useCookies=true</c>, which issues an HTTP-only cookie. A
-  /// successful password reset also unlocks the account (<see cref="ResetPasswordUnlockFilter"/>).
+  /// successful password reset also unlocks the account (<see cref="ResetPasswordUnlockFilter"/>), and changing the
+  /// password signs out the account's other sessions (<see cref="PasswordChangeSignInFilter"/>).
   /// </remarks>
   /// <param name="endpoints">The route builder.</param>
   /// <returns>The same route builder.</returns>
   public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder endpoints)
   {
     var group = endpoints.MapGroup("/api/v1/auth").WithTags("Auth");
+    group.AddEndpointFilter<PasswordChangeSignInFilter>();
     group.MapGroup(string.Empty).AddEndpointFilter<ResetPasswordUnlockFilter>().MapIdentityApi<User>();
     group.MapPost("/logout", LogoutAsync).RequireAuthorization();
     group.MapPost("/confirm", ConfirmAsync).AllowAnonymous();
@@ -38,7 +40,8 @@ internal static class AuthEndpoints
   /// Opening the link proves the person owns the inbox, so a new account starts signed in rather than being sent to the
   /// sign-in form. Only the first confirmation signs in: Identity's confirmation codes stay valid for their lifetime, so
   /// opening the link again, or a link for an address already confirmed, confirms nothing and signs no one in. A change
-  /// of address is confirmed without signing in, since the person already has a session where they asked for it.
+  /// of address is confirmed without signing in, since the person already has a session where they asked for it; that
+  /// session, if it is the one confirming, is kept signed in, while the account's other sessions are signed out.
   /// </remarks>
   /// <param name="request">The values from the link.</param>
   /// <param name="userManager">The user manager.</param>
@@ -58,9 +61,18 @@ internal static class AuthEndpoints
 
     if (request.ChangedEmail is { } changed)
     {
-      return await ChangeEmailAsync(userManager, user, changed, code).ConfigureAwait(false)
-        ? TypedResults.Ok(new ConfirmEmailResponse(SignedIn: false))
-        : TypedResults.Unauthorized();
+      if (!await ChangeEmailAsync(userManager, user, changed, code).ConfigureAwait(false))
+      {
+        return TypedResults.Unauthorized();
+      }
+
+      // The change renews the security stamp, which signs out every session; the one confirming stays signed in.
+      if (userManager.GetUserId(signInManager.Context.User) == user.Id)
+      {
+        await signInManager.RefreshSignInAsync(user).ConfigureAwait(false);
+      }
+
+      return TypedResults.Ok(new ConfirmEmailResponse(SignedIn: false));
     }
 
     if (user.EmailConfirmed)
