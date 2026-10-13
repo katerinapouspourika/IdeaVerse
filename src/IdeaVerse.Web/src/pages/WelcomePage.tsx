@@ -9,7 +9,7 @@ import { SetupSteps } from '../workspaces/SetupSteps';
  * everyone else starts setting up their workspace: naming it, then inviting their team. Either way, workspaces at their
  * company are offered to ask to join.
  */
-export function WelcomePage() {
+export function WelcomePage({ onCreated }: { onCreated?: () => void }) {
   const invitations = useReceivedInvitations();
   const invited = (invitations.data?.length ?? 0) > 0;
 
@@ -21,14 +21,14 @@ export function WelcomePage() {
           <p className="muted">You’ve been invited to a workspace. Join it to see your team’s ideas, or start one of your own.</p>
           <ReceivedInvitations />
           <CompanyWorkspaces />
-          <CreateWorkspaceForm heading="Or start your own workspace" />
+          <CreateWorkspaceForm heading="Or start your own workspace" onCreated={onCreated} />
         </>
       ) : (
         <>
           <p className="muted">Ideas live in a workspace you share with your company or team. Let’s set yours up; it takes a minute.</p>
           <CompanyWorkspaces />
           <SetupSteps current={1} />
-          <CreateWorkspaceForm heading="Name your workspace" />
+          <CreateWorkspaceForm heading="Name your workspace" onCreated={onCreated} />
           <p className="muted small">Expecting an invitation instead? Ask a teammate to invite this email address; it will appear here.</p>
         </>
       )}

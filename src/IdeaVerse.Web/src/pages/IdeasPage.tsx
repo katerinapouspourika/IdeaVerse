@@ -30,13 +30,16 @@ export function IdeasPage() {
   const workspaces = useWorkspace();
   const { current, isLoading, error } = workspaces;
   const location = useLocation();
+  // A workspace just created here moves on to its invite step; showing its ideas, or a waiting template, first would
+  // take the user past that step.
+  const [created, setCreated] = useState(false);
 
-  if (isLoading) {
+  if (isLoading || created) {
     return <Skeleton variant="cards" />;
   }
 
   if (!current) {
-    return error ? <LoadError queries={workspaces} /> : <WelcomePage />;
+    return error ? <LoadError queries={workspaces} /> : <WelcomePage onCreated={() => setCreated(true)} />;
   }
 
   // A template chosen before signing up opens in the New idea form as soon as there is a workspace to add it to.
