@@ -99,11 +99,16 @@ function searchable(text: string): string {
   return text.toLowerCase().replaceAll(/[_/]/g, ' ');
 }
 
-/** Whether an option matches a search on its label or IANA id; every word must match. */
+/**
+ * Whether an option matches a search on its label or IANA id; every word must match. Every label starts with its offset
+ * from UTC, so "UTC" or "GMT" alone matches only the UTC zone itself; before an offset, as in "utc+05:30", it is ignored.
+ */
 export function matchesZone(option: TimeZoneOption, search: string): boolean {
-  const haystack = `${searchable(option.label)} ${searchable(option.id)}`;
+  const haystack = `${searchable(option.label.replace('(UTC', '('))} ${searchable(option.id)}`;
   return searchable(search)
+    .replaceAll(/\b(?:utc|gmt)(?=[+-])/g, '')
     .split(/\s+/)
     .filter(Boolean)
+    .map((word) => (word === 'gmt' ? 'utc' : word))
     .every((word) => haystack.includes(word));
 }

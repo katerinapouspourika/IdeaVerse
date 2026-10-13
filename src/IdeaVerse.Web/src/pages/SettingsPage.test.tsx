@@ -72,6 +72,22 @@ describe('SettingsPage', () => {
     await waitFor(() => expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ timeZone: 'Asia/Kolkata' }));
   });
 
+  it('finds UTC by name, and other zones by their offset from it', async () => {
+    fakeApi({ ...signedIn, 'GET /api/v1/account': { status: 200, body: { ...signedInAccount, timeZone: 'Asia/Kolkata' } } });
+    renderApp('/settings');
+
+    const form = await screen.findByRole('form', { name: 'Time zone' });
+    const search = within(form).getByRole('searchbox', { name: 'Search time zones' });
+    await userEvent.type(search, 'utc');
+
+    expect(within(form).getByText('1 time zone matches.')).toBeInTheDocument();
+    expect(within(form).getByRole('combobox', { name: 'Your time zone' })).toHaveValue('UTC');
+
+    await userEvent.clear(search);
+    await userEvent.type(search, 'UTC+05:30 kolkata');
+    expect(within(form).getByRole('combobox', { name: 'Your time zone' })).toHaveValue('Asia/Kolkata');
+  });
+
   it('says when no time zone matches, and keeps the choice', async () => {
     fakeApi(signedIn);
     renderApp('/settings');
