@@ -135,7 +135,7 @@ Ideas with a planned start also remind their team before it starts (`StartingSoo
 
 Assigned components with a due date count down the same way for their assignee, whether or not they are on the idea's team. Teammates' actions also notify: being assigned a component, being added to an idea's team, a comment on an idea you own or are on the team of (except your own), and being mentioned in a comment, when it is posted or when an edit adds you (`Mentioned`, instead of the comment notification; it reaches anyone in the workspace). These are always on, appear under the bell, and are emailed unless the person turned reminder emails off; comments are only emailed to people who also turned on comment emails.
 
-Notifications that no longer concern the user (they left the team or workspace, or were unassigned) are hidden.
+Notifications that no longer concern the user (they left the team or workspace, or were unassigned) are hidden; someone added back sees only what was raised since.
 
 ## Configuration
 

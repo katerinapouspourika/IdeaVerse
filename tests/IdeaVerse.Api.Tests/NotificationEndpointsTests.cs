@@ -111,6 +111,26 @@ public class NotificationEndpointsTests
     await Assert.That(after.UnreadCount).IsEqualTo(0);
   }
 
+  [Test]
+  public async Task List_MemberAddedBack_SeesOnlyWhatWasRaisedSince()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var member = await factory.CreateSignedInClientAsync("member@example.com");
+    await factory.JoinAsync(owner, member, "member@example.com");
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(1))).ReadIdeaAsync();
+    var added = await (await owner.AddMemberAsync(idea.Id, "member@example.com")).ReadMemberAsync();
+    await factory.RunRemindersAsync();
+    (await owner.DeleteAsync($"/api/v1/ideas/{idea.Id}/members/{added.UserId}")).Dispose();
+
+    factory.Time.Advance(TimeSpan.FromMinutes(5));
+    (await owner.AddMemberAsync(idea.Id, "member@example.com")).Dispose();
+    var after = await ReadAsync(member);
+
+    await Assert.That(after.Items.Select(n => n.Kind)).IsEquivalentTo([ReminderKind.AddedToTeam]);
+    await Assert.That(after.UnreadCount).IsEqualTo(1);
+  }
+
   private static async Task<NotificationsResponse> ReadAsync(HttpClient client)
   {
     using var response = await client.GetAsync("/api/v1/notifications");
