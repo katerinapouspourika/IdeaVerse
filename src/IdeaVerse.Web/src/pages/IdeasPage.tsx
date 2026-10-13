@@ -51,12 +51,17 @@ export function IdeasPage() {
 /** Which ideas the status tabs show: all active ones, one status, or the archive. */
 type Tab = IdeaStatus | 'All' | 'Archived';
 
+const views = ['list', 'board', 'calendar', 'timeline', 'matrix'] as const;
+type View = (typeof views)[number];
+const tabs: readonly Tab[] = ['All', ...statuses, 'Archived'];
+
 function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
-  const [tab, setTab] = useState<Tab>('All');
+  const remembered = `ideaverse.ideas.${workspace.id}`;
+  const [tab, setTab] = useRemembered<Tab>(remembered, 'tab', 'All', (value) => tabs.includes(value as Tab));
   const [search, setSearch] = useState('');
-  const [tag, setTag] = useState('');
-  const [sort, setSort] = useState<IdeaSort>('TargetDate');
-  const [view, setView] = useState<'list' | 'board' | 'calendar' | 'timeline' | 'matrix'>('list');
+  const [tag, setTag] = useRemembered(remembered, 'tag', '', (value) => typeof value === 'string');
+  const [sort, setSort] = useRemembered<IdeaSort>(remembered, 'sort', 'TargetDate', (value) => typeof value === 'string' && value in sortLabels);
+  const [view, setView] = useRemembered<View>(remembered, 'view', 'list', (value) => views.includes(value as View));
   const location = useLocation();
   const navigate = useNavigate();
   const request = location.state as { adding?: boolean; template?: string } | null;
@@ -307,4 +312,35 @@ function describeTeam(idea: Idea): string {
   }
   const owner = personLabel(idea.ownerName, idea.ownerEmail);
   return idea.role === 'Member' ? `You’re on ${owner}’s team` : `By ${owner}`;
+}
+
+/**
+ * A choice on the ideas list (view, status tab, tag, or order) kept in the browser per workspace, so a reload or a later
+ * visit opens the list as it was left. Storage may be unavailable, as in a private window; the list then starts fresh.
+ */
+function useRemembered<T>(key: string, name: string, initial: T, valid: (value: unknown) => boolean) {
+  const [value, setValue] = useState<T>(() => {
+    const saved = readChoices(key)[name];
+    return saved !== undefined && valid(saved) ? (saved as T) : initial;
+  });
+
+  const update = (next: T) => {
+    setValue(next);
+    try {
+      localStorage.setItem(key, JSON.stringify({ ...readChoices(key), [name]: next }));
+    } catch {
+      // Not remembered this time; the choice still applies.
+    }
+  };
+
+  return [value, update] as const;
+}
+
+function readChoices(key: string): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? '{}');
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
 }
