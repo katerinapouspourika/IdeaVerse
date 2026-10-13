@@ -73,16 +73,20 @@ public class AccountEndpointsTests
   }
 
   [Test]
-  public async Task Update_IanaTimeZone_SavesIt()
+  [Arguments("Europe/Athens")]
+  [Arguments("Europe/Kyiv")]
+  [Arguments("Asia/Kolkata")]
+  [Arguments("Pacific/Kanton")]
+  public async Task Update_IanaTimeZone_SavesIt(string timeZone)
   {
     await using var factory = new IdeaVerseApiFactory();
     using var client = await factory.CreateSignedInClientAsync();
 
-    using var response = await client.PutAsJsonAsync("/api/v1/account", new UpdateAccountRequest("Europe/Athens"), Json.Options);
+    using var response = await client.PutAsJsonAsync("/api/v1/account", new UpdateAccountRequest(timeZone), Json.Options);
     var account = await client.GetFromJsonAsync<AccountResponse>("/api/v1/account", Json.Options);
 
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
-    await Assert.That(account!.TimeZone).IsEqualTo("Europe/Athens");
+    await Assert.That(account!.TimeZone).IsEqualTo(timeZone);
   }
 
   [Test]
