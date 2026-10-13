@@ -48,6 +48,9 @@ builder.Services.ConfigureApplicationCookie(o =>
   o.Cookie.SameSite = SameSiteMode.Strict;
 });
 
+// A password change or reset signs out other sessions within a minute, instead of Identity's default 30.
+builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.FromMinutes(1));
+
 builder.Services.AddScoped<UserCalendar>();
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<WorkspaceService>();
