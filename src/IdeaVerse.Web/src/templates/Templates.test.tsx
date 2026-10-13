@@ -94,7 +94,7 @@ describe('Starting an idea from a template', () => {
     const form = await screen.findByRole('form', { name: 'New idea' });
     expect(within(form).getByLabelText('Start from')).toHaveValue('product-launch');
     expect(within(form).getByLabelText('Title')).toHaveValue(launch.title);
-    expect(within(form).getByLabelText('Implement by')).toHaveValue(addDays(todayIso(), launch.days));
+    expect(within(form).getByLabelText('Target date')).toHaveValue(addDays(todayIso(), launch.days));
     const title = within(form).getByLabelText('Title');
     await userEvent.clear(title);
     await userEvent.type(title, 'Launch: Atlas');

@@ -61,7 +61,7 @@ function TemplateDetail({ template }: { template: IdeaTemplate }) {
               ))}
             </ol>
             <p className="small muted">
-              Due in about {Math.round(template.days / 7)} weeks by default. Tags: {template.tags.join(', ')}. Everything can be changed once it’s yours.
+              Target date about {Math.round(template.days / 7)} weeks away by default. Tags: {template.tags.join(', ')}. Everything can be changed once it’s yours.
             </p>
           </div>
         </div>

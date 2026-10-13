@@ -90,7 +90,7 @@ export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, o
           <input {...props} required maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Black Friday teaser campaign" />
         )}
       </Field>
-      <Field label="Implement by" error={fieldError(create.error, 'targetDate')}>
+      <Field label="Target date" error={fieldError(create.error, 'targetDate')}>
         {(props) => (
           <input {...props} type="date" required min={today} value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
         )}

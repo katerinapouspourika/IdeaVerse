@@ -116,7 +116,7 @@ function BoardCard({ idea, status, onMove }: { idea: Idea; status: IdeaStatus; o
         </Link>
         {idea.canEdit && <GripVertical aria-hidden="true" size={16} className="grip" />}
       </div>
-      <span className={idea.isOverdue ? 'overdue-text small' : 'muted small'}>Due {describeDue(idea.targetDate)}</span>
+      <span className={idea.isOverdue ? 'overdue-text small' : 'muted small'}>Target date {describeDue(idea.targetDate)}</span>
       <Progress done={idea.completedComponentCount} total={idea.componentCount} />
       <Tags tags={idea.tags} />
       {idea.canEdit && (
