@@ -15,6 +15,8 @@ export interface ToastOptions {
   tone?: 'success' | 'error';
   /** Offers an Undo button that runs this. */
   undo?: () => void;
+  /** Offers a button that does something with what the message is about, such as "Open" for a new idea. */
+  action?: { label: string; run: () => void };
 }
 
 interface Toast extends ToastOptions {
@@ -30,7 +32,7 @@ interface Feedback {
 
 const FeedbackContext = createContext<Feedback | null>(null);
 
-/** How long a toast stays, longer when it offers Undo. */
+/** How long a toast stays, longer when it offers a button. */
 const toastMs = 5000;
 const undoToastMs = 8000;
 
@@ -48,7 +50,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
       toast: (options) => {
         const id = ++nextId.current;
         setToasts((all) => [...all.slice(-2), { ...options, id }]);
-        setTimeout(() => dismiss(id), options.undo ? undoToastMs : toastMs);
+        setTimeout(() => dismiss(id), options.undo || options.action ? undoToastMs : toastMs);
       },
     }),
     [dismiss],
@@ -68,6 +70,18 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
           <div key={t.id} className={t.tone === 'error' ? 'toast error' : 'toast'}>
             {t.tone === 'error' ? <CircleAlert aria-hidden="true" size={18} /> : <CircleCheck aria-hidden="true" size={18} />}
             <span>{t.message}</span>
+            {t.action && (
+              <button
+                type="button"
+                className="toast-action"
+                onClick={() => {
+                  t.action?.run();
+                  dismiss(t.id);
+                }}
+              >
+                {t.action.label}
+              </button>
+            )}
             {t.undo && (
               <button
                 type="button"

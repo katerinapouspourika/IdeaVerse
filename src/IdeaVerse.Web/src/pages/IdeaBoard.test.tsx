@@ -109,4 +109,39 @@ describe('Board view', () => {
     expect(screen.queryByLabelText('Status of Leo’s podcast')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Leo’s podcast' }).closest('li')).toHaveAttribute('draggable', 'false');
   });
+
+  it('opens an idea from anywhere on its card, with the title as the one link to tab to', async () => {
+    fakeApi({
+      ...routes(),
+      'GET /api/v1/ideas/idea-1': { status: 200, body: launch },
+      'GET /api/v1/ideas/idea-1/components': { status: 200, body: [] },
+      'GET /api/v1/workspaces/ws-1/members': { status: 200, body: [] },
+    });
+    const router = renderApp('/ideas');
+    await userEvent.click(await screen.findByRole('button', { name: 'Board' }));
+
+    const title = screen.getByRole('link', { name: 'Spring launch' });
+    const card = title.closest('li')!;
+    // The title link is stretched over the card; it isn't draggable itself, so a drag from anywhere on the card moves the card.
+    expect(title).toHaveClass('stretched-link');
+    expect(title).toHaveAttribute('draggable', 'false');
+    expect(within(card).getAllByRole('link')).toEqual([title]);
+
+    await userEvent.selectOptions(within(card).getByLabelText('Status of Spring launch'), 'InProgress');
+    expect(router.state.location.search).toBe('');
+
+    await userEvent.click(screen.getByRole('link', { name: 'Spring launch' }));
+    expect(await screen.findByRole('dialog', { name: 'Spring launch' })).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?idea=idea-1');
+  });
+
+  it('still moves a card dragged by its title', async () => {
+    const calls = fakeApi(routes());
+    renderApp('/ideas');
+    await userEvent.click(await screen.findByRole('button', { name: 'Board' }));
+
+    drag(screen.getByRole('link', { name: 'Spring launch' }), screen.getByRole('region', { name: /Done/ }));
+
+    await waitFor(() => expect(calls.find((c) => c.method === 'PUT')?.body).toMatchObject({ status: 'Done' }));
+  });
 });
