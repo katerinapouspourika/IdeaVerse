@@ -11,6 +11,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
 import { ComponentsSection } from '../pages/ComponentsSection';
 import { PriorityCard } from '../priority/PriorityCard';
+import { VoteButton } from '../priority/VoteButton';
 
 const focusable = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -87,6 +88,7 @@ export function IdeaPanel({ id, onClose }: { id: string; onClose: () => void }) 
                   {idea.data.title}
                 </h2>
                 <StatusBadge idea={idea.data} />
+                <VoteButton idea={idea.data} />
               </div>
               <p className="small">
                 Implement by <strong>{formatDate(idea.data.targetDate)}</strong>{' '}
