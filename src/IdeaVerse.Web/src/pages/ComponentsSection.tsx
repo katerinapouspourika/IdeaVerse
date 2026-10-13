@@ -1,9 +1,11 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { GripVertical } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 
 import { SuggestComponents } from '../ai/SuggestComponents';
 import { formatDate, todayIso } from '../api/dates';
 import {
+  keys,
   useAddComponent,
   useComponents,
   useDeleteComponent,
@@ -24,6 +26,7 @@ export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: st
   const components = useComponents(ideaId);
   const update = useUpdateComponent(ideaId);
   const remove = useDeleteComponent(ideaId);
+  const client = useQueryClient();
   const add = useAddComponent(ideaId);
   const reorder = useReorderComponents(ideaId);
   const toast = useToast();
@@ -57,9 +60,19 @@ export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: st
     }
   }, [components.data]);
 
-  /** Removes a component straight away, offering Undo, which adds it back with its assignment, due date, and done state. */
-  const removeComponent = (component: Component) =>
-    remove.mutate(component.id, {
+  /** Removes a component straight away, offering Undo, which adds it back in its place with its assignment, due date, and done state. */
+  const removeComponent = (component: Component) => {
+    const place = (components.data ?? []).findIndex((c) => c.id === component.id);
+    // Undo adds the component again, at the end; puts it back in its old place among the components there are now.
+    const putBack = (created: Component) => {
+      const current = client.getQueryData<Component[]>(keys.components(ideaId)) ?? components.data ?? [];
+      const ids = current.map((c) => c.id).filter((id) => id !== component.id && id !== created.id);
+      if (place >= 0 && place < ids.length) {
+        ids.splice(place, 0, created.id);
+        reorder.mutate(ids);
+      }
+    };
+    return remove.mutate(component.id, {
       onSuccess: () =>
         toast({
           message: `Removed “${component.title}”`,
@@ -68,6 +81,7 @@ export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: st
               { title: component.title, notes: component.notes },
               {
                 onSuccess: (created) => {
+                  putBack(created);
                   if (component.isDone || component.assigneeId || component.dueDate) {
                     update.mutate({
                       id: created.id,
@@ -83,6 +97,7 @@ export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: st
             ),
         }),
     });
+  };
 
   return (
     <section className="card stack" aria-labelledby="components-heading">
