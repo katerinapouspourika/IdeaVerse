@@ -3,6 +3,7 @@ namespace Pouspourika.IdeaVerse.Api.Tests;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Pouspourika.IdeaVerse.Api.Activity;
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Ideas;
 using Pouspourika.IdeaVerse.Api.Members;
@@ -47,6 +48,10 @@ internal static class Json
 
   public static async Task<HttpResponseMessage> CreateIdeaAsync(this HttpClient client, string title, DateOnly targetDate, string? description = null)
     => await client.PostAsJsonAsync($"/api/v1/workspaces/{await client.WorkspaceIdAsync()}/ideas", new CreateIdeaRequest(title, description, targetDate), Options);
+
+  // A page of the idea's history; the first page at the default size unless the query says otherwise.
+  public static async Task<ActivityPageResponse> ActivityAsync(this HttpClient client, Guid ideaId, string query = "")
+    => (await client.GetFromJsonAsync<ActivityPageResponse>($"/api/v1/ideas/{ideaId}/activity{query}", Options))!;
 
   public static async Task SetTimeZoneAsync(this HttpClient client, string timeZone)
   {

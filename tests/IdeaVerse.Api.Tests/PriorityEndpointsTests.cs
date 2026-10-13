@@ -112,7 +112,7 @@ public class PriorityEndpointsTests
     using var response = await client.PutAsJsonAsync($"/api/v1/ideas/{idea.Id}/priority", new SetPriorityRequest(4, 2), Json.Options);
     (await client.PutAsJsonAsync($"/api/v1/ideas/{idea.Id}/priority", new SetPriorityRequest(4, 2), Json.Options)).Dispose();
     var scored = await response.ReadIdeaAsync();
-    var activity = await client.GetFromJsonAsync<ActivityResponse[]>($"/api/v1/ideas/{idea.Id}/activity", Json.Options);
+    var activity = (await client.ActivityAsync(idea.Id)).Items;
 
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
     await Assert.That(scored.Impact).IsEqualTo(4);
@@ -144,7 +144,7 @@ public class PriorityEndpointsTests
     (await client.PutAsJsonAsync($"/api/v1/ideas/{idea.Id}/priority", new SetPriorityRequest(4, 2), Json.Options)).Dispose();
 
     (await client.PutAsJsonAsync($"/api/v1/ideas/{idea.Id}/priority", new SetPriorityRequest(4, null), Json.Options)).Dispose();
-    var activity = await client.GetFromJsonAsync<ActivityResponse[]>($"/api/v1/ideas/{idea.Id}/activity", Json.Options);
+    var activity = (await client.ActivityAsync(idea.Id)).Items;
 
     await Assert.That(activity!.Where(a => a.Kind == ActivityKind.Rescored).Select(a => a.Detail ?? string.Empty))
       .IsEquivalentTo(["Impact 4, effort 2", "Impact 4, effort not scored"]);
