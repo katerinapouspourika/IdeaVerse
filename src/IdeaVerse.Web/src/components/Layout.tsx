@@ -15,6 +15,7 @@ import { FeedbackProvider } from './Feedback';
 import { Menu } from './Menu';
 import { NotificationBell } from './NotificationBell';
 import { ThemeToggle } from './ThemeToggle';
+import { TimeZonePrompt } from './TimeZonePrompt';
 import { useInstallPrompt } from './useInstallPrompt';
 
 /** What a route can tell the layout about its page. */
@@ -51,6 +52,7 @@ export function Layout() {
             tabIndex={-1}
             className={fullWidth ? 'content full' : account || returning ? 'content wide' : 'content'}
           >
+            {account && !fullWidth && <TimeZonePrompt />}
             <Outlet />
           </main>
           {account && !fullWidth ? <AppFooter /> : <Footer />}
