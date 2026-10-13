@@ -2194,14 +2194,29 @@ a:focus-visible {
   text-decoration: none;
 }
 
+/* The details, then the work (components, discussion, activity) on the left, and the side cards on the right.
+   On narrow screens the side cards come between the details and the work, as they do in the markup. */
 .idea-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'main side'
+    'work side';
   align-items: start;
-  gap: 20px;
+  gap: 16px 20px;
+}
+
+.idea-main {
+  grid-area: main;
+}
+
+.idea-work {
+  grid-area: work;
 }
 
 .idea-side {
+  grid-area: side;
   position: sticky;
   top: 84px;
 }
@@ -2235,6 +2250,11 @@ a:focus-visible {
 @media (max-width: 960px) {
   .idea-layout {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      'main'
+      'side'
+      'work';
   }
 
   .idea-side {

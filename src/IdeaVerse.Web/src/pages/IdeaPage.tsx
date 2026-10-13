@@ -110,9 +110,6 @@ function IdeaDetail({ idea }: { idea: Idea }) {
               )}
             </section>
           )}
-          <ComponentsSection ideaId={idea.id} workspaceId={idea.workspaceId} canEdit={idea.canEdit} />
-          <DiscussionSection ideaId={idea.id} workspaceId={idea.workspaceId} />
-          <ActivitySection ideaId={idea.id} />
         </div>
 
         <aside className="stack idea-side" aria-label="Idea details">
@@ -120,6 +117,12 @@ function IdeaDetail({ idea }: { idea: Idea }) {
           <PriorityCard idea={idea} />
           <TeamSection idea={idea} />
         </aside>
+
+        <div className="stack idea-work">
+          <ComponentsSection ideaId={idea.id} workspaceId={idea.workspaceId} canEdit={idea.canEdit} />
+          <DiscussionSection ideaId={idea.id} workspaceId={idea.workspaceId} />
+          <ActivitySection ideaId={idea.id} />
+        </div>
       </div>
     </div>
   );
