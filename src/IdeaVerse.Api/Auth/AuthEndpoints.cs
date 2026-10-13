@@ -20,7 +20,8 @@ internal static class AuthEndpoints
   /// The web app signs in with <c>POST /api/v1/auth/login?useCookies=true</c>, which issues an HTTP-only cookie. A
   /// successful password reset also unlocks the account (<see cref="ResetPasswordUnlockFilter"/>), and changing the
   /// password signs out the account's other sessions (<see cref="PasswordChangeSignInFilter"/>). A change of email to
-  /// an address another account uses is refused up front (<see cref="EmailChangeFilter"/>).
+  /// an address another account uses is refused up front (<see cref="EmailChangeFilter"/>). Password reset and
+  /// confirmation emails are limited per address (<see cref="AccountEmailThrottleFilter"/>).
   /// </remarks>
   /// <param name="endpoints">The route builder.</param>
   /// <returns>The same route builder.</returns>
@@ -32,6 +33,7 @@ internal static class AuthEndpoints
     group.MapPost("/logout", LogoutAsync).RequireAuthorization();
     group.MapPost("/confirm", ConfirmAsync).AllowAnonymous();
     group.AddEndpointFilter<EmailChangeFilter>();
+    group.AddEndpointFilter<AccountEmailThrottleFilter>();
     return endpoints;
   }
 

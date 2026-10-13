@@ -20,10 +20,16 @@ using Pouspourika.IdeaVerse.Api.Workspaces;
 /// </remarks>
 /// <param name="context">The database context.</param>
 /// <param name="mailSender">Sends the request and approval emails.</param>
+/// <param name="throttle">Limits how often one person's requests are emailed.</param>
 /// <param name="app">Application settings, for links in emails.</param>
 /// <param name="timeProvider">The clock.</param>
-public sealed class DiscoveryService(IdeaVerseDbContext context, IMailSender mailSender, IOptions<AppOptions> app, TimeProvider timeProvider)
+public sealed class DiscoveryService(IdeaVerseDbContext context, IMailSender mailSender, EmailThrottle throttle, IOptions<AppOptions> app, TimeProvider timeProvider)
 {
+  /// <summary>
+  /// How many times a day a workspace's owner and admins are emailed about one person's requests to join it.
+  /// </summary>
+  public const int RequestEmailsPerDay = 3;
+
   /// <summary>
   /// Builds the subject of the email telling a workspace's owner and admins that someone asked to join.
   /// </summary>
@@ -118,6 +124,10 @@ public sealed class DiscoveryService(IdeaVerseDbContext context, IMailSender mai
   /// <summary>
   /// Asks to join a workspace at the user's company, telling its owner and admins by email. Asking again changes nothing.
   /// </summary>
+  /// <remarks>
+  /// Withdrawing and asking again makes a new request, but the owner and admins are emailed about one person's requests
+  /// to a workspace at most <see cref="RequestEmailsPerDay"/> times a day; the requests still show on the People page.
+  /// </remarks>
   /// <param name="userId">The signed-in user's identifier.</param>
   /// <param name="workspaceId">The workspace identifier.</param>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
@@ -144,7 +154,10 @@ public sealed class DiscoveryService(IdeaVerseDbContext context, IMailSender mai
     {
       context.JoinRequests.Add(new JoinRequest { WorkspaceId = workspaceId, UserId = userId, CreatedAt = timeProvider.GetUtcNow() });
       await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-      await EmailManagersAsync(workspaceId, workspace.Name, email!, cancellationToken).ConfigureAwait(false);
+      if (throttle.TryAcquire($"joinRequest:{workspaceId}:{userId}", RequestEmailsPerDay, TimeSpan.FromDays(1)))
+      {
+        await EmailManagersAsync(workspaceId, workspace.Name, email!, cancellationToken).ConfigureAwait(false);
+      }
     }
 
     return true;
