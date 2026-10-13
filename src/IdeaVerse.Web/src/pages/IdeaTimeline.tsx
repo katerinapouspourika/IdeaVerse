@@ -76,7 +76,8 @@ export function IdeaTimeline({ ideas }: { ideas: Idea[] }) {
               return (
                 <li key={idea.id} className="timeline-row">
                   <div className="timeline-label">
-                    <Link {...linkProps(idea.id)} className="timeline-title">
+                    {/* Stretched over the whole row, bar included, so a click anywhere on it opens the idea. */}
+                    <Link {...linkProps(idea.id)} className="timeline-title stretched-link">
                       {idea.title}
                     </Link>
                     <span className={idea.isOverdue ? 'small overdue-text' : 'small muted'}>

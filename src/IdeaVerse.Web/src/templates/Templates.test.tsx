@@ -93,11 +93,11 @@ describe('Starting an idea from a template', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/ideas'));
     const form = await screen.findByRole('form', { name: 'New idea' });
     expect(within(form).getByLabelText('Start from')).toHaveValue('product-launch');
-    expect(within(form).getByLabelText('Title')).toHaveValue(launch.title);
+    expect(within(form).getByLabelText('Title')).toHaveValue('');
+    expect(within(form).getByLabelText('Title')).toHaveAttribute('placeholder', 'Launch: [product name]');
+    expect(within(form).getByLabelText('Title')).toHaveAccessibleDescription('Suggested: Launch: [product name]');
     expect(within(form).getByLabelText('Target date')).toHaveValue(addDays(todayIso(), launch.days));
-    const title = within(form).getByLabelText('Title');
-    await userEvent.clear(title);
-    await userEvent.type(title, 'Launch: Atlas');
+    await userEvent.type(within(form).getByLabelText('Title'), 'Launch: Atlas');
     await userEvent.click(within(form).getByRole('button', { name: 'Add idea' }));
 
     await waitFor(() => expect(screen.queryByRole('form', { name: 'New idea' })).not.toBeInTheDocument());
@@ -120,9 +120,14 @@ describe('Starting an idea from a template', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'New idea' }));
     const form = screen.getByRole('form', { name: 'New idea' });
     await userEvent.selectOptions(within(form).getByLabelText('Start from'), 'customer-newsletter');
-    expect(within(form).getByLabelText('Title')).toHaveValue(findTemplate('customer-newsletter')!.title);
+    expect(within(form).getByLabelText('Title')).toHaveValue('');
+    expect(within(form).getByLabelText('Title')).toHaveAttribute('placeholder', findTemplate('customer-newsletter')!.title);
+    await userEvent.selectOptions(within(form).getByLabelText('Start from'), 'website-refresh');
+    expect(within(form).getByLabelText('Title')).toHaveValue('Website refresh');
+    await userEvent.selectOptions(within(form).getByLabelText('Start from'), 'customer-newsletter');
     expect(within(form).getByText(/^Adds 6 things it needs/)).toBeInTheDocument();
     await userEvent.selectOptions(within(form).getByLabelText('Start from'), '');
+    await userEvent.type(within(form).getByLabelText('Title'), 'October newsletter');
     await userEvent.click(within(form).getByRole('button', { name: 'Add idea' }));
 
     await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.path.endsWith('/ideas'))).toBe(true));

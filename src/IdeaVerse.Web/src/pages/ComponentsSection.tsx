@@ -88,6 +88,9 @@ export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: st
     <section className="card stack" aria-labelledby="components-heading">
       <h2 id="components-heading">What it needs</h2>
       <p className="muted small">Components are the things that must be in place before this idea can happen.</p>
+      {components.data && components.data.length > 0 && (
+        <ChecklistProgress done={components.data.filter((c) => c.isDone).length} total={components.data.length} />
+      )}
       {components.isLoading && <Skeleton />}
       {components.data?.length === 0 && <p className="muted">Nothing listed yet.</p>}
       {components.data && components.data.length > 0 && (
@@ -146,6 +149,35 @@ export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: st
       {canEdit && <AddComponentForm ideaId={ideaId} />}
       {canEdit && <SuggestComponents ideaId={ideaId} workspaceId={workspaceId} />}
     </section>
+  );
+}
+
+/** How far along the checklist is, in words and as a labelled bar. */
+function ChecklistProgress({ done, total }: { done: number; total: number }) {
+  const labelId = useId();
+  const percent = Math.round((done / total) * 100);
+  const label = done === total ? `All ${total} done` : `${done} of ${total} done`;
+
+  return (
+    <div className="checklist-progress">
+      <div className="row spread small">
+        <span id={labelId}>
+          <strong>{label}</strong>
+        </span>
+        <span className="muted">{percent}%</span>
+      </div>
+      <div
+        className="progress-track wide"
+        role="progressbar"
+        aria-labelledby={labelId}
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-valuenow={done}
+        aria-valuetext={`${done} of ${total} components done, ${percent}%`}
+      >
+        <span className="progress-fill" style={{ width: `${percent}%` }} />
+      </div>
+    </div>
   );
 }
 

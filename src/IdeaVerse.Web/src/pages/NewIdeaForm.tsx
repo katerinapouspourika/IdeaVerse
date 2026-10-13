@@ -6,7 +6,7 @@ import { useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { TagInput } from '../components/TagInput';
-import { findTemplate, templates } from '../templates/templates';
+import { findTemplate, templates, type IdeaTemplate } from '../templates/templates';
 
 interface NewIdeaFormProps {
   workspaceId: string;
@@ -17,9 +17,16 @@ interface NewIdeaFormProps {
   onDone: () => void;
 }
 
+/** Whether a template's title has a part to fill in, such as "Launch: [product name]". */
+const hasPlaceholder = (title: string) => /\[[^\]]*\]/.test(title);
+
+/** The title a template starts the idea with: its own when complete, or none when the user has a part to fill in. */
+const startingTitle = (template: IdeaTemplate) => (hasPlaceholder(template.title) ? '' : template.title);
+
 /**
  * Adds an idea, either blank or from a template. A template fills in the fields, which can still be changed, and its
- * checklist is added to the idea once it is saved.
+ * checklist is added to the idea once it is saved. A template title with a part to fill in, such as
+ * "Launch: [product name]", is offered as the title's placeholder and hint instead, so the brackets are never saved.
  */
 export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, onDone }: NewIdeaFormProps) {
   const create = useCreateIdea(workspaceId);
@@ -28,17 +35,18 @@ export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, o
   const today = todayIso();
   const starting = findTemplate(initialTemplate);
   const [templateSlug, setTemplateSlug] = useState(starting?.slug ?? '');
-  const [title, setTitle] = useState(starting?.title ?? initial?.title ?? '');
+  const [title, setTitle] = useState(starting ? startingTitle(starting) : (initial?.title ?? ''));
   const [description, setDescription] = useState(starting?.description ?? initial?.description ?? '');
   const [targetDate, setTargetDate] = useState(addDays(today, starting?.days ?? 14));
   const [tags, setTags] = useState<string[]>(starting?.tags ?? []);
   const template = findTemplate(templateSlug);
+  const suggestion = template && hasPlaceholder(template.title) ? template.title : undefined;
 
   const chooseTemplate = (slug: string) => {
     setTemplateSlug(slug);
     const chosen = findTemplate(slug);
     if (chosen) {
-      setTitle(chosen.title);
+      setTitle(startingTitle(chosen));
       setDescription(chosen.description);
       setTags(chosen.tags);
       setTargetDate(addDays(today, chosen.days));
@@ -85,9 +93,16 @@ export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, o
           </ul>
         </details>
       )}
-      <Field label="Title" error={fieldError(create.error, 'title')}>
+      <Field label="Title" hint={suggestion ? `Suggested: ${suggestion}` : undefined} error={fieldError(create.error, 'title')}>
         {(props) => (
-          <input {...props} required maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Black Friday teaser campaign" />
+          <input
+            {...props}
+            required
+            maxLength={200}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={suggestion ?? 'e.g. Black Friday teaser campaign'}
+          />
         )}
       </Field>
       <Field label="Target date" error={fieldError(create.error, 'targetDate')}>
