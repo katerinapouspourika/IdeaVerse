@@ -98,7 +98,7 @@ function IdeaDetail({ idea }: { idea: Idea }) {
                 </div>
               </div>
               <p className="small">
-                Implement by <strong>{formatDate(idea.targetDate)}</strong>{' '}
+                Target date <strong>{formatDate(idea.targetDate)}</strong>{' '}
                 <span className={idea.isOverdue ? 'overdue-text' : 'muted'}>({describeDue(idea.targetDate)})</span>
               </p>
               <Tags tags={idea.tags} />
@@ -169,7 +169,7 @@ function ScheduleCard({ idea }: { idea: Idea }) {
     <section className="card stack" aria-labelledby="schedule-heading">
       <h2 id="schedule-heading">Schedule</h2>
       <dl className="facts">
-        <dt>Implement by</dt>
+        <dt>Target date</dt>
         <dd>
           <strong>{formatDate(idea.targetDate)}</strong>{' '}
           <span className={idea.isOverdue ? 'overdue-text small' : 'muted small'}>({describeDue(idea.targetDate)})</span>
@@ -267,7 +267,7 @@ function EditIdeaForm({ idea, onDone }: { idea: Idea; onDone: () => void }) {
         )}
       </Field>
       <div className="row wrap">
-        <Field label="Implement by" error={fieldError(update.error, 'targetDate')}>
+        <Field label="Target date" error={fieldError(update.error, 'targetDate')}>
           {(props) => (
             <input {...props} type="date" required value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
           )}

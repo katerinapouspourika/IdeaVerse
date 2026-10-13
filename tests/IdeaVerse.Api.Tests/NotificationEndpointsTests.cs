@@ -26,7 +26,7 @@ public class NotificationEndpointsTests
     await Assert.That(list.Items.Select(n => n.Kind)).IsEquivalentTo([ReminderKind.Tomorrow, ReminderKind.ComingUp], CollectionOrdering.Matching);
     await Assert.That(list.Items[0].IdeaId).IsEqualTo(idea.Id);
     await Assert.That(list.Items[0].IdeaTitle).IsEqualTo("Launch");
-    await Assert.That(list.Items[0].Message).StartsWith("“Launch” is due tomorrow");
+    await Assert.That(list.Items[0].Message).StartsWith("The target date for “Launch” is tomorrow");
   }
 
   [Test]

@@ -88,7 +88,7 @@ function TimeZoneForm({ account }: { account: Account | null }) {
       </Field>
       <Field
         label="Your time zone"
-        hint="Decides when an idea is due today or overdue for you. Reminders arrive at 8:00 in this time zone."
+        hint="Decides when an idea reaches its target date or is overdue for you. Reminders arrive at 8:00 in this time zone."
         error={fieldError(error, 'timeZone')}
       >
         {(props) => (

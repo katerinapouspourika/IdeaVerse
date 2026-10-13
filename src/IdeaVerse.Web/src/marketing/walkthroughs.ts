@@ -14,7 +14,7 @@ export const walkthroughs: Walkthrough[] = [
     slug: 'capture-an-idea',
     title: 'Capture an idea and give it a date',
     summary: 'Every idea gets a target date, so nothing good sits in a notebook forever.',
-    steps: ['Click “New idea”.', 'Give it a title, a date, and a few tags.', 'It joins your list, sorted by what’s due first.'],
+    steps: ['Click “New idea”.', 'Give it a title, a target date, and a few tags.', 'It joins your list, sorted by what’s due first.'],
   },
   {
     slug: 'plan-what-it-needs',

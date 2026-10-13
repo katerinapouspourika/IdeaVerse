@@ -91,7 +91,7 @@ export function IdeaPanel({ id, onClose }: { id: string; onClose: () => void }) 
                 <VoteButton idea={idea.data} />
               </div>
               <p className="small">
-                Implement by <strong>{formatDate(idea.data.targetDate)}</strong>{' '}
+                Target date <strong>{formatDate(idea.data.targetDate)}</strong>{' '}
                 <span className={idea.data.isOverdue ? 'overdue-text' : 'muted'}>({describeDue(idea.data.targetDate)})</span>
               </p>
               <Tags tags={idea.data.tags} />
