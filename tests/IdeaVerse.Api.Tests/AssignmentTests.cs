@@ -39,6 +39,24 @@ public class AssignmentTests
   }
 
   [Test]
+  public async Task RemoveMember_FromWorkspace_ClearsTheirAssignmentsButKeepsDueDates()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var viewer = await factory.CreateSignedInClientAsync("viewer@example.com");
+    await factory.JoinAsync(owner, viewer, "viewer@example.com");
+    var (ideaId, component) = await IdeaWithComponentAsync(owner);
+    var viewerId = await UserIdAsync(owner, "viewer@example.com");
+    (await owner.UpdateComponentAsync(ideaId, component.Id, new UpdateComponentRequest("Budget", null, IsDone: false, viewerId, Today.AddDays(3)))).Dispose();
+
+    (await owner.DeleteAsync($"/api/v1/workspaces/{await owner.WorkspaceIdAsync()}/members/{viewerId}")).Dispose();
+    var components = await (await owner.GetAsync($"/api/v1/ideas/{ideaId}/components")).ReadComponentsAsync();
+
+    await Assert.That(components.Single().AssigneeId).IsNull();
+    await Assert.That(components.Single().DueDate).IsEqualTo(Today.AddDays(3));
+  }
+
+  [Test]
   public async Task Update_AssignToSomeoneOutsideWorkspace_ReturnsValidationProblem()
   {
     await using var factory = new IdeaVerseApiFactory();
