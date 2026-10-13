@@ -194,6 +194,30 @@ a {
   min-width: 0;
 }
 
+/* On phones the header keeps the page's 16px gutter and packs its buttons closer, so it never scrolls sideways. */
+@media (max-width: 600px) {
+  .topbar {
+    gap: 8px;
+    padding: 10px 16px;
+  }
+
+  .account {
+    gap: 4px;
+  }
+}
+
+/* Signed in, the header holds five buttons; on the narrowest phones the logo stands alone (the link keeps its name). */
+@media (max-width: 420px) {
+  .topbar.app .brand-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
 .content {
   flex: 1;
   width: 100%;
@@ -517,6 +541,22 @@ textarea:focus-visible,
   display: block;
   height: 100%;
   background: linear-gradient(90deg, var(--sky), var(--ok));
+}
+
+/* The checklist card's summary: "2 of 5 done" and its percentage over a full-width bar. */
+.checklist-progress {
+  display: grid;
+  gap: 6px;
+}
+
+.checklist-progress .progress-fill {
+  transition: width 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checklist-progress .progress-fill {
+    transition: none;
+  }
 }
 
 .checklist,
@@ -2070,6 +2110,19 @@ a:focus-visible {
   font-size: 0.92rem;
 }
 
+/* On narrow screens the bell sits mid-header, so its panel spans the header instead of hanging off the left edge. */
+@media (max-width: 600px) {
+  .bell-menu {
+    position: static;
+  }
+
+  .notification-popover {
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+}
+
 /* Toasts */
 .toasts {
   position: fixed;
@@ -2165,14 +2218,29 @@ a:focus-visible {
   text-decoration: none;
 }
 
+/* The details, then the work (components, discussion, activity) on the left, and the side cards on the right.
+   On narrow screens the side cards come between the details and the work, as they do in the markup. */
 .idea-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'main side'
+    'work side';
   align-items: start;
-  gap: 20px;
+  gap: 16px 20px;
+}
+
+.idea-main {
+  grid-area: main;
+}
+
+.idea-work {
+  grid-area: work;
 }
 
 .idea-side {
+  grid-area: side;
   position: sticky;
   top: 84px;
 }
@@ -2206,6 +2274,11 @@ a:focus-visible {
 @media (max-width: 960px) {
   .idea-layout {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      'main'
+      'side'
+      'work';
   }
 
   .idea-side {

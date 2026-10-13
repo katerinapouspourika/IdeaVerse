@@ -26,6 +26,11 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
   private const string OwnerOnlyMessage = "Only the workspace's owner can do this.";
 
   /// <summary>
+  /// Why an owner or admin may not change their own role.
+  /// </summary>
+  private const string OwnRoleMessage = "You can't change your own role. Ask the workspace's owner or another admin.";
+
+  /// <summary>
   /// Lists the user's workspaces by name.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
@@ -221,6 +226,11 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
     if (!role.Value.CanManage())
     {
       return WorkspaceChangeResult.Forbidden();
+    }
+
+    if (memberUserId == userId)
+    {
+      return WorkspaceChangeResult.Forbidden(OwnRoleMessage);
     }
 
     if (request.Role is not (WorkspaceRole.Admin or WorkspaceRole.Member))

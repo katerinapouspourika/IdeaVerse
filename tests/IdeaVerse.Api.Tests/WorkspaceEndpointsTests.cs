@@ -212,6 +212,37 @@ public class WorkspaceEndpointsTests
   }
 
   [Test]
+  public async Task ChangeRole_OwnRoleByAdmin_ReturnsForbiddenAndKeepsIt()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var admin = await factory.CreateSignedInClientAsync("admin@example.com");
+    await factory.JoinAsync(owner, admin, "admin@example.com", WorkspaceRole.Admin);
+    var workspaceId = await owner.WorkspaceIdAsync();
+    var adminId = await UserIdAsync(owner, workspaceId, "admin@example.com");
+
+    using var response = await admin.PutAsJsonAsync($"/api/v1/workspaces/{workspaceId}/members/{adminId}", new ChangeRoleRequest(WorkspaceRole.Member), Json.Options);
+    var members = await ListMembersAsync(owner, workspaceId);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+    await Assert.That(await response.Content.ReadAsStringAsync()).Contains("change your own role");
+    await Assert.That(members.Single(m => m.Email == "admin@example.com").Role).IsEqualTo(WorkspaceRole.Admin);
+  }
+
+  [Test]
+  public async Task ChangeRole_OwnRoleByOwner_ReturnsForbidden()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    var workspaceId = await owner.WorkspaceIdAsync();
+    var ownerId = await UserIdAsync(owner, workspaceId, "owner@example.com");
+
+    using var response = await owner.PutAsJsonAsync($"/api/v1/workspaces/{workspaceId}/members/{ownerId}", new ChangeRoleRequest(WorkspaceRole.Admin), Json.Options);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+  }
+
+  [Test]
   public async Task RemoveMember_ByAdmin_RemovesThemFromWorkspaceAndIdeaTeams()
   {
     await using var factory = new IdeaVerseApiFactory();

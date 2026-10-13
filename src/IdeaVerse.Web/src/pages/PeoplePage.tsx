@@ -194,6 +194,29 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
   const confirm = useConfirm();
   const toast = useToast();
 
+  const changeRoleOf = async (member: WorkspaceMember, role: WorkspaceRole) => {
+    const name = personLabel(member.name, member.email);
+    const ok = await confirm(
+      role === 'Admin'
+        ? {
+            title: `Make ${name} an admin?`,
+            message: `They will be able to invite and remove people, change roles, and manage every idea in ${workspace.name}.`,
+            confirmLabel: 'Make admin',
+          }
+        : {
+            title: `Make ${name} a member?`,
+            message: 'They will no longer manage people or other people’s ideas, and the invitations they sent will be revoked.',
+            confirmLabel: 'Make member',
+          },
+    );
+    if (ok) {
+      changeRole.mutate(
+        { userId: member.userId, role },
+        { onSuccess: () => toast({ message: `${name} is now ${role === 'Admin' ? 'an admin' : 'a member'}`, tone: 'success' }) },
+      );
+    }
+  };
+
   const removeMember = async (member: WorkspaceMember, leaving: boolean) => {
     const name = personLabel(member.name, member.email);
     const ok = await confirm(
@@ -230,12 +253,12 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
                   {member.name && <span className="muted small block">{member.email}</span>}
                 </span>
                 <span className="row">
-                  {canManage && !isOwner ? (
+                  {canManage && !isOwner && !isMe ? (
                     <select
                       aria-label={`Role of ${personLabel(member.name, member.email)}`}
                       value={member.role}
                       disabled={changeRole.isPending}
-                      onChange={(e) => changeRole.mutate({ userId: member.userId, role: e.target.value as WorkspaceRole })}
+                      onChange={(e) => void changeRoleOf(member, e.target.value as WorkspaceRole)}
                     >
                       <option value="Admin">Admin</option>
                       <option value="Member">Member</option>
