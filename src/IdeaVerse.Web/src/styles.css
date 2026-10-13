@@ -3552,3 +3552,8 @@ legend,
   font-size: 0.9rem;
   font-weight: 600;
 }
+
+/* Settings' workspace section, which People links to: clear of the sticky header when scrolled to. */
+#workspace {
+  scroll-margin-top: 80px;
+}
