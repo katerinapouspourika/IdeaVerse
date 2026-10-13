@@ -81,6 +81,26 @@ public class ArchivedIdeaTests
   }
 
   [Test]
+  public async Task Vote_ArchivedIdea_IsRefusedForAnyoneInTheWorkspace()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var member = await factory.CreateSignedInClientAsync("member@example.com");
+    await factory.JoinAsync(owner, member, "member@example.com", WorkspaceRole.Member);
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    (await owner.PutAsync($"/api/v1/ideas/{idea.Id}/vote", null)).Dispose();
+    (await owner.PostAsync($"/api/v1/ideas/{idea.Id}/archive", null)).Dispose();
+
+    using var vote = await member.PutAsync($"/api/v1/ideas/{idea.Id}/vote", null);
+    using var withdraw = await owner.DeleteAsync($"/api/v1/ideas/{idea.Id}/vote");
+    var after = await owner.GetFromJsonAsync<IdeaResponse>($"/api/v1/ideas/{idea.Id}", Json.Options);
+
+    await Assert.That(vote.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+    await Assert.That(withdraw.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+    await Assert.That(after!.VoteCount).IsEqualTo(1);
+  }
+
+  [Test]
   public async Task Comment_OnArchivedIdea_IsStillAllowed()
   {
     await using var factory = new IdeaVerseApiFactory();

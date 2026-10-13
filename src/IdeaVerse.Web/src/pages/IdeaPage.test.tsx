@@ -271,7 +271,7 @@ describe('Archived idea', () => {
     expect(screen.queryByRole('form', { name: 'Add component' })).not.toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'Postpone idea' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Impact')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Vote for Black Friday teaser/ })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: /^Vote for Black Friday teaser/ })).not.toBeInTheDocument();
     expect(await screen.findByText('The team can’t change while the idea is archived.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'Add team member' })).not.toBeInTheDocument();

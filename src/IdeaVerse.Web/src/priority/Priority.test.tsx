@@ -64,6 +64,14 @@ describe('Voting', () => {
     expect(calls.some((c) => c.method === 'DELETE' && c.path === '/api/v1/ideas/idea-1/vote')).toBe(true);
   });
 
+  it('shows an archived idea’s votes without letting anyone vote', async () => {
+    fakeApi(ideaRoutes(anIdea({ title: 'Spring launch', voteCount: 4, archivedAt: '2099-01-01T00:00:00Z' })));
+    renderApp('/ideas/idea-1');
+
+    expect(await screen.findByRole('img', { name: '4 votes' })).toHaveAttribute('title', 'Archived ideas can’t be voted on');
+    expect(screen.queryByRole('button', { name: /Vote for/ })).not.toBeInTheDocument();
+  });
+
   it('puts the vote beside the idea’s title rather than in the Priority card', async () => {
     fakeApi(ideaRoutes(anIdea({ title: 'Spring launch', voteCount: 4 })));
     renderApp('/ideas/idea-1');

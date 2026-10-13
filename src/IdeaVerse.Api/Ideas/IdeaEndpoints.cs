@@ -37,8 +37,8 @@ internal static class IdeaEndpoints
     group.MapPost("/{id:guid}/postpone", PostponeAsync).WithValidation<PostponeIdeaRequest>().RejectWhenArchived();
     group.MapPut("/{id:guid}/priority", SetPriorityAsync).WithValidation<SetPriorityRequest>().RejectWhenArchived();
     group.MapPut("/{id:guid}/start", SetStartAsync).WithValidation<SetStartRequest>().RejectWhenArchived();
-    group.MapPut("/{id:guid}/vote", VoteAsync);
-    group.MapDelete("/{id:guid}/vote", WithdrawVoteAsync);
+    group.MapPut("/{id:guid}/vote", VoteAsync).RejectVoteWhenArchived();
+    group.MapDelete("/{id:guid}/vote", WithdrawVoteAsync).RejectVoteWhenArchived();
     group.MapPost("/{id:guid}/archive", ArchiveAsync);
     group.MapPost("/{id:guid}/restore", RestoreAsync);
     group.MapDelete("/{id:guid}", DeleteAsync);

@@ -21,4 +21,12 @@ internal static class ArchivedIdeaFilterExtensions
   /// <returns>The same builder.</returns>
   public static RouteHandlerBuilder RejectTeamChangeWhenArchived(this RouteHandlerBuilder builder)
     => builder.AddEndpointFilter(new ArchivedIdeaFilter(managesTeam: true)).ProducesProblem(StatusCodes.Status409Conflict);
+
+  /// <summary>
+  /// Refuses a vote, or withdrawing one, with 409 while the idea is archived, for anyone who can see it.
+  /// </summary>
+  /// <param name="builder">The endpoint builder.</param>
+  /// <returns>The same builder.</returns>
+  public static RouteHandlerBuilder RejectVoteWhenArchived(this RouteHandlerBuilder builder)
+    => builder.AddEndpointFilter(new ArchivedIdeaFilter(votes: true)).ProducesProblem(StatusCodes.Status409Conflict);
 }

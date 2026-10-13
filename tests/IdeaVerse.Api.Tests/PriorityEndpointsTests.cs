@@ -70,20 +70,6 @@ public class PriorityEndpointsTests
   }
 
   [Test]
-  public async Task Vote_ArchivedIdea_IsCounted()
-  {
-    await using var factory = new IdeaVerseApiFactory();
-    using var client = await factory.CreateSignedInClientAsync();
-    var idea = await (await client.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
-    (await client.PostAsync($"/api/v1/ideas/{idea.Id}/archive", null)).Dispose();
-
-    using var response = await client.PutAsync($"/api/v1/ideas/{idea.Id}/vote", null);
-
-    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
-    await Assert.That((await response.ReadIdeaAsync()).VoteCount).IsEqualTo(1);
-  }
-
-  [Test]
   public async Task Vote_BySomeoneRemovedFromTheWorkspace_StopsCounting()
   {
     await using var factory = new IdeaVerseApiFactory();
