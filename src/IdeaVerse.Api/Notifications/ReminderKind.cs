@@ -4,8 +4,9 @@ namespace Pouspourika.IdeaVerse.Api.Notifications;
 /// What a notification is about: a stage of an idea's or component's countdown, or something a teammate did.
 /// </summary>
 /// <remarks>
-/// The first four are countdown stages (see <see cref="ReminderSchedule.Stages"/>), which people choose in their reminder settings.
-/// The rest are always sent.
+/// The countdown stages (see <see cref="ReminderSchedule.Stages"/>), which people choose in their reminder settings, are the
+/// first four and <see cref="StartingSoon"/>; <see cref="AddComponents"/> goes with <see cref="StartingSoon"/>. The rest are
+/// always sent.
 /// </remarks>
 public enum ReminderKind
 {
@@ -48,4 +49,14 @@ public enum ReminderKind
   /// Someone mentioned the person in a comment; the notification's detail is the start of the comment.
   /// </summary>
   Mentioned,
+
+  /// <summary>
+  /// Work on the idea is about to start (see <see cref="StartSchedule"/>).
+  /// </summary>
+  StartingSoon,
+
+  /// <summary>
+  /// The idea is about to start and has no components yet; adding them helps it move along.
+  /// </summary>
+  AddComponents,
 }

@@ -4,8 +4,8 @@ import { Link, useNavigate, useParams } from 'react-router';
 
 import { ImproveIdea } from '../ai/ImproveIdea';
 import { ApiError } from '../api/client';
-import { addDays, describeDue, formatDate, todayIso } from '../api/dates';
-import { useArchiveIdea, useDeleteIdea, useIdea, useMoveIdea, usePostponeIdea, useUpdateIdea } from '../api/queries';
+import { addDays, describeDue, formatDate, formatStart, todayIso } from '../api/dates';
+import { useArchiveIdea, useDeleteIdea, useIdea, useMoveIdea, usePostponeIdea, useSetStart, useUpdateIdea } from '../api/queries';
 import { personLabel, statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
 import { useConfirm, useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
@@ -100,6 +100,11 @@ function IdeaDetail({ idea }: { idea: Idea }) {
                 Implement by <strong>{formatDate(idea.targetDate)}</strong>{' '}
                 <span className={idea.isOverdue ? 'overdue-text' : 'muted'}>({describeDue(idea.targetDate)})</span>
               </p>
+              {idea.startDate && (
+                <p className="small">
+                  Starts <strong>{formatStart(idea)}</strong>
+                </p>
+              )}
               <Tags tags={idea.tags} />
               {idea.description ? <p className="description">{idea.description}</p> : <p className="muted">No description yet.</p>}
               <Progress done={idea.completedComponentCount} total={idea.componentCount} />
@@ -162,10 +167,19 @@ function QuickStatus({ idea }: { idea: Idea }) {
 /** When the idea is due, who owns it, and, for its team, a quick way to postpone it. */
 function ScheduleCard({ idea }: { idea: Idea }) {
   const canPostpone = idea.canEdit && idea.status !== 'Done' && !idea.archivedAt;
+  const start = formatStart(idea);
   return (
     <section className="card stack" aria-labelledby="schedule-heading">
       <h2 id="schedule-heading">Schedule</h2>
       <dl className="facts">
+        {start && (
+          <>
+            <dt>Starts</dt>
+            <dd>
+              <strong>{start}</strong>
+            </dd>
+          </>
+        )}
         <dt>Implement by</dt>
         <dd>
           <strong>{formatDate(idea.targetDate)}</strong>{' '}
@@ -182,6 +196,7 @@ function ScheduleCard({ idea }: { idea: Idea }) {
         <dt>Created</dt>
         <dd>{formatDate(idea.createdAt.slice(0, 10))}</dd>
       </dl>
+      {canPostpone && <StartForm idea={idea} />}
       {canPostpone && <PostponeForm idea={idea} />}
     </section>
   );
@@ -298,6 +313,74 @@ function EditIdeaForm({ idea, onDone }: { idea: Idea; onDone: () => void }) {
           Cancel
         </button>
       </div>
+    </form>
+  );
+}
+
+/** Plans when work on the idea starts: a date, and optionally a time; the team is reminded ahead of it. */
+function StartForm({ idea }: { idea: Idea }) {
+  const setStart = useSetStart(idea.id);
+  const toast = useToast();
+  const today = todayIso();
+  const [open, setOpen] = useState(false);
+  const [startDate, setStartDate] = useState(idea.startDate ?? (today <= idea.targetDate ? today : idea.targetDate));
+  const [startTime, setStartTime] = useState(idea.startTime?.slice(0, 5) ?? '');
+
+  const save = (event: FormEvent) => {
+    event.preventDefault();
+    setStart.mutate(
+      { startDate, startTime: startTime || null },
+      {
+        onSuccess: (saved) => {
+          setOpen(false);
+          toast({ message: `Starts ${formatStart(saved) ?? ''}` });
+        },
+      },
+    );
+  };
+
+  const clear = () =>
+    setStart.mutate({ startDate: null, startTime: null }, { onSuccess: () => toast({ message: 'Start cleared' }) });
+
+  if (!open) {
+    return (
+      <div className="row wrap">
+        <button type="button" className="button small" onClick={() => setOpen(true)}>
+          <CalendarClock aria-hidden="true" size={16} />
+          {idea.startDate ? 'Change start' : 'Plan the start'}
+        </button>
+        {idea.startDate && (
+          <button type="button" className="button ghost small" onClick={clear} disabled={setStart.isPending}>
+            Clear start
+          </button>
+        )}
+        <ErrorMessage error={setStart.error} />
+      </div>
+    );
+  }
+
+  return (
+    <form className="stack tight" onSubmit={save} aria-label="Plan the start">
+      <p className="muted small">The team is reminded before it starts, from 10 days ahead.</p>
+      <div className="row wrap">
+        <Field label="Start date" error={fieldError(setStart.error, 'startDate')}>
+          {(props) => (
+            <input {...props} type="date" required min={today} max={idea.targetDate} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          )}
+        </Field>
+        <Field label=<>Time <span className="muted">(optional)</span></> error={fieldError(setStart.error, 'startTime')}>
+          {(props) => <input {...props} type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />}
+        </Field>
+      </div>
+      <div className="row">
+        <button type="submit" className="button primary small" disabled={setStart.isPending}>
+          {setStart.isPending ? 'Saving…' : 'Save start'}
+        </button>
+        <button type="button" className="button ghost small" onClick={() => setOpen(false)}>
+          Cancel
+        </button>
+      </div>
+      <ErrorMessage error={setStart.error} />
     </form>
   );
 }

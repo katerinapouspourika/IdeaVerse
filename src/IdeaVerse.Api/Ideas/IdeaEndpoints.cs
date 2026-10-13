@@ -36,6 +36,7 @@ internal static class IdeaEndpoints
     group.MapPut("/{id:guid}", UpdateAsync).WithValidation<UpdateIdeaRequest>();
     group.MapPost("/{id:guid}/postpone", PostponeAsync).WithValidation<PostponeIdeaRequest>();
     group.MapPut("/{id:guid}/priority", SetPriorityAsync).WithValidation<SetPriorityRequest>();
+    group.MapPut("/{id:guid}/start", SetStartAsync).WithValidation<SetStartRequest>();
     group.MapPut("/{id:guid}/vote", VoteAsync);
     group.MapDelete("/{id:guid}/vote", WithdrawVoteAsync);
     group.MapPost("/{id:guid}/archive", ArchiveAsync);
@@ -186,6 +187,23 @@ internal static class IdeaEndpoints
     IdeaService service,
     CancellationToken cancellationToken)
     => ToHttpResult(await service.SetPriorityAsync(user.GetUserId(), id, request, cancellationToken).ConfigureAwait(false));
+
+  /// <summary>
+  /// Plans when work on an idea starts, or clears the start.
+  /// </summary>
+  /// <param name="id">The idea identifier.</param>
+  /// <param name="request">The validated request.</param>
+  /// <param name="user">The signed-in user.</param>
+  /// <param name="service">The idea service.</param>
+  /// <param name="cancellationToken">Token to cancel the request.</param>
+  /// <returns>The idea, 404, 403 when the user is not on the idea's team, or a validation problem.</returns>
+  private static async Task<Results<Ok<IdeaResponse>, NotFound, ValidationProblem, ProblemHttpResult>> SetStartAsync(
+    Guid id,
+    SetStartRequest request,
+    ClaimsPrincipal user,
+    IdeaService service,
+    CancellationToken cancellationToken)
+    => ToHttpResult(await service.SetStartAsync(user.GetUserId(), id, request, cancellationToken).ConfigureAwait(false));
 
   /// <summary>
   /// Votes for an idea; voting again changes nothing.

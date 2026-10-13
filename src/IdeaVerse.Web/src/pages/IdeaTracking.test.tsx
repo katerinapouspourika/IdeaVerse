@@ -117,6 +117,8 @@ describe('Idea tracking', () => {
         description: null,
         targetDate: addDays(todayIso(), 14),
         tags: ['marketing', 'q4', 'draft'],
+        startDate: null,
+        startTime: null,
       }),
     );
   });

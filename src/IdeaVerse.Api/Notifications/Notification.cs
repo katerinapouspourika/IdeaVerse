@@ -53,6 +53,16 @@ public sealed class Notification
   public DateOnly TargetDate { get; init; }
 
   /// <summary>
+  /// Gets when the idea starts, for <see cref="ReminderKind.StartingSoon"/> and <see cref="ReminderKind.AddComponents"/>.
+  /// </summary>
+  public DateTimeOffset? StartsAt { get; init; }
+
+  /// <summary>
+  /// Gets the moment a start reminder was due, which keeps each one to a single notification per person.
+  /// </summary>
+  public DateTimeOffset? DueAt { get; init; }
+
+  /// <summary>
   /// Gets the identifier of the <see cref="Components.Component"/> the notification is about, if any: an assignment, or a
   /// countdown stage of a component's due date.
   /// </summary>

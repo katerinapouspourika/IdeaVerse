@@ -89,4 +89,10 @@ public enum ActivityKind
   /// The impact or effort score changed; the detail is the new scores, such as "Impact 4, effort 2" or "Impact 4, effort not scored", or empty when both were cleared.
   /// </summary>
   Rescored,
+
+  /// <summary>
+  /// The planned start changed; the detail is the new start date, with its time when one was given, such as "2026-11-02" or
+  /// "2026-11-02T15:30", or empty when it was cleared.
+  /// </summary>
+  StartChanged,
 }

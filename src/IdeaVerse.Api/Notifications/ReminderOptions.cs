@@ -21,7 +21,10 @@ public sealed class ReminderOptions
   /// Gets or sets how often the background job runs.
   /// </summary>
   [Range(typeof(TimeSpan), "00:00:10", "1.00:00:00")]
-  public TimeSpan Interval { get; set; } = TimeSpan.FromHours(1);
+  /// <remarks>
+  /// A minute, so start reminders as close as 15 minutes before a start arrive on time.
+  /// </remarks>
+  public TimeSpan Interval { get; set; } = TimeSpan.FromMinutes(1);
 
   /// <summary>
   /// Gets or sets the local time of day from which each person's reminders for that day are raised and emailed.

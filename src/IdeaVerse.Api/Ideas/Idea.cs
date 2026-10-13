@@ -82,6 +82,27 @@ public sealed class Idea
   public DateOnly TargetDate { get; set; }
 
   /// <summary>
+  /// Gets or sets the date work on the idea is planned to start, or <see langword="null"/> when none is planned.
+  /// </summary>
+  public DateOnly? StartDate { get; set; }
+
+  /// <summary>
+  /// Gets or sets the time of day work starts, as the person who set it entered it, or <see langword="null"/> when they gave none.
+  /// </summary>
+  public TimeOnly? StartTime { get; set; }
+
+  /// <summary>
+  /// Gets or sets the moment work starts: <see cref="StartDate"/> at <see cref="StartTime"/>, or at
+  /// <see cref="Notifications.StartSchedule.DefaultTime"/> without one, in the time zone of the person who set it.
+  /// </summary>
+  public DateTimeOffset? StartsAt { get; set; }
+
+  /// <summary>
+  /// Gets or sets when the start was last set, from which the owner's start reminders are counted.
+  /// </summary>
+  public DateTimeOffset? StartSetAt { get; set; }
+
+  /// <summary>
   /// Gets or sets the lifecycle status.
   /// </summary>
   public IdeaStatus Status { get; set; } = IdeaStatus.Planned;

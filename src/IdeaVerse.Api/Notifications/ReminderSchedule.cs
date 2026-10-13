@@ -15,7 +15,8 @@ public static class ReminderSchedule
   /// <summary>
   /// Gets the countdown stages, in order, which people choose in their reminder settings.
   /// </summary>
-  public static IReadOnlyList<ReminderKind> Stages { get; } = [ReminderKind.ComingUp, ReminderKind.Tomorrow, ReminderKind.Today, ReminderKind.Overdue];
+  public static IReadOnlyList<ReminderKind> Stages { get; } =
+    [ReminderKind.StartingSoon, ReminderKind.ComingUp, ReminderKind.Tomorrow, ReminderKind.Today, ReminderKind.Overdue];
 
   /// <summary>
   /// Returns the reminder that applies to an idea due on <paramref name="targetDate"/>, or <see langword="null"/> when none does yet.
@@ -55,6 +56,58 @@ public static class ReminderSchedule
   /// <param name="today">The reader's current date, for the "in N days" wording.</param>
   /// <returns>The message.</returns>
   public static string Message(NotificationContent content, DateOnly today)
+    => MessageCore(content, today);
+
+  /// <summary>
+  /// Writes how soon a start is, such as "in 5 days", "in 2 hours", or "in 15 minutes".
+  /// </summary>
+  /// <param name="start">The start.</param>
+  /// <returns>The phrase.</returns>
+  private static string In(StartContent? start)
+  {
+    var notice = start?.Notice ?? TimeSpan.Zero;
+    if (notice >= TimeSpan.FromHours(36))
+    {
+      return Count((int)Math.Round(notice.TotalDays), "day");
+    }
+
+    return notice >= TimeSpan.FromMinutes(90)
+      ? Count((int)Math.Round(notice.TotalHours), "hour")
+      : Count(Math.Max((int)Math.Round(notice.TotalMinutes), 1), "minute");
+
+    static string Count(int value, string unit)
+      => string.Create(CultureInfo.InvariantCulture, $"in {value} {unit}{(value == 1 ? string.Empty : "s")}");
+  }
+
+  /// <summary>
+  /// Writes when a start is, such as ", on Mon 2 Nov 2026 at 15:30", or ", at 15:30" when it is less than a day away.
+  /// </summary>
+  /// <param name="start">The start.</param>
+  /// <returns>The phrase, starting with a comma.</returns>
+  private static string On(StartContent? start)
+  {
+    if (start is null)
+    {
+      return string.Empty;
+    }
+
+    var time = start.Local.ToString("HH:mm", CultureInfo.InvariantCulture);
+    if (start.Notice < TimeSpan.FromHours(24))
+    {
+      return $", at {time}";
+    }
+
+    var date = start.Local.ToString("ddd d MMM yyyy", CultureInfo.InvariantCulture);
+    return start.HasTime ? $", on {date} at {time}" : $", on {date}";
+  }
+
+  /// <summary>
+  /// Writes a notification's text.
+  /// </summary>
+  /// <param name="content">What the notification is about.</param>
+  /// <param name="today">The reader's current date.</param>
+  /// <returns>The message.</returns>
+  private static string MessageCore(NotificationContent content, DateOnly today)
   {
     ArgumentNullException.ThrowIfNull(content);
     var date = content.TargetDate.ToString("ddd d MMM yyyy", CultureInfo.InvariantCulture);
@@ -73,6 +126,9 @@ public static class ReminderSchedule
       ReminderKind.AddedToTeam => $"{actor} added you to the team of {idea}.",
       ReminderKind.Commented => $"{actor} commented on {idea}: “{content.Detail}”",
       ReminderKind.Mentioned => $"{actor} mentioned you on {idea}: “{content.Detail}”",
+      ReminderKind.StartingSoon => $"{idea} starts {In(content.Start)}{On(content.Start)}.",
+      ReminderKind.AddComponents =>
+        $"{idea} starts {In(content.Start)}{On(content.Start)}, and it has no components yet. Add the steps it needs, so the team knows where to begin and it can move along.",
       _ => throw new ArgumentOutOfRangeException(nameof(content), content.Kind, "Unknown notification kind."),
     };
   }

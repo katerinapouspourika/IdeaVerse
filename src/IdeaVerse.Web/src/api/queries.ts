@@ -33,6 +33,7 @@ import type {
   Workspace,
   WorkspaceMember,
   WorkspaceRole,
+  StartInput,
 } from './types';
 
 export const keys = {
@@ -415,6 +416,16 @@ export function useSetPriority() {
       request<Idea>('PUT', `/api/v1/ideas/${idea.id}/priority`, priority),
     onSuccess: store,
     onSettled: (_saved, _error, { idea }) => invalidate(idea.id),
+  });
+}
+
+export function useSetStart(id: string) {
+  const invalidate = useInvalidateIdea();
+  const store = useStoreIdea();
+  return useMutation({
+    mutationFn: (start: StartInput) => request<Idea>('PUT', `/api/v1/ideas/${id}/start`, start),
+    onSuccess: store,
+    onSettled: () => invalidate(id),
   });
 }
 

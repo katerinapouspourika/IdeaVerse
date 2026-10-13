@@ -77,6 +77,7 @@ The API also serves the web app (`src/IdeaVerse.Web`) from `wwwroot` when one is
 | `PUT` | `/api/v1/ideas/{id}` | Replace title, description, target date, and status, and `tags` when given. A changed date must be today or later. |
 | `POST` | `/api/v1/ideas/{id}/postpone` | Move to a later date, mark `Postponed`, and count the postponement. Completed ideas cannot be postponed. |
 | `PUT` | `/api/v1/ideas/{id}/priority` | Score impact and effort, each 1–5 or `null` to clear; the idea's team and the workspace's owner and admins only. Changes are recorded as `Rescored` activity. |
+| `PUT` | `/api/v1/ideas/{id}/start` | Plan when work starts: `startDate` (on or before the target date, not in the past) and an optional `startTime` (`HH:mm`, in the caller's time zone; one already passed is refused); a `null` date clears it. Without a time the idea starts at 9:00 in the caller's time zone. Ideas return `startDate`, `startTime` and `startsAt` (the moment, in UTC); creating an idea also takes an optional `startDate` and `startTime`. A target date before the start date is refused. Changes are recorded as `StartChanged` activity. The idea's team and the workspace's owner and admins only. |
 | `PUT` | `/api/v1/ideas/{id}/vote` | Vote for an idea; anyone in its workspace may, once. Voting again changes nothing. |
 | `DELETE` | `/api/v1/ideas/{id}/vote` | Withdraw the caller's vote; nothing changes when there was none. |
 | `POST` | `/api/v1/ideas/{id}/archive` | Archive an idea: it leaves the list, is no longer overdue, and its team and assignees get no reminders. 409 when already archived. |
@@ -130,6 +131,8 @@ A used-up allowance returns 429, and an AI failure returns 502.
 | `POST` | `/api/v1/notifications/{id}/read` | Mark one reminder read. |
 | `POST` | `/api/v1/notifications/read-all` | Mark all reminders read. |
 
+Ideas with a planned start also remind their team before it starts (`StartingSoon`, which people can turn off with the other stages), counted from when each person learned of the start: when it was set, or when they joined the team later. With more than 2 days' notice they come 10, 5 and 2 days before (skipping those already past); with 24 to 48 hours, 24 hours and 2 hours before; with 2 to 24 hours, 1 hour before; with 15 minutes to 2 hours, 15 minutes before; with less, none. Only the latest one due is sent, so a missed run never sends stale ones. Halfway between a person's first start reminder and the start (at 9:00 in their time zone when that is at least 2 days), they are nudged to add components (`AddComponents`), but only if the idea still has none by then. Ideas already in progress, done, or archived get no start reminders.
+
 Assigned components with a due date count down the same way for their assignee, whether or not they are on the idea's team. Teammates' actions also notify: being assigned a component, being added to an idea's team, a comment on an idea you own or are on the team of (except your own), and being mentioned in a comment, when it is posted or when an edit adds you (`Mentioned`, instead of the comment notification; it reaches anyone in the workspace). These are always on, appear under the bell, and are emailed unless the person turned reminder emails off; comments are only emailed to people who also turned on comment emails.
 
 Notifications that no longer concern the user (they left the team or workspace, or were unassigned) are hidden.
@@ -143,7 +146,7 @@ Notifications that no longer concern the user (they left the team or workspace, 
 | `ConnectionStrings:IdeaVerse` | local `ideaverse` database in Development | PostgreSQL connection string. |
 | `Database:MigrateOnStartup` | `true` in Development, otherwise `false` | Applies pending EF Core migrations at startup. Other environments use the Docker `migrations` target. |
 | `Reminders:Enabled` | `true` | Runs the reminder background job. |
-| `Reminders:Interval` | `01:00:00` (one minute in Development) | How often the job runs. |
+| `Reminders:Interval` | `00:01:00` | How often the job runs; a minute keeps the 15-minute start reminders on time. |
 | `Reminders:SendAt` | `08:00` | Local time of day from which each person's reminders go out, in their own time zone. |
 | `Reminders:EmailRetryWindow` | `2.00:00:00` | How long a failed reminder email keeps being retried. |
 | `Ai:Enabled` | `true` | Offers AI help, provided `ANTHROPIC_API_KEY` is set. |

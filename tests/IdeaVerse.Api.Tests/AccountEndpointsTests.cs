@@ -28,7 +28,7 @@ public class AccountEndpointsTests
     await Assert.That(account.TimeZone).IsNull();
     await Assert.That(account.EmailReminders).IsTrue();
     await Assert.That(account.ReminderKinds).IsEquivalentTo(
-      [ReminderKind.ComingUp, ReminderKind.Tomorrow, ReminderKind.Today, ReminderKind.Overdue],
+      [ReminderKind.StartingSoon, ReminderKind.ComingUp, ReminderKind.Tomorrow, ReminderKind.Today, ReminderKind.Overdue],
       CollectionOrdering.Matching);
   }
 

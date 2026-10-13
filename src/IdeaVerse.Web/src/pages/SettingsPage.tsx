@@ -20,6 +20,7 @@ function timeZones(current: string): string[] {
 }
 
 const reminderChoices: { kind: ReminderKind; label: string; hint: string }[] = [
+  { kind: 'StartingSoon', label: 'Starting soon', hint: 'Before an idea’s start: 10, 5 and 2 days ahead, or closer on short notice, plus a nudge to add its components' },
   { kind: 'ComingUp', label: 'Coming up', hint: 'Two to seven days before the date' },
   { kind: 'Tomorrow', label: 'Due tomorrow', hint: 'The day before' },
   { kind: 'Today', label: 'Due today', hint: 'On the day' },

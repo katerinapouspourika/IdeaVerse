@@ -32,6 +32,8 @@ export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, o
   const [description, setDescription] = useState(starting?.description ?? initial?.description ?? '');
   const [targetDate, setTargetDate] = useState(addDays(today, starting?.days ?? 14));
   const [tags, setTags] = useState<string[]>(starting?.tags ?? []);
+  const [startDate, setStartDate] = useState('');
+  const [startTime, setStartTime] = useState('');
   const template = findTemplate(templateSlug);
 
   const chooseTemplate = (slug: string) => {
@@ -47,7 +49,7 @@ export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, o
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const idea = await create.mutateAsync({ title, description: description || null, targetDate, tags }).catch(() => null);
+    const idea = await create.mutateAsync({ title, description: description || null, targetDate, tags, startDate: startDate || null, startTime: (startDate && startTime) || null }).catch(() => null);
     if (!idea) {
       return;
     }
@@ -95,6 +97,20 @@ export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, o
           <input {...props} type="date" required min={today} value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
         )}
       </Field>
+      <div className="row wrap">
+        <Field
+          label=<>Starts <span className="muted">(optional)</span></>
+          hint="Plan a start to get reminders before it, from 10 days ahead."
+          error={fieldError(create.error, 'startDate')}
+        >
+          {(props) => (
+            <input {...props} type="date" min={today} max={targetDate} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          )}
+        </Field>
+        <Field label=<>Start time <span className="muted">(optional)</span></> error={fieldError(create.error, 'startTime')}>
+          {(props) => <input {...props} type="time" disabled={!startDate} value={startTime} onChange={(e) => setStartTime(e.target.value)} />}
+        </Field>
+      </div>
       <Field label=<>Description <span className="muted">(optional)</span></>>
         {(props) => (
           <textarea {...props} rows={3} maxLength={4000} value={description} onChange={(e) => setDescription(e.target.value)} />

@@ -50,11 +50,14 @@ public sealed class NotificationService(IdeaVerseDbContext context, UserCalendar
         ActorName = n.Actor!.DisplayName,
         ActorEmail = n.Actor.Email,
         n.Detail,
+        n.StartsAt,
+        StartHasTime = n.Idea.StartTime != null,
       })
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
 
-    var today = await calendar.TodayAsync(userId, cancellationToken).ConfigureAwait(false);
+    var zone = await calendar.ZoneAsync(userId, cancellationToken).ConfigureAwait(false);
+    var today = timeProvider.TodayIn(zone);
     var items = rows
       .Select(n => new NotificationResponse(
         n.Id,
@@ -62,7 +65,16 @@ public sealed class NotificationService(IdeaVerseDbContext context, UserCalendar
         n.Title,
         n.Kind,
         n.TargetDate,
-        ReminderSchedule.Message(new NotificationContent(n.Kind, n.Title, n.TargetDate, n.ComponentTitle, n.ActorName ?? n.ActorEmail, n.Detail), today),
+        ReminderSchedule.Message(
+          new NotificationContent(
+            n.Kind,
+            n.Title,
+            n.TargetDate,
+            n.ComponentTitle,
+            n.ActorName ?? n.ActorEmail,
+            n.Detail,
+            StartContent.For(n.StartsAt, n.CreatedAt, zone, n.StartHasTime)),
+          today),
         n.CreatedAt,
         n.ReadAt))
       .ToList();

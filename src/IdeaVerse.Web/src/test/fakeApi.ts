@@ -87,6 +87,9 @@ export function anIdea(overrides: Partial<Idea> = {}): Idea {
     hasVoted: false,
     impact: null,
     effort: null,
+    startDate: null,
+    startTime: null,
+    startsAt: null,
     ...overrides,
   };
 }

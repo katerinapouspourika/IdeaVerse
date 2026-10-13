@@ -18,12 +18,21 @@ public sealed class UserCalendar(IdeaVerseDbContext context, TimeProvider timePr
   /// <param name="cancellationToken">Token to cancel the query.</param>
   /// <returns>The user's local date.</returns>
   public async Task<DateOnly> TodayAsync(string userId, CancellationToken cancellationToken)
+    => timeProvider.TodayIn(await ZoneAsync(userId, cancellationToken).ConfigureAwait(false));
+
+  /// <summary>
+  /// Gets the user's time zone, or UTC when they have not chosen one.
+  /// </summary>
+  /// <param name="userId">The user's identifier.</param>
+  /// <param name="cancellationToken">Token to cancel the query.</param>
+  /// <returns>The user's time zone.</returns>
+  public async Task<TimeZoneInfo> ZoneAsync(string userId, CancellationToken cancellationToken)
   {
     var id = await context.Users
       .Where(u => u.Id == userId)
       .Select(u => u.TimeZone)
       .FirstOrDefaultAsync(cancellationToken)
       .ConfigureAwait(false);
-    return timeProvider.TodayIn(TimeZones.Find(id));
+    return TimeZones.Find(id);
   }
 }
