@@ -5,7 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { ApiError } from '../api/client';
 import { useJoinByLink, useJoinPreview } from '../api/queries';
 import { useAuth } from '../auth/AuthContext';
-import { ErrorMessage } from '../components/ErrorMessage';
+import { ErrorMessage, LoadError } from '../components/ErrorMessage';
 import { useToast } from '../components/Feedback';
 import { Skeleton } from '../components/Skeleton';
 import { usePageMeta } from '../seo/usePageMeta';
@@ -90,7 +90,7 @@ function JoinWorkspace({ token }: { token: string }) {
       <section className="card auth stack center">
         <h1>This invite link doesn’t work anymore</h1>
         <p className="muted">It may have been turned off or replaced with a new one. Ask whoever shared it for a new link.</p>
-        {!gone && <ErrorMessage error={preview.error} />}
+        {!gone && <LoadError queries={preview} />}
         <Link to="/" className="button">
           Go to Home
         </Link>

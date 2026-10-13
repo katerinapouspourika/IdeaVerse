@@ -1,7 +1,7 @@
 import { formatDate } from '../api/dates';
 import { useAnswerJoinRequest, useJoinRequests } from '../api/queries';
 import { personLabel } from '../api/types';
-import { ErrorMessage } from '../components/ErrorMessage';
+import { ErrorMessage, LoadError } from '../components/ErrorMessage';
 
 /** People at the company asking to join, each with Approve and Decline. Shows nothing when there are none. */
 export function JoinRequestsCard({ workspaceId }: { workspaceId: string }) {
@@ -9,7 +9,7 @@ export function JoinRequestsCard({ workspaceId }: { workspaceId: string }) {
   const answer = useAnswerJoinRequest(workspaceId);
 
   if (!requests.data?.length) {
-    return <ErrorMessage error={requests.error} />;
+    return <LoadError queries={requests} />;
   }
 
   return (

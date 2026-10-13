@@ -130,6 +130,16 @@ export function useInvite(workspaceId: string) {
   });
 }
 
+/** Sends an open invitation again with a fresh expiry; it keeps the role it was sent with. */
+export function useResendInvitation(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (invitationId: string) =>
+      request<Invitation>('POST', `/api/v1/workspaces/${workspaceId}/invitations/${invitationId}/resend`),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.invitations(workspaceId) }),
+  });
+}
+
 export function useRevokeInvitation(workspaceId: string) {
   const client = useQueryClient();
   return useMutation({

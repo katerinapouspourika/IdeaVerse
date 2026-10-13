@@ -72,13 +72,17 @@ public sealed class InvitationService(
   }
 
   /// <summary>
-  /// Invites an email address to a workspace and emails them, or sends an open invitation for it again with a fresh expiry.
+  /// Invites an email address to a workspace and emails them.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier; must be an owner or admin.</param>
   /// <param name="workspaceId">The workspace identifier.</param>
   /// <param name="request">The validated request.</param>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
   /// <returns>The outcome, carrying the invitation when sent.</returns>
+  /// <remarks>
+  /// An address with an open invitation is a <see cref="ChangeOutcome.Conflict"/>, so inviting it again never sends a second email
+  /// or changes its role by accident; <see cref="ResendAsync"/> sends it again. An expired invitation is renewed with the new role.
+  /// </remarks>
   public async Task<InvitationChangeResult> InviteAsync(string userId, Guid workspaceId, InviteRequest request, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(request);
@@ -101,10 +105,14 @@ public sealed class InvitationService(
       return new InvitationChangeResult(ChangeOutcome.Invalid, Field: EmailField, Message: "This person is already in the workspace.");
     }
 
-    var now = timeProvider.GetUtcNow();
     var invitation = await context.Invitations
       .FirstOrDefaultAsync(i => i.WorkspaceId == workspaceId && i.NormalizedEmail == normalizedEmail, cancellationToken)
       .ConfigureAwait(false);
+    if (invitation is not null && invitation.ExpiresAt > timeProvider.GetUtcNow())
+    {
+      return new InvitationChangeResult(ChangeOutcome.Conflict, Message: AlreadyInvitedMessage(invitation.Email));
+    }
+
     var isNew = invitation is null;
     if (invitation is null)
     {
@@ -113,26 +121,36 @@ public sealed class InvitationService(
     }
 
     invitation.Role = request.Role;
-    invitation.InvitedById = userId;
-    invitation.SentAt = now;
-    invitation.ExpiresAt = now + Invitation.Lifetime;
-
-    var workspaceName = await context.Workspaces
-      .Where(w => w.Id == workspaceId)
-      .Select(w => w.Name)
-      .SingleAsync(cancellationToken)
-      .ConfigureAwait(false);
-    var sender = await context.Users
-      .Where(u => u.Id == userId)
-      .Select(u => new { u.Email, u.DisplayName })
-      .SingleAsync(cancellationToken)
-      .ConfigureAwait(false);
-    var inviter = sender.DisplayName is { } name ? $"{name} ({sender.Email})" : sender.Email!;
-    await mailSender.SendAsync(InvitationEmail(invitation, workspaceName, inviter), cancellationToken).ConfigureAwait(false);
-    await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-    var response = new InvitationResponse(invitation.Id, invitation.Email, invitation.Role, sender.Email!, sender.DisplayName, invitation.SentAt, invitation.ExpiresAt);
+    var response = await SendAsync(invitation, userId, cancellationToken).ConfigureAwait(false);
     return new InvitationChangeResult(ChangeOutcome.Changed, response, isNew);
+  }
+
+  /// <summary>
+  /// Sends an invitation again with a fresh expiry, keeping the role it was sent with.
+  /// </summary>
+  /// <param name="userId">The signed-in user's identifier; must be an owner or admin.</param>
+  /// <param name="workspaceId">The workspace identifier.</param>
+  /// <param name="invitationId">The invitation identifier.</param>
+  /// <param name="cancellationToken">Token to cancel the operation.</param>
+  /// <returns>The outcome, carrying the invitation when sent.</returns>
+  public async Task<InvitationChangeResult> ResendAsync(string userId, Guid workspaceId, Guid invitationId, CancellationToken cancellationToken)
+  {
+    var outcome = await CheckManagerAsync(userId, workspaceId, cancellationToken).ConfigureAwait(false);
+    if (outcome != ChangeOutcome.Changed)
+    {
+      return new InvitationChangeResult(outcome, Message: WorkspaceChangeResult.AdminsOnlyMessage);
+    }
+
+    var invitation = await context.Invitations
+      .FirstOrDefaultAsync(i => i.Id == invitationId && i.WorkspaceId == workspaceId, cancellationToken)
+      .ConfigureAwait(false);
+    if (invitation is null)
+    {
+      return new InvitationChangeResult(ChangeOutcome.NotFound);
+    }
+
+    var response = await SendAsync(invitation, userId, cancellationToken).ConfigureAwait(false);
+    return new InvitationChangeResult(ChangeOutcome.Changed, response);
   }
 
   /// <summary>
@@ -243,6 +261,14 @@ public sealed class InvitationService(
       .ConfigureAwait(false) > 0;
 
   /// <summary>
+  /// Builds the message refusing to invite an address that already has an open invitation.
+  /// </summary>
+  /// <param name="email">The invited address.</param>
+  /// <returns>The message.</returns>
+  private static string AlreadyInvitedMessage(string email)
+    => $"{email} already has an open invitation. Resend it from the list of people waiting to join.";
+
+  /// <summary>
   /// Queries the open invitations for the user's email, provided the user has confirmed it.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
@@ -253,6 +279,37 @@ public sealed class InvitationService(
     return context.Invitations.Where(i =>
       i.ExpiresAt > now
       && context.Users.Any(u => u.Id == userId && u.EmailConfirmed && u.NormalizedEmail == i.NormalizedEmail));
+  }
+
+  /// <summary>
+  /// Marks an invitation as sent now by the user, with a fresh expiry, emails it, and saves it.
+  /// </summary>
+  /// <param name="invitation">The tracked invitation, with its role set.</param>
+  /// <param name="userId">The signed-in user's identifier, who becomes its sender.</param>
+  /// <param name="cancellationToken">Token to cancel the operation.</param>
+  /// <returns>The sent invitation.</returns>
+  private async Task<InvitationResponse> SendAsync(Invitation invitation, string userId, CancellationToken cancellationToken)
+  {
+    var now = timeProvider.GetUtcNow();
+    invitation.InvitedById = userId;
+    invitation.SentAt = now;
+    invitation.ExpiresAt = now + Invitation.Lifetime;
+
+    var workspaceName = await context.Workspaces
+      .Where(w => w.Id == invitation.WorkspaceId)
+      .Select(w => w.Name)
+      .SingleAsync(cancellationToken)
+      .ConfigureAwait(false);
+    var sender = await context.Users
+      .Where(u => u.Id == userId)
+      .Select(u => new { u.Email, u.DisplayName })
+      .SingleAsync(cancellationToken)
+      .ConfigureAwait(false);
+    var inviter = sender.DisplayName is { } name ? $"{name} ({sender.Email})" : sender.Email!;
+    await mailSender.SendAsync(InvitationEmail(invitation, workspaceName, inviter), cancellationToken).ConfigureAwait(false);
+    await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+    return new InvitationResponse(invitation.Id, invitation.Email, invitation.Role, sender.Email!, sender.DisplayName, invitation.SentAt, invitation.ExpiresAt);
   }
 
   /// <summary>

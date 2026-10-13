@@ -10,13 +10,14 @@ import {
   useInvite,
   useRemoveWorkspaceMember,
   useRenameWorkspace,
+  useResendInvitation,
   useRevokeInvitation,
   useWorkspaceMembers,
 } from '../api/queries';
-import { personLabel, type Workspace, type WorkspaceMember, type WorkspaceRole } from '../api/types';
+import { personLabel, type Invitation, type Workspace, type WorkspaceMember, type WorkspaceRole } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
-import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 import { useConfirm, useToast } from '../components/Feedback';
 import { Skeleton } from '../components/Skeleton';
 import { usePageMeta } from '../seo/usePageMeta';
@@ -193,6 +194,29 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
   const confirm = useConfirm();
   const toast = useToast();
 
+  const changeRoleOf = async (member: WorkspaceMember, role: WorkspaceRole) => {
+    const name = personLabel(member.name, member.email);
+    const ok = await confirm(
+      role === 'Admin'
+        ? {
+            title: `Make ${name} an admin?`,
+            message: `They will be able to invite and remove people, change roles, and manage every idea in ${workspace.name}.`,
+            confirmLabel: 'Make admin',
+          }
+        : {
+            title: `Make ${name} a member?`,
+            message: 'They will no longer manage people or other people’s ideas, and the invitations they sent will be revoked.',
+            confirmLabel: 'Make member',
+          },
+    );
+    if (ok) {
+      changeRole.mutate(
+        { userId: member.userId, role },
+        { onSuccess: () => toast({ message: `${name} is now ${role === 'Admin' ? 'an admin' : 'a member'}`, tone: 'success' }) },
+      );
+    }
+  };
+
   const removeMember = async (member: WorkspaceMember, leaving: boolean) => {
     const name = personLabel(member.name, member.email);
     const ok = await confirm(
@@ -229,12 +253,12 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
                   {member.name && <span className="muted small block">{member.email}</span>}
                 </span>
                 <span className="row">
-                  {canManage && !isOwner ? (
+                  {canManage && !isOwner && !isMe ? (
                     <select
                       aria-label={`Role of ${personLabel(member.name, member.email)}`}
                       value={member.role}
                       disabled={changeRole.isPending}
-                      onChange={(e) => changeRole.mutate({ userId: member.userId, role: e.target.value as WorkspaceRole })}
+                      onChange={(e) => void changeRoleOf(member, e.target.value as WorkspaceRole)}
                     >
                       <option value="Admin">Admin</option>
                       <option value="Member">Member</option>
@@ -258,7 +282,8 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
           })}
         </ul>
       )}
-      <ErrorMessage error={members.error ?? changeRole.error ?? remove.error} />
+      <LoadError queries={members} />
+      <ErrorMessage error={changeRole.error ?? remove.error} />
     </section>
   );
 }
@@ -317,10 +342,15 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
 
 function OpenInvitations({ workspaceId }: { workspaceId: string }) {
   const invitations = useInvitations(workspaceId, true);
+  const resend = useResendInvitation(workspaceId);
   const revoke = useRevokeInvitation(workspaceId);
+  const toast = useToast();
+
+  const resendTo = (invitation: Invitation) =>
+    resend.mutate(invitation.id, { onSuccess: () => toast({ message: `Invitation sent again to ${invitation.email}`, tone: 'success' }) });
 
   if (!invitations.data?.length) {
-    return <ErrorMessage error={invitations.error} />;
+    return <LoadError queries={invitations} />;
   }
 
   return (
@@ -335,19 +365,30 @@ function OpenInvitations({ workspaceId }: { workspaceId: string }) {
                 {invitation.role} · invited by {personLabel(invitation.invitedByName, invitation.invitedByEmail)} · until {formatDate(invitation.expiresAt.slice(0, 10))}
               </span>
             </span>
-            <button
-              type="button"
-              className="button ghost small"
-              aria-label={`Revoke invitation for ${invitation.email}`}
-              disabled={revoke.isPending}
-              onClick={() => revoke.mutate(invitation.id)}
-            >
-              Revoke
-            </button>
+            <span className="row">
+              <button
+                type="button"
+                className="button ghost small"
+                aria-label={`Resend invitation to ${invitation.email}`}
+                disabled={resend.isPending}
+                onClick={() => resendTo(invitation)}
+              >
+                Resend
+              </button>
+              <button
+                type="button"
+                className="button ghost small"
+                aria-label={`Revoke invitation for ${invitation.email}`}
+                disabled={revoke.isPending}
+                onClick={() => revoke.mutate(invitation.id)}
+              >
+                Revoke
+              </button>
+            </span>
           </li>
         ))}
       </ul>
-      <ErrorMessage error={revoke.error} />
+      <ErrorMessage error={resend.error ?? revoke.error} />
     </section>
   );
 }

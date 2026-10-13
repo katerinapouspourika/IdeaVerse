@@ -93,6 +93,16 @@ describe('Impact and effort', () => {
     expect(within(priority).getByText('Time sinks')).toBeInTheDocument();
   });
 
+  it('calls a medium effort of 3 balanced rather than a big bet', async () => {
+    fakeApi(ideaRoutes(anIdea({ role: 'Viewer', canEdit: false, canManage: false, impact: 5, effort: 3 })));
+    renderApp('/ideas/idea-1');
+
+    const priority = await screen.findByRole('region', { name: 'Priority' });
+
+    expect(within(priority).getByText('Balanced')).toBeInTheDocument();
+    expect(within(priority).queryByText('Big bets')).not.toBeInTheDocument();
+  });
+
   it('sorts the list by votes or by impact for effort', async () => {
     const calls = fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [anIdea()] } });
     renderApp('/ideas');
@@ -127,5 +137,31 @@ describe('Matrix view', () => {
     expect(within(screen.getByRole('region', { name: /Nice to haves/ })).getByRole('link', { name: 'Sticker pack' })).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: /Time sinks/ })).getByRole('link', { name: 'Rewrite site' })).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: /Not scored yet/ })).getByRole('link', { name: 'Podcast' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /Balanced/ })).not.toBeInTheDocument();
+  });
+
+  it('lists ideas with a medium 3 on either axis as balanced, with their scores', async () => {
+    fakeApi({
+      ...signedIn,
+      [ideasRoute]: {
+        status: 200,
+        body: [
+          anIdea({ id: 'idea-1', title: 'Newsletter', impact: 5, effort: 3 }),
+          anIdea({ id: 'idea-2', title: 'Sticker pack', impact: 3, effort: 1 }),
+          anIdea({ id: 'idea-3', title: 'Rewrite site', impact: 2, effort: 4 }),
+        ],
+      },
+    });
+    renderApp('/ideas');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Matrix' }));
+
+    const balanced = screen.getByRole('region', { name: /Balanced/ });
+    expect(within(balanced).getByRole('link', { name: 'Newsletter' })).toBeInTheDocument();
+    expect(within(balanced).getByText('impact 5 · effort 3')).toBeInTheDocument();
+    expect(within(balanced).getByRole('link', { name: 'Sticker pack' })).toBeInTheDocument();
+    expect(within(balanced).queryByRole('link', { name: 'Rewrite site' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: /Big bets/ })).queryByRole('link', { name: 'Newsletter' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: /Time sinks/ })).getByRole('link', { name: 'Rewrite site' })).toBeInTheDocument();
   });
 });

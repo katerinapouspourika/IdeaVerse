@@ -41,6 +41,14 @@ public sealed class User : IdentityUser
   public bool EmailReminders { get; set; } = true;
 
   /// <summary>
+  /// Gets or sets a value indicating whether comments on the user's ideas are emailed too, when <see cref="EmailReminders"/> is on.
+  /// </summary>
+  /// <remarks>
+  /// Off by default: comments always appear under the bell, and mentions are emailed regardless.
+  /// </remarks>
+  public bool EmailComments { get; set; }
+
+  /// <summary>
   /// Gets or sets the countdown stages the user turned off, one bit per <see cref="ReminderKind"/>; zero means all are on.
   /// Teammates' actions, such as assignments and comments, are always notified.
   /// </summary>

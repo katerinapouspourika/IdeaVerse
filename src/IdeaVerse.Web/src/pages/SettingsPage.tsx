@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 
 import { request } from '../api/client';
 import { browserTimeZone } from '../api/dates';
+import { currentZoneName, matchesZone, timeZoneOption, timeZoneOptions } from '../api/timeZones';
 import type { Account, ReminderKind } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { readAccountProblems } from '../auth/identityErrors';
@@ -12,12 +13,6 @@ import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { useConfirm } from '../components/Feedback';
 import { usePageMeta } from '../seo/usePageMeta';
-
-/** Every IANA time zone the browser knows, with UTC, sorted by name. */
-function timeZones(current: string): string[] {
-  const known = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : [];
-  return [...new Set(['UTC', current, ...known])].sort((a, b) => a.localeCompare(b));
-}
 
 const reminderChoices: { kind: ReminderKind; label: string; hint: string }[] = [
   { kind: 'ComingUp', label: 'Coming up', hint: 'Two to seven days before the date' },
@@ -51,7 +46,22 @@ function TimeZoneForm({ account }: { account: Account | null }) {
   const [error, setError] = useState<unknown>(null);
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
+  const [search, setSearch] = useState('');
   const detected = browserTimeZone();
+  const options = useMemo(() => timeZoneOptions([saved]), [saved]);
+  const matching = options.filter((option) => matchesZone(option, search));
+  const selected = options.find((option) => option.id === timeZone) ?? timeZoneOption(timeZone);
+  const shown = matching.some((option) => option.id === timeZone) ? matching : [selected, ...matching];
+  const isDetected = currentZoneName(detected) === currentZoneName(timeZone);
+
+  const filter = (text: string) => {
+    setSearch(text);
+    const found = options.filter((option) => matchesZone(option, text));
+    const first = found[0];
+    if (first && !found.some((option) => option.id === timeZone)) {
+      setTimeZone(first.id);
+    }
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -71,6 +81,11 @@ function TimeZoneForm({ account }: { account: Account | null }) {
   return (
     <form className="card stack" onSubmit={(event) => void submit(event)} aria-label="Time zone">
       <h2>Time zone</h2>
+      <Field label="Search time zones" hint="Type a city, region, or offset such as +02. The first match is chosen; pick another below.">
+        {(props) => (
+          <input {...props} type="search" autoComplete="off" value={search} onChange={(e) => filter(e.target.value)} placeholder="Athens" />
+        )}
+      </Field>
       <Field
         label="Your time zone"
         hint="Decides when an idea is due today or overdue for you. Reminders arrive at 8:00 in this time zone."
@@ -78,18 +93,27 @@ function TimeZoneForm({ account }: { account: Account | null }) {
       >
         {(props) => (
           <select {...props} value={timeZone} onChange={(e) => setTimeZone(e.target.value)}>
-            {timeZones(saved).map((zone) => (
-              <option key={zone} value={zone}>
-                {zone.replaceAll('_', ' ')}
+            {shown.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
               </option>
             ))}
           </select>
         )}
       </Field>
-      {detected !== timeZone && (
+      {search.trim() !== '' && (
+        <p role="status" className="muted small">
+          {matching.length === 0
+            ? `No time zone matches “${search.trim()}”.`
+            : matching.length === 1
+              ? '1 time zone matches.'
+              : `${matching.length} time zones match.`}
+        </p>
+      )}
+      {!isDetected && (
         <p className="small">
-          This browser is set to {detected.replaceAll('_', ' ')}.{' '}
-          <button type="button" className="link-button" onClick={() => setTimeZone(detected)}>
+          This browser is set to {timeZoneOption(currentZoneName(detected)).label}.{' '}
+          <button type="button" className="link-button" onClick={() => setTimeZone(currentZoneName(detected))}>
             Use it
           </button>
         </p>
@@ -113,6 +137,7 @@ function RemindersForm({ account }: { account: Account }) {
   const { updateReminders } = useAuth();
   const [email, setEmail] = useState(account.emailReminders);
   const [kinds, setKinds] = useState<ReminderKind[]>(account.reminderKinds);
+  const [comments, setComments] = useState(account.emailComments);
   const [error, setError] = useState<unknown>(null);
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
@@ -126,7 +151,7 @@ function RemindersForm({ account }: { account: Account }) {
     setError(null);
     setDone(false);
     try {
-      await updateReminders({ emailReminders: email, reminderKinds: kinds });
+      await updateReminders({ emailReminders: email, reminderKinds: kinds, emailComments: email && comments });
       setDone(true);
     } catch (caught) {
       setError(caught);
@@ -154,6 +179,13 @@ function RemindersForm({ account }: { account: Account }) {
       <label className="check">
         <input type="checkbox" checked={email} onChange={(e) => setEmail(e.target.checked)} />
         <span>Also email me these reminders</span>
+      </label>
+      <label className="check">
+        <input type="checkbox" checked={email && comments} disabled={!email} onChange={(e) => setComments(e.target.checked)} />
+        <span>
+          Email me about new comments too
+          <span className="muted small block">Comments on ideas you own or are on the team of. Mentions are always emailed.</span>
+        </span>
       </label>
       {kinds.length === 0 && (
         <p className="muted small" role="note">

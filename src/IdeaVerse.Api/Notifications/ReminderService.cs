@@ -222,7 +222,7 @@ public sealed partial class ReminderService(
   /// <remarks>
   /// A failed email is logged and left for the next run; one failure does not stop the rest.
   /// Notifications that no longer concern their recipient (see <see cref="NotificationAccess.StillRelevant"/>), about archived ideas, or for people
-  /// who turned reminder emails off, are not emailed.
+  /// who turned reminder emails off, are not emailed; nor are comments, unless the recipient asked for comment emails.
   /// </remarks>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
   /// <returns>How many emails were sent.</returns>
@@ -234,6 +234,7 @@ public sealed partial class ReminderService(
 
     var pending = await context.StillRelevant()
       .Where(n => n.EmailedAt == null && n.CreatedAt >= oldest && n.User!.EmailReminders && n.Idea!.ArchivedAt == null)
+      .Where(n => n.Kind != ReminderKind.Commented || n.User!.EmailComments)
       .Select(n => new
       {
         Notification = n,

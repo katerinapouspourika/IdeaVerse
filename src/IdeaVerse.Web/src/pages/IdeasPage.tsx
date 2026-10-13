@@ -7,7 +7,7 @@ import { BrainstormPanel, describeBrainstormed } from '../ai/BrainstormPanel';
 import { useAiStatus, useIdeas, useTags } from '../api/queries';
 import { personLabel, sortLabels, statuses, statusLabels, type Idea, type IdeaSort, type IdeaStatus, type Workspace } from '../api/types';
 import { Field } from '../components/Field';
-import { ErrorMessage } from '../components/ErrorMessage';
+import { LoadError } from '../components/ErrorMessage';
 import { Progress } from '../components/Progress';
 import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
@@ -27,7 +27,8 @@ import { WelcomePage } from './WelcomePage';
 
 export function IdeasPage() {
   usePageMeta('Ideas', { index: false });
-  const { current, isLoading, error } = useWorkspace();
+  const workspaces = useWorkspace();
+  const { current, isLoading, error } = workspaces;
   const location = useLocation();
 
   if (isLoading) {
@@ -35,7 +36,7 @@ export function IdeasPage() {
   }
 
   if (!current) {
-    return error ? <ErrorMessage error={error} /> : <WelcomePage />;
+    return error ? <LoadError queries={workspaces} /> : <WelcomePage />;
   }
 
   // A template chosen before signing up opens in the New idea form as soon as there is a workspace to add it to.
@@ -171,7 +172,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
       </div>
 
       {ideas.isLoading && <Skeleton variant="cards" />}
-      <ErrorMessage error={ideas.error} />
+      <LoadError queries={ideas} />
       {ideas.data &&
         (view === 'calendar' ? (
           <IdeaCalendar ideas={ideas.data} />

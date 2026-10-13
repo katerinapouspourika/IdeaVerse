@@ -194,6 +194,30 @@ a {
   min-width: 0;
 }
 
+/* On phones the header keeps the page's 16px gutter and packs its buttons closer, so it never scrolls sideways. */
+@media (max-width: 600px) {
+  .topbar {
+    gap: 8px;
+    padding: 10px 16px;
+  }
+
+  .account {
+    gap: 4px;
+  }
+}
+
+/* Signed in, the header holds five buttons; on the narrowest phones the logo stands alone (the link keeps its name). */
+@media (max-width: 420px) {
+  .topbar.app .brand-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
 .content {
   flex: 1;
   width: 100%;
@@ -279,6 +303,13 @@ a {
 .error {
   color: var(--danger);
   margin: 0;
+}
+
+.load-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
 }
 
 .overdue-text {
@@ -512,6 +543,22 @@ textarea:focus-visible,
   background: linear-gradient(90deg, var(--sky), var(--ok));
 }
 
+/* The checklist card's summary: "2 of 5 done" and its percentage over a full-width bar. */
+.checklist-progress {
+  display: grid;
+  gap: 6px;
+}
+
+.checklist-progress .progress-fill {
+  transition: width 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checklist-progress .progress-fill {
+    transition: none;
+  }
+}
+
 .checklist,
 .team {
   list-style: none;
@@ -548,6 +595,7 @@ textarea:focus-visible,
 }
 
 .check input {
+  flex-shrink: 0;
   margin-top: 4px;
   width: 18px;
   height: 18px;
@@ -621,6 +669,7 @@ textarea:focus-visible,
 
 .notification-message {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .notification.unread .notification-message {
@@ -753,6 +802,8 @@ h3 {
   gap: 6px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
+  /* A long word, such as a pasted link, wraps rather than running out of the card. */
+  overflow-wrap: anywhere;
 }
 
 .comment p {
@@ -867,7 +918,22 @@ h3 {
   color: var(--ok);
 }
 
+/* On narrow screens the month buttons show only their arrows, so the month's name fits between them. */
+.calendar-nav .button {
+  position: relative;
+  flex: none;
+}
+
 @media (max-width: 600px) {
+  .calendar-nav .calendar-nav-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
   .calendar td {
     height: 56px;
     padding: 2px;
@@ -1110,6 +1176,47 @@ h3 {
   gap: 28px 48px;
 }
 
+.footer.slim .footer-inner {
+  padding: 8px 16px;
+  align-items: center;
+  gap: 4px 24px;
+}
+
+.footer.slim p {
+  margin: 0;
+}
+
+.footer-slim-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Full-height rows, so each link is easy to tap on a phone. */
+.footer-slim-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.footer-slim-links a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .footer-slim-links a {
+    min-height: 44px;
+  }
+}
+
 .footer-brand {
   display: flex;
   flex-direction: column;
@@ -1344,6 +1451,8 @@ h3 {
   padding: 0;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .mini-list li {
@@ -2001,6 +2110,19 @@ a:focus-visible {
   font-size: 0.92rem;
 }
 
+/* On narrow screens the bell sits mid-header, so its panel spans the header instead of hanging off the left edge. */
+@media (max-width: 600px) {
+  .bell-menu {
+    position: static;
+  }
+
+  .notification-popover {
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+}
+
 /* Toasts */
 .toasts {
   position: fixed;
@@ -2096,14 +2218,29 @@ a:focus-visible {
   text-decoration: none;
 }
 
+/* The details, then the work (components, discussion, activity) on the left, and the side cards on the right.
+   On narrow screens the side cards come between the details and the work, as they do in the markup. */
 .idea-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'main side'
+    'work side';
   align-items: start;
-  gap: 20px;
+  gap: 16px 20px;
+}
+
+.idea-main {
+  grid-area: main;
+}
+
+.idea-work {
+  grid-area: work;
 }
 
 .idea-side {
+  grid-area: side;
   position: sticky;
   top: 84px;
 }
@@ -2137,6 +2274,11 @@ a:focus-visible {
 @media (max-width: 960px) {
   .idea-layout {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      'main'
+      'side'
+      'work';
   }
 
   .idea-side {
@@ -2284,6 +2426,8 @@ a:focus-visible {
 
 /* Board view: a column per status, scrolling sideways on narrow screens. */
 .board {
+  /* Positioned, so the cards' visually hidden labels scroll with the board instead of widening the page. */
+  position: relative;
   display: grid;
   grid-template-columns: repeat(4, minmax(220px, 1fr));
   gap: 14px;
@@ -2356,6 +2500,50 @@ a:focus-visible {
 .grip {
   flex: none;
   color: var(--muted);
+}
+
+/*
+ * A title link stretched over its card or row, so a click anywhere on it opens the idea, while the link stays the one
+ * thing to tab to. Controls inside sit above it (`.board-move`).
+ */
+.board-card,
+.timeline-row {
+  position: relative;
+}
+
+.stretched-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.stretched-link:focus-visible {
+  outline: none;
+}
+
+.stretched-link:focus-visible::after {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.board-card .stretched-link::after {
+  border-radius: var(--radius);
+}
+
+.board-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-lift);
+}
+
+.board-card:hover .board-title {
+  color: var(--accent);
+}
+
+.board-move {
+  position: relative;
+  z-index: 2;
 }
 
 .board-move select {
@@ -2436,6 +2624,12 @@ a:focus-visible {
   --quadrant-soft: var(--warn-soft);
 }
 
+.quadrant-tag.Balanced,
+.matrix-cell.Balanced {
+  --quadrant: var(--text);
+  --quadrant-soft: var(--bg-tint);
+}
+
 .quadrant-tag {
   background: var(--quadrant-soft);
   color: var(--quadrant);
@@ -2475,6 +2669,10 @@ a:focus-visible {
 
 .matrix-cell.TimeSink {
   grid-area: sink;
+}
+
+.matrix-cell.Balanced {
+  min-height: 0;
 }
 
 .matrix-axis {
@@ -2569,6 +2767,59 @@ a:focus-visible {
   flex: none;
   cursor: grab;
   color: var(--muted);
+}
+
+/* A component's row: its handle, its checkbox and title, then its actions, which move under the title on narrow screens. */
+.component-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'check actions';
+  align-items: start;
+  gap: 4px 8px;
+}
+
+.component-row.reorderable {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'handle check actions';
+}
+
+/* The handle, the checkbox, and the title's first line share a centre line. */
+.component-row .move-handle {
+  grid-area: handle;
+  margin-top: -6px;
+}
+
+.component-row .check {
+  grid-area: check;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.component-row .check input {
+  margin-top: 1px;
+  /* The label is the touch target, so the box keeps its size beside phone-sized inputs. */
+  min-height: 0;
+}
+
+.component-actions {
+  grid-area: actions;
+  margin-top: -6px;
+}
+
+@media (max-width: 600px) {
+  .component-row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'check' 'actions';
+  }
+
+  .component-row.reorderable {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: 'handle check' '. actions';
+  }
+
+  .component-actions {
+    margin-top: 0;
+  }
 }
 
 .checklist li.dragging {
@@ -2770,6 +3021,15 @@ a:focus-visible {
 .timeline-row {
   min-height: 52px;
   border-bottom: 1px solid var(--border);
+}
+
+.timeline-row:hover {
+  background: var(--accent-soft);
+}
+
+.timeline-row:hover .timeline-title {
+  color: var(--accent);
+  text-decoration: underline;
 }
 
 .timeline-row:last-child {

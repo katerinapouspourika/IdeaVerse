@@ -33,6 +33,35 @@ describe('IdeasPage', () => {
     expect(screen.getByRole('status')).toHaveTextContent('1 overdue');
   });
 
+  it('explains a failed load in plain words and loads again on Try again', async () => {
+    let failing = true;
+    fakeApi({
+      ...signedIn,
+      [ideasRoute]: () => (failing ? { status: 500, body: { title: 'Server error' } } : { status: 200, body: [anIdea()] }),
+    });
+
+    renderApp('/ideas');
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('We couldn’t load this. Check your connection and try again.');
+    expect(alert).not.toHaveTextContent('Server error');
+
+    failing = false;
+    await userEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByText('Black Friday teaser')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('shows the API’s own reason when it refuses, with nothing to try again', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 403, body: { title: 'You are no longer in this workspace.' } } });
+
+    renderApp('/ideas');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('You are no longer in this workspace.');
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+  });
+
   it('shows an empty state when there are no ideas', async () => {
     fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
 

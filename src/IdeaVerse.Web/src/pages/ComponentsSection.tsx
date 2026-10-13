@@ -14,7 +14,7 @@ import {
 import { personLabel, type Component } from '../api/types';
 import { useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
-import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
 
 const componentDragType = 'application/x-ideaverse-component';
@@ -88,6 +88,9 @@ export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: st
     <section className="card stack" aria-labelledby="components-heading">
       <h2 id="components-heading">What it needs</h2>
       <p className="muted small">Components are the things that must be in place before this idea can happen.</p>
+      {components.data && components.data.length > 0 && (
+        <ChecklistProgress done={components.data.filter((c) => c.isDone).length} total={components.data.length} />
+      )}
       {components.isLoading && <Skeleton />}
       {components.data?.length === 0 && <p className="muted">Nothing listed yet.</p>}
       {components.data && components.data.length > 0 && (
@@ -141,10 +144,40 @@ export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: st
       <p className="visually-hidden" aria-live="polite">
         {announcement}
       </p>
-      <ErrorMessage error={components.error ?? update.error ?? remove.error} />
+      <LoadError queries={components} />
+      <ErrorMessage error={update.error ?? remove.error} />
       {canEdit && <AddComponentForm ideaId={ideaId} />}
       {canEdit && <SuggestComponents ideaId={ideaId} workspaceId={workspaceId} />}
     </section>
+  );
+}
+
+/** How far along the checklist is, in words and as a labelled bar. */
+function ChecklistProgress({ done, total }: { done: number; total: number }) {
+  const labelId = useId();
+  const percent = Math.round((done / total) * 100);
+  const label = done === total ? `All ${total} done` : `${done} of ${total} done`;
+
+  return (
+    <div className="checklist-progress">
+      <div className="row spread small">
+        <span id={labelId}>
+          <strong>{label}</strong>
+        </span>
+        <span className="muted">{percent}%</span>
+      </div>
+      <div
+        className="progress-track wide"
+        role="progressbar"
+        aria-labelledby={labelId}
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-valuenow={done}
+        aria-valuetext={`${done} of ${total} components done, ${percent}%`}
+      >
+        <span className="progress-fill" style={{ width: `${percent}%` }} />
+      </div>
+    </div>
   );
 }
 
@@ -244,7 +277,7 @@ function ComponentItem({ ideaId, workspaceId, component, canEdit, reorder, onTog
         reorder?.onDrop();
       }}
     >
-      <div className="row spread wrap">
+      <div className={reorder ? 'component-row reorderable' : 'component-row'}>
         {reorder && (
           <button
             type="button"
@@ -260,7 +293,7 @@ function ComponentItem({ ideaId, workspaceId, component, canEdit, reorder, onTog
             <GripVertical aria-hidden="true" size={16} />
           </button>
         )}
-        <label className="check grow">
+        <label className="check">
           <input type="checkbox" checked={checked} onChange={toggle} disabled={!canEdit} />
           <span>
             <span className="check-title">{component.title}</span>
@@ -275,7 +308,7 @@ function ComponentItem({ ideaId, workspaceId, component, canEdit, reorder, onTog
           </span>
         </label>
         {canEdit && (
-          <span className="row">
+          <span className="row component-actions">
             <button ref={editButton} type="button" className="button ghost small" aria-label={`Edit ${component.title}`} onClick={() => setEditing(true)}>
               Edit
             </button>
@@ -316,7 +349,7 @@ function EditComponentForm({ ideaId, component, onDone }: { ideaId: string; comp
 
   return (
     <form
-      className="row wrap end grow"
+      className="row wrap end"
       onSubmit={submit}
       aria-label={`Edit ${component.title}`}
       onKeyDown={(event) => {
@@ -388,7 +421,8 @@ function AssignForm({ ideaId, workspaceId, component, onDone }: { ideaId: string
       <button type="button" className="button ghost small" onClick={onDone}>
         Cancel
       </button>
-      <ErrorMessage error={update.error ?? people.error} />
+      <ErrorMessage error={update.error} />
+      <LoadError queries={people} />
     </form>
   );
 }

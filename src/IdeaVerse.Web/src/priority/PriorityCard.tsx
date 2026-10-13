@@ -2,7 +2,7 @@ import { useSetPriority } from '../api/queries';
 import { maxScore, minScore, type Idea, type PriorityInput } from '../api/types';
 import { useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
-import { quadrantHints, quadrantLabels, quadrantOf } from './priority';
+import { placementHints, placementLabels, placementOf } from './priority';
 import { VoteButton } from './VoteButton';
 
 const scoreLabels: Record<number, string> = { 1: 'Very low', 2: 'Low', 3: 'Medium', 4: 'High', 5: 'Very high' };
@@ -13,7 +13,7 @@ export function PriorityCard({ idea }: { idea: Idea }) {
   const setPriority = useSetPriority();
   const toast = useToast();
   const shown = setPriority.isPending ? { ...idea, ...setPriority.variables.priority } : idea;
-  const quadrant = quadrantOf(shown);
+  const placement = placementOf(shown);
   const canScore = idea.canEdit && !idea.archivedAt;
 
   const save = (priority: PriorityInput) =>
@@ -38,9 +38,9 @@ export function PriorityCard({ idea }: { idea: Idea }) {
           <dd>{shown.effort === null ? 'Not scored' : `${shown.effort} · ${scoreLabels[shown.effort]}`}</dd>
         </dl>
       )}
-      {quadrant ? (
+      {placement ? (
         <p className="small">
-          <strong className={`quadrant-tag ${quadrant}`}>{quadrantLabels[quadrant]}</strong> <span className="muted">{quadrantHints[quadrant]}</span>
+          <strong className={`quadrant-tag ${placement}`}>{placementLabels[placement]}</strong> <span className="muted">{placementHints[placement]}</span>
         </p>
       ) : (
         <p className="muted small">Score impact and effort to place it on the matrix.</p>

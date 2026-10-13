@@ -6,7 +6,7 @@ import { personLabel, type Comment } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { useConfirm, useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
-import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
 import { MentionTextarea, type Mentionable } from '../mentions/MentionTextarea';
 import { maxBodyLength, mentionLabels, segments, toBody, toEditable, type Mention } from '../mentions/mentions';
@@ -37,7 +37,8 @@ export function DiscussionSection({ ideaId, workspaceId }: { ideaId: string; wor
           ))}
         </ol>
       )}
-      <ErrorMessage error={comments.error ?? remove.error} />
+      <LoadError queries={comments} />
+      <ErrorMessage error={remove.error} />
       <AddCommentForm ideaId={ideaId} people={people} />
     </section>
   );

@@ -5,7 +5,7 @@ import { daysUntil, describeDue, formatDate } from '../api/dates';
 import { useAssignments, useIdeas, useNotifications } from '../api/queries';
 import type { Assignment, Idea, Workspace } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
-import { ErrorMessage } from '../components/ErrorMessage';
+import { LoadError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
 import { usePageMeta } from '../seo/usePageMeta';
@@ -19,14 +19,15 @@ const listSize = 5;
 /** The signed-in home page: what needs attention in the current workspace. */
 export function DashboardPage() {
   usePageMeta('Home', { index: false });
-  const { current, isLoading, error } = useWorkspace();
+  const workspaces = useWorkspace();
+  const { current, isLoading, error } = workspaces;
 
   if (isLoading) {
     return <Skeleton variant="page" lines={4} />;
   }
 
   if (!current) {
-    return error ? <ErrorMessage error={error} /> : <WelcomePage />;
+    return error ? <LoadError queries={workspaces} /> : <WelcomePage />;
   }
 
   return <WorkspaceDashboard key={current.id} workspace={current} />;
@@ -62,7 +63,7 @@ function WorkspaceDashboard({ workspace }: { workspace: Workspace }) {
         </div>
       </section>
 
-      <ErrorMessage error={ideas.error ?? assignments.error} />
+      <LoadError queries={[ideas, assignments]} />
 
       {account && ideas.data && <GettingStarted workspace={workspace} ideas={ideas.data} account={account} />}
 

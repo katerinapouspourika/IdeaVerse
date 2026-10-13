@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 
 import { fakeApi, ideasRoute, signedIn, signedOut } from '../test/fakeApi';
 import { renderApp } from '../test/render';
@@ -49,5 +49,34 @@ describe('Remembered sign-in', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: /Turn bright ideas/ })).toBeInTheDocument();
     expect(localStorage.getItem('ideaverse.session')).toBeNull();
+  });
+
+  it('shows a returning user a plain header, not the public links, until their account loads', async () => {
+    localStorage.setItem('ideaverse.session', '1');
+    let release: (response: Response) => void = () => undefined;
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
+    const answer = vi.mocked(fetch).getMockImplementation()!;
+    vi.mocked(fetch).mockImplementation((input, init) =>
+      input === '/api/v1/account' && !init?.method ? new Promise<Response>((resolve) => (release = resolve)) : answer(input, init),
+    );
+    renderApp('/ideas');
+
+    const header = await screen.findByRole('banner');
+    expect(within(header).getByRole('link', { name: 'IdeaVerse' })).toBeInTheDocument();
+    expect(within(header).queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument();
+    expect(within(header).queryByRole('link', { name: 'Pricing' })).not.toBeInTheDocument();
+
+    release(new Response(JSON.stringify(signedIn['GET /api/v1/account'].body), { status: 200 }));
+    await waitFor(() => expect(within(screen.getByRole('banner')).getByRole('link', { name: 'Ideas' })).toBeInTheDocument());
+    // The signed-in header may hide the name on narrow phones, but the logo link keeps it.
+    expect(within(screen.getByRole('banner')).getByRole('link', { name: 'IdeaVerse' })).toBeInTheDocument();
+  });
+
+  it('shows visitors the public links while the account loads', async () => {
+    fakeApi(signedOut);
+    renderApp('/pricing');
+
+    expect(within(screen.getByRole('banner')).getByRole('link', { name: 'Sign in' })).toBeInTheDocument();
+    await waitFor(() => expect(localStorage.getItem('ideaverse.session')).toBeNull());
   });
 });
