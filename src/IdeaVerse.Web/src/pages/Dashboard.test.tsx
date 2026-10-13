@@ -68,7 +68,7 @@ describe('Dashboard', () => {
     expect(within(tasks).getByRole('link', { name: /Book the venue/ })).toHaveAttribute('href', '/ideas/idea-2');
     expect(within(tasks).getByText('due tomorrow')).toBeInTheDocument();
 
-    expect(within(screen.getByRole('region', { name: 'Latest reminders' })).getByRole('link', { name: '“Late launch” is overdue' })).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Latest notifications' })).getByRole('link', { name: '“Late launch” is overdue' })).toBeInTheDocument();
   });
 
   it('celebrates when nothing needs attention', async () => {
