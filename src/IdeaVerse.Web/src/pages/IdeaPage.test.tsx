@@ -55,6 +55,20 @@ describe('IdeaPage', () => {
     expect(screen.getByRole('menuitem', { name: 'Delete idea' })).toBeInTheDocument();
   });
 
+  it('puts the schedule, priority, and team right after the details, before the rest of the work', async () => {
+    fakeApi(ideaRoutes({}, [owner]));
+
+    renderApp('/ideas/idea-1');
+
+    const title = await screen.findByRole('heading', { name: 'Black Friday teaser' });
+    const side = screen.getByRole('complementary', { name: 'Idea details' });
+    const components = screen.getByRole('heading', { name: 'What it needs' });
+    expect(within(side).getByRole('heading', { name: 'Schedule' })).toBeInTheDocument();
+    expect(title.compareDocumentPosition(side) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(side.compareDocumentPosition(components) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(side.compareDocumentPosition(screen.getByRole('heading', { name: 'Discussion' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('deletes the idea after confirming, and returns to the list', async () => {
     const calls = fakeApi({ ...ideaRoutes({}, [owner]), 'DELETE /api/v1/ideas/idea-1': { status: 204 }, 'GET /api/v1/workspaces/ws-1/ideas': { status: 200, body: [] } });
     const router = renderApp('/ideas/idea-1');
