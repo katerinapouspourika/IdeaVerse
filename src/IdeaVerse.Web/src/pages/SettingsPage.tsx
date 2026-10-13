@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router';
 import { request } from '../api/client';
 import { browserTimeZone } from '../api/dates';
 import { currentZoneName, matchesZone, timeZoneOption, timeZoneOptions } from '../api/timeZones';
-import type { Account, ReminderKind } from '../api/types';
+import type { Account, ReminderKind, Workspace } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { readAccountProblems } from '../auth/identityErrors';
 import { meetsPasswordRules } from '../auth/passwordRules';
@@ -13,6 +13,8 @@ import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { useConfirm } from '../components/Feedback';
 import { usePageMeta } from '../seo/usePageMeta';
+import { BrandingCard } from '../workspaces/BrandingCard';
+import { canManageWorkspace, useWorkspace } from '../workspaces/WorkspaceContext';
 
 const reminderChoices: { kind: ReminderKind; label: string; hint: string }[] = [
   { kind: 'StartingSoon', label: 'Starting soon', hint: 'Before an idea’s start: 10, 5 and 2 days ahead, or closer on short notice, plus a nudge to add its components' },
@@ -22,10 +24,11 @@ const reminderChoices: { kind: ReminderKind; label: string; hint: string }[] = [
   { kind: 'Overdue', label: 'Overdue', hint: 'Once, when the date passes and it isn’t done' },
 ];
 
-/** The signed-in user's settings: their time zone and reminders. */
+/** The signed-in user's settings, and, for owners and admins, the current workspace's. */
 export function SettingsPage() {
   usePageMeta('Settings', { index: false });
   const { account } = useAuth();
+  const { current } = useWorkspace();
 
   return (
     <div className="stack">
@@ -35,8 +38,22 @@ export function SettingsPage() {
       {account && <RemindersForm account={account} />}
       {account && <EmailForm account={account} />}
       <PasswordForm />
+      {current && canManageWorkspace(current) && <WorkspaceSettings key={current.id} workspace={current} />}
       <DeleteAccountForm />
     </div>
+  );
+}
+
+/** The current workspace's settings, which apply to everyone in it; for its owners and admins. People links here as `#workspace`. */
+function WorkspaceSettings({ workspace }: { workspace: Workspace }) {
+  return (
+    <section id="workspace" className="stack" aria-labelledby="workspace-settings-heading">
+      <div className="stack tight">
+        <h2 id="workspace-settings-heading">Workspace: {workspace.name}</h2>
+        <p className="muted small">These apply to everyone in the workspace. Only its owners and admins see them.</p>
+      </div>
+      <BrandingCard workspace={workspace} />
+    </section>
   );
 }
 

@@ -1,7 +1,8 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 
 import { formatDate, formatMoment } from '../api/dates';
-import { useActivity } from '../api/queries';
+import { activityPageSize, useActivity } from '../api/queries';
 import { personLabel, statusLabels, type ActivityEntry, type IdeaStatus } from '../api/types';
 import { LoadError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
@@ -52,10 +53,17 @@ export function describeActivity(entry: ActivityEntry): string {
   }
 }
 
-/** The idea's history, loaded when opened. */
+/** The idea's history, loaded when opened, a page at a time. */
 export function ActivitySection({ ideaId }: { ideaId: string }) {
   const [open, setOpen] = useState(false);
-  const activity = useActivity(ideaId, open);
+  const [page, setPage] = useState(1);
+  const activity = useActivity(ideaId, page, open);
+  const data = activity.data;
+  const pageCount = data ? Math.max(1, Math.ceil(data.totalCount / activityPageSize)) : 1;
+  const first = (page - 1) * activityPageSize + 1;
+  const last = data ? first + data.items.length - 1 : first;
+  const canGoBack = page > 1 && !activity.isPlaceholderData;
+  const canGoOn = page < pageCount && !activity.isPlaceholderData;
 
   return (
     <section className="card stack" aria-labelledby="activity-heading">
@@ -66,15 +74,32 @@ export function ActivitySection({ ideaId }: { ideaId: string }) {
         </button>
       </div>
       {open && activity.isLoading && <Skeleton />}
-      {open && activity.data && (
-        <ol className="activity">
-          {activity.data.map((entry) => (
+      {open && data?.totalCount === 0 && <p className="muted">Nothing has changed yet.</p>}
+      {open && data && data.items.length > 0 && (
+        <ol className={activity.isPlaceholderData ? 'activity loading' : 'activity'} start={first} aria-busy={activity.isPlaceholderData}>
+          {data.items.map((entry) => (
             <li key={entry.id}>
               <span>{describeActivity(entry)}</span>
               <span className="muted small">{formatMoment(entry.createdAt)}</span>
             </li>
           ))}
         </ol>
+      )}
+      {open && data && data.totalCount > activityPageSize && (
+        <nav className="row spread pager" aria-label="Activity pages">
+          {/* aria-disabled rather than disabled, so focus stays on the button at the first or last page. */}
+          <button type="button" className="button small" aria-disabled={!canGoBack} onClick={() => canGoBack && setPage(page - 1)}>
+            <ChevronLeft aria-hidden="true" size={16} />
+            Previous
+          </button>
+          <span className="muted small" aria-live="polite">
+            {data.items.length > 0 ? `Showing ${first}–${last} of ${data.totalCount}` : `Page ${page} of ${pageCount}`}
+          </span>
+          <button type="button" className="button small" aria-disabled={!canGoOn} onClick={() => canGoOn && setPage(page + 1)}>
+            Next
+            <ChevronRight aria-hidden="true" size={16} />
+          </button>
+        </nav>
       )}
       <LoadError queries={activity} />
     </section>
