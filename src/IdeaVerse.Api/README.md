@@ -28,6 +28,7 @@ The API also serves the web app (`src/IdeaVerse.Web`) from `wwwroot` when one is
 - Unknown `/api` routes return 404. Any other unknown address, including malformed idea ids and the built `.html` files themselves, returns `404.html` with status 404, so made-up URLs are not indexed; a missing file such as an image gets the usual problem-details 404.
 - Pages are served as UTF-8 HTML. The web app's files are compressed (Brotli or gzip); API responses (under `/api` in any casing) are not, since compressing secrets next to attacker-controlled text over HTTPS can leak them (BREACH).
 - Content-hashed files under `/assets` are cached for a year, images, fonts and videos for a day, and pages are revalidated on every visit.
+- Every response, page or API, carries `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` with `Content-Security-Policy: frame-ancestors 'none'` (the app is never shown in another site's frame), and `Referrer-Policy: strict-origin-when-cross-origin` (`Web/SecurityHeadersExtensions`).
 
 ## Features
 

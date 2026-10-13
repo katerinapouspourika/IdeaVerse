@@ -224,4 +224,20 @@ public sealed class WebAppTests : IDisposable
 
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
   }
+
+  [Test]
+  [Arguments("/")]
+  [Arguments("/api/v1/workspaces")]
+  [Arguments("/no-such-page")]
+  public async Task AnyResponse_CarriesSecurityHeaders(string path)
+  {
+    await using var factory = new IdeaVerseApiFactory(webRoot.FullName);
+    var client = factory.CreateClient();
+
+    using var response = await client.GetAsync(path);
+
+    await Assert.That(response.Headers.GetValues("X-Content-Type-Options")).IsEquivalentTo(["nosniff"]);
+    await Assert.That(response.Headers.GetValues("X-Frame-Options")).IsEquivalentTo(["DENY"]);
+    await Assert.That(response.Headers.GetValues("Referrer-Policy")).IsEquivalentTo(["strict-origin-when-cross-origin"]);
+  }
 }
