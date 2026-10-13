@@ -96,6 +96,7 @@ export function IdeaBoard({ ideas }: { ideas: Idea[] }) {
   );
 }
 
+/** A card that opens the idea from anywhere on it, as its title link does; its status menu stays above the link. */
 function BoardCard({ idea, status, onMove }: { idea: Idea; status: IdeaStatus; onMove: (status: IdeaStatus) => void }) {
   const [dragging, setDragging] = useState(false);
   const { linkProps } = useIdeaPanel();
@@ -111,7 +112,8 @@ function BoardCard({ idea, status, onMove }: { idea: Idea; status: IdeaStatus; o
       onDragEnd={() => setDragging(false)}
     >
       <div className="row spread">
-        <Link {...linkProps(idea.id)} className="board-title">
+        {/* Stretched over the whole card, so a click anywhere opens the idea; not draggable itself, so dragging moves the card. */}
+        <Link {...linkProps(idea.id)} className="board-title stretched-link" draggable={false}>
           {idea.title}
         </Link>
         {idea.canEdit && <GripVertical aria-hidden="true" size={16} className="grip" />}

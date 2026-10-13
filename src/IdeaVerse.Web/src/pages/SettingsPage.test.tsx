@@ -41,6 +41,50 @@ describe('SettingsPage', () => {
     expect(await within(form).findByText('Choose a time zone from the list, such as Europe/Athens.')).toBeInTheDocument();
   });
 
+  it('labels time zones with their UTC offset, under their current names', async () => {
+    fakeApi(signedIn);
+    renderApp('/settings');
+
+    const form = await screen.findByRole('form', { name: 'Time zone' });
+    const select = within(form).getByRole('combobox', { name: 'Your time zone' });
+
+    expect(within(select).getByRole('option', { name: '(UTC+00:00) UTC' })).toHaveValue('UTC');
+    expect(within(select).getByRole('option', { name: /^\(UTC\+0[23]:00\) Athens \(Europe\)$/ })).toHaveValue('Europe/Athens');
+    expect(within(select).getByRole('option', { name: '(UTC+05:30) Kolkata (Asia)' })).toHaveValue('Asia/Kolkata');
+    expect(within(select).queryByRole('option', { name: /Calcutta/ })).not.toBeInTheDocument();
+    expect(within(select).queryByRole('option', { name: /Asmera/ })).not.toBeInTheDocument();
+  });
+
+  it('finds a time zone by searching, and saves its IANA id', async () => {
+    const calls = fakeApi({
+      ...signedIn,
+      'PUT /api/v1/account': (body) => ({ status: 200, body: { ...signedInAccount, ...(body as object) } }),
+    });
+    renderApp('/settings');
+
+    const form = await screen.findByRole('form', { name: 'Time zone' });
+    await userEvent.type(within(form).getByRole('searchbox', { name: 'Search time zones' }), 'kolkata');
+
+    expect(within(form).getByText('1 time zone matches.')).toBeInTheDocument();
+    expect(within(form).getByRole('combobox', { name: 'Your time zone' })).toHaveValue('Asia/Kolkata');
+    await userEvent.click(within(form).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ timeZone: 'Asia/Kolkata' }));
+  });
+
+  it('says when no time zone matches, and keeps the choice', async () => {
+    fakeApi(signedIn);
+    renderApp('/settings');
+
+    const form = await screen.findByRole('form', { name: 'Time zone' });
+    await userEvent.click(within(form).getByRole('searchbox', { name: 'Search time zones' }));
+    await userEvent.paste('Atlantis');
+
+    expect(within(form).getByText('No time zone matches “Atlantis”.')).toBeInTheDocument();
+    expect(within(form).getByRole('combobox', { name: 'Your time zone' })).toHaveValue('UTC');
+    expect(within(form).getByRole('button', { name: 'Save' })).toBeDisabled();
+  });
+
   it('sets the browser’s time zone on an account that has none yet', async () => {
     const calls = fakeApi({
       ...signedIn,

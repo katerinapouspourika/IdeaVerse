@@ -154,7 +154,7 @@ internal static class WorkspaceEndpoints
   /// <param name="user">The signed-in user.</param>
   /// <param name="service">The workspace service.</param>
   /// <param name="cancellationToken">Token to cancel the request.</param>
-  /// <returns>The person, 404, 403 for a member, 400 for the owner role, or 409 when changing the owner.</returns>
+  /// <returns>The person, 404, 403 for a member or for the user's own role, 400 for the owner role, or 409 when changing the owner.</returns>
   private static async Task<Results<Ok<WorkspaceMemberResponse>, NotFound, ValidationProblem, ProblemHttpResult>> ChangeRoleAsync(
     Guid workspaceId,
     string memberUserId,
