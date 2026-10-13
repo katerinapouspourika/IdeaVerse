@@ -11,7 +11,7 @@ const tomorrow: Notification = {
   ideaTitle: 'Black Friday teaser',
   kind: 'Tomorrow',
   targetDate: '2026-11-27',
-  message: '“Black Friday teaser” is due tomorrow, Fri 27 Nov 2026.',
+  message: 'The target date for “Black Friday teaser” is tomorrow, Fri 27 Nov 2026.',
   createdAt: '2026-11-26T08:00:00Z',
   readAt: null,
 };
@@ -20,7 +20,7 @@ const comingUp: Notification = {
   ...tomorrow,
   id: 'n-1',
   kind: 'ComingUp',
-  message: '“Black Friday teaser” is due in 7 days, on Fri 27 Nov 2026.',
+  message: 'The target date for “Black Friday teaser” is in 7 days, on Fri 27 Nov 2026.',
   createdAt: '2026-11-20T08:00:00Z',
   readAt: '2026-11-20T09:00:00Z',
 };
@@ -37,7 +37,7 @@ describe('Notifications', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }));
     const preview = screen.getByRole('region', { name: 'Latest notifications' });
-    expect(within(preview).getAllByRole('link')[0]).toHaveTextContent('is due tomorrow');
+    expect(within(preview).getAllByRole('link')[0]).toHaveTextContent('is tomorrow');
     expect(within(preview).getByRole('link', { name: 'See all notifications' })).toHaveAttribute('href', '/notifications');
   });
 
@@ -48,7 +48,7 @@ describe('Notifications', () => {
 
     const items = await within(screen.getByRole('main')).findAllByRole('listitem');
     expect(items[0]).toHaveTextContent('Tomorrow');
-    expect(items[0]).toHaveTextContent('is due tomorrow');
+    expect(items[0]).toHaveTextContent('is tomorrow');
     expect(items[1]).toHaveTextContent('Coming up');
   });
 

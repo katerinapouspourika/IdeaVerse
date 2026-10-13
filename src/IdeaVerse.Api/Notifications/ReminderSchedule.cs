@@ -117,13 +117,18 @@ public static class ReminderSchedule
     var subject = content.ComponentTitle is { } component ? $"“{component}” for {idea}" : idea;
     var actor = content.Actor ?? "Someone";
     var days = Math.Max(content.TargetDate.DayNumber - today.DayNumber, 2);
+    var isComponent = content.ComponentTitle is not null;
     return content.Kind switch
     {
-      ReminderKind.ComingUp => $"{subject} is due in {days} days, on {date}.",
-      ReminderKind.Tomorrow => $"{subject} is due tomorrow, {date}.",
-      ReminderKind.Today => $"{subject} is due today.",
-      ReminderKind.Overdue when content.ComponentTitle is not null => $"{subject} was due on {date} and isn’t done.",
-      ReminderKind.Overdue => $"{subject} was due on {date} and isn’t done. Postpone it or mark it done so it doesn’t slip away.",
+      // A component has a due date; an idea has a target date, named as such so the reminder matches the app.
+      ReminderKind.ComingUp when isComponent => $"{subject} is due in {days} days, on {date}.",
+      ReminderKind.ComingUp => $"The target date for {idea} is in {days} days, on {date}.",
+      ReminderKind.Tomorrow when isComponent => $"{subject} is due tomorrow, {date}.",
+      ReminderKind.Tomorrow => $"The target date for {idea} is tomorrow, {date}.",
+      ReminderKind.Today when isComponent => $"{subject} is due today.",
+      ReminderKind.Today => $"The target date for {idea} is today.",
+      ReminderKind.Overdue when isComponent => $"{subject} was due on {date} and isn’t done.",
+      ReminderKind.Overdue => $"The target date for {idea} was {date} and it isn’t done. Postpone it or mark it done so it doesn’t slip away.",
       ReminderKind.Assigned => $"{actor} assigned “{content.ComponentTitle}” for {idea} to you.",
       ReminderKind.AddedToTeam => $"{actor} added you to the team of {idea}.",
       ReminderKind.Commented => $"{actor} commented on {idea}: “{content.Detail}”",

@@ -117,7 +117,7 @@ export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, o
           />
         )}
       </Field>
-      <Field label="Implement by" error={fieldError(create.error, 'targetDate')}>
+      <Field label="Target date" error={fieldError(create.error, 'targetDate')}>
         {(props) => (
           <input {...props} type="date" required min={today} value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
         )}

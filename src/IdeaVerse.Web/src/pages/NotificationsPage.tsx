@@ -36,7 +36,7 @@ export function NotificationsPage() {
         )}
       </div>
       <p className="muted small">
-        Reminders arrive a week before, the day before, and on the day an idea or task is due, and once if it becomes overdue. You also hear when you’re added to a team, given a task, or someone comments. Change what you get in Settings.
+        Reminders arrive a week before, the day before, and on an idea’s target date or a task’s due date, and once if it becomes overdue. You also hear when you’re added to a team, given a task, or someone comments. Change what you get in Settings.
       </p>
       {notifications.isLoading && <Skeleton variant="cards" />}
       <LoadError queries={notifications} />
