@@ -260,6 +260,10 @@ function EditIdeaForm({ idea, onDone }: { idea: Idea; onDone: () => void }) {
   const [targetDate, setTargetDate] = useState(idea.targetDate);
   const [status, setStatus] = useState<IdeaStatus>(idea.status);
   const [tags, setTags] = useState(idea.tags);
+  // Not in the past, unless the idea is already overdue and keeps its date, and not before the planned start.
+  const today = todayIso();
+  const floor = idea.targetDate < today ? idea.targetDate : today;
+  const earliest = idea.startDate && idea.startDate > floor ? idea.startDate : floor;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -285,7 +289,7 @@ function EditIdeaForm({ idea, onDone }: { idea: Idea; onDone: () => void }) {
       <div className="row wrap">
         <Field label="Target date" error={fieldError(update.error, 'targetDate')}>
           {(props) => (
-            <input {...props} type="date" required value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+            <input {...props} type="date" required min={earliest} value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
           )}
         </Field>
         <Field label="Status">

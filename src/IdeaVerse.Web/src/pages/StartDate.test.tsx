@@ -64,4 +64,24 @@ describe('Idea start', () => {
 
     await waitFor(() => expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({ title: 'Launch', startDate: start, startTime: null }));
   });
+
+  it('keeps the edited target date from the past and from before the start', async () => {
+    const start = addDays(todayIso(), 5);
+    fakeApi(ideaRoutes({ targetDate: addDays(todayIso(), 30), startDate: start, startTime: null, startsAt: `${start}T09:00:00Z` }));
+    renderApp('/ideas/idea-1');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit details' }));
+
+    expect(within(screen.getByRole('form', { name: 'Edit idea' })).getByLabelText('Target date')).toHaveAttribute('min', start);
+  });
+
+  it('lets an overdue idea keep its target date while editing', async () => {
+    const overdue = addDays(todayIso(), -3);
+    fakeApi(ideaRoutes({ targetDate: overdue, isOverdue: true }));
+    renderApp('/ideas/idea-1');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit details' }));
+
+    expect(within(screen.getByRole('form', { name: 'Edit idea' })).getByLabelText('Target date')).toHaveAttribute('min', overdue);
+  });
 });
