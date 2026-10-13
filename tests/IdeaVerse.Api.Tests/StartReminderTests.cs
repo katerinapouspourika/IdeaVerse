@@ -273,8 +273,8 @@ public class StartReminderTests
     await SetStartAsync(owner, idea.Id, Today.AddDays(20), new TimeOnly(15, 30));
     await SetStartAsync(owner, idea.Id, null);
 
-    var activity = await owner.GetFromJsonAsync<Activity.ActivityResponse[]>($"/api/v1/ideas/{idea.Id}/activity", Json.Options);
-    var starts = activity!.Where(a => a.Kind == Activity.ActivityKind.StartChanged).Select(a => a.Detail ?? string.Empty).ToList();
+    var activity = await owner.GetFromJsonAsync<Activity.ActivityPageResponse>($"/api/v1/ideas/{idea.Id}/activity", Json.Options);
+    var starts = activity!.Items.Where(a => a.Kind == Activity.ActivityKind.StartChanged).Select(a => a.Detail ?? string.Empty).ToList();
     var expected = Today.AddDays(20).ToString("O", CultureInfo.InvariantCulture) + "T15:30";
     await Assert.That(starts).IsEquivalentTo([string.Empty, expected], CollectionOrdering.Matching);
   }
