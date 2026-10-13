@@ -298,6 +298,17 @@ export interface ActivityEntry {
   createdAt: string;
 }
 
+/** A page of an idea's history, newest first, from `GET /api/v1/ideas/{ideaId}/activity?page=&pageSize=`. */
+export interface ActivityPage {
+  /** Empty past the last page. */
+  items: ActivityEntry[];
+  /** How many entries the history holds in all. */
+  totalCount: number;
+  /** From 1. */
+  page: number;
+  pageSize: number;
+}
+
 /** An unfinished component assigned to the signed-in user. */
 export interface Assignment {
   componentId: string;

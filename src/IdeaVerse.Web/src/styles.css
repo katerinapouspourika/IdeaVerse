@@ -817,6 +817,27 @@ h3 {
   gap: 4px 12px;
 }
 
+/* The previous page stays, dimmed, while the next one loads. */
+.activity.loading {
+  opacity: 0.6;
+}
+
+/* Previous and Next either side of where the page is in the list. */
+.pager {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+.pager .button {
+  flex: none;
+  gap: 4px;
+}
+
+.pager > span {
+  text-align: center;
+}
+
 .assign-form {
   margin-top: 8px;
   padding: 8px;
@@ -3609,4 +3630,9 @@ legend,
   padding: 0;
   font-size: 0.9rem;
   font-weight: 600;
+}
+
+/* Settings' workspace section, which People links to: clear of the sticky header when scrolled to. */
+#workspace {
+  scroll-margin-top: 80px;
 }

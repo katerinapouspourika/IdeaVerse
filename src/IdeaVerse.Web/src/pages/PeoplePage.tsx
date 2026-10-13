@@ -1,5 +1,6 @@
+import { Palette } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { Navigate, useNavigate } from 'react-router';
+import { Link, Navigate, useNavigate } from 'react-router';
 
 import { formatDate } from '../api/dates';
 import {
@@ -22,7 +23,6 @@ import { useConfirm, useToast } from '../components/Feedback';
 import { Skeleton } from '../components/Skeleton';
 import { usePageMeta } from '../seo/usePageMeta';
 import { canManageWorkspace, useWorkspace } from '../workspaces/WorkspaceContext';
-import { BrandingCard } from '../workspaces/BrandingCard';
 import { CompanyDomainCard } from '../workspaces/CompanyDomainCard';
 import { InviteLinkCard } from '../workspaces/InviteLinkCard';
 import { JoinRequestsCard } from '../workspaces/JoinRequestsCard';
@@ -56,7 +56,6 @@ function People({ workspace }: { workspace: Workspace }) {
           <JoinRequestsCard workspaceId={workspace.id} />
           <InviteLinkCard workspaceId={workspace.id} />
           <CompanyDomainCard workspaceId={workspace.id} />
-          <BrandingCard workspace={workspace} />
           <OpenInvitations workspaceId={workspace.id} />
         </>
       ) : (
@@ -177,9 +176,16 @@ function WorkspaceName({ workspace, canManage }: { workspace: Workspace; canMana
     <div className="row spread wrap">
       <h1>People in {workspace.name}</h1>
       {canManage && (
-        <button type="button" className="button ghost" onClick={() => setEditing(true)}>
-          Rename
-        </button>
+        <div className="row wrap">
+          <button type="button" className="button ghost" onClick={() => setEditing(true)}>
+            Rename
+          </button>
+          {/* The workspace's look lives with its other settings; this keeps it easy to find from here. */}
+          <Link to="/settings#workspace" className="button ghost">
+            <Palette aria-hidden="true" size={18} />
+            Logo and colour
+          </Link>
+        </div>
       )}
     </div>
   );

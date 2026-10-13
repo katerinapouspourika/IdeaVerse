@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 
 import { request } from './client';
 import type {
-  ActivityEntry,
+  ActivityPage,
   Assignment,
   AiStatus,
   BrainstormedIdea,
@@ -622,10 +622,16 @@ export function useDeleteComment(ideaId: string) {
   return useCommentMutation(ideaId, (id: string) => request<void>('DELETE', `/api/v1/ideas/${ideaId}/comments/${id}`));
 }
 
-export function useActivity(ideaId: string, enabled: boolean) {
+/** How many history entries the Activity card shows at a time. */
+export const activityPageSize = 10;
+
+/** A page of the idea's history; the idea's previous page stays on screen while the next one loads. */
+export function useActivity(ideaId: string, page: number, enabled: boolean) {
   return useQuery({
-    queryKey: keys.activity(ideaId),
-    queryFn: () => request<ActivityEntry[]>('GET', `/api/v1/ideas/${ideaId}/activity`),
+    queryKey: [...keys.activity(ideaId), page],
+    queryFn: () => request<ActivityPage>('GET', `/api/v1/ideas/${ideaId}/activity?page=${page}&pageSize=${activityPageSize}`),
+    // Never another idea's history, when the same card moves on to a different idea.
+    placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[1] === ideaId ? previous : undefined),
     enabled,
   });
 }

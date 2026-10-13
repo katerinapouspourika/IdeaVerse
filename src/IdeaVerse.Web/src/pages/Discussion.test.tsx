@@ -84,7 +84,10 @@ describe('Activity', () => {
       { id: 'a-2', kind: 'ComponentCompleted', detail: 'Budget', actorEmail: 'mia@example.com', actorName: 'Mia', createdAt: '2026-10-10T10:00:00Z' },
       { id: 'a-1', kind: 'Created', detail: null, actorEmail: 'kat@example.com', actorName: null, createdAt: '2026-10-10T09:00:00Z' },
     ];
-    const calls = fakeApi({ ...routes([]), 'GET /api/v1/ideas/idea-1/activity': { status: 200, body: entries } });
+    const calls = fakeApi({
+      ...routes([]),
+      'GET /api/v1/ideas/idea-1/activity?page=1&pageSize=10': { status: 200, body: { items: entries, totalCount: 2, page: 1, pageSize: 10 } },
+    });
     renderApp('/ideas/idea-1');
 
     const section = await screen.findByRole('region', { name: 'Activity' });
@@ -93,6 +96,67 @@ describe('Activity', () => {
 
     expect(await within(section).findByText('Mia ticked off “Budget”')).toBeInTheDocument();
     expect(within(section).getByText('kat@example.com created the idea')).toBeInTheDocument();
+  });
+
+  it('pages through a long history ten entries at a time', async () => {
+    const entries: ActivityEntry[] = Array.from({ length: 23 }, (_, i) => ({
+      id: `a-${i}`,
+      kind: 'ComponentAdded',
+      detail: `Item ${23 - i}`,
+      actorEmail: 'mia@example.com',
+      actorName: 'Mia',
+      createdAt: '2026-10-10T09:00:00Z',
+    }));
+    const page = (n: number) => ({ status: 200, body: { items: entries.slice((n - 1) * 10, n * 10), totalCount: 23, page: n, pageSize: 10 } });
+    fakeApi({
+      ...routes([]),
+      'GET /api/v1/ideas/idea-1/activity?page=1&pageSize=10': page(1),
+      'GET /api/v1/ideas/idea-1/activity?page=2&pageSize=10': page(2),
+      'GET /api/v1/ideas/idea-1/activity?page=3&pageSize=10': page(3),
+    });
+    renderApp('/ideas/idea-1');
+
+    const section = await screen.findByRole('region', { name: 'Activity' });
+    await userEvent.click(within(section).getByRole('button', { name: 'Show' }));
+
+    const pages = await within(section).findByRole('navigation', { name: 'Activity pages' });
+    expect(within(section).getAllByRole('listitem')).toHaveLength(10);
+    expect(within(section).getByText('Mia added “Item 23”')).toBeInTheDocument();
+    expect(within(pages).getByText('Showing 1–10 of 23')).toBeInTheDocument();
+    expect(within(pages).getByRole('button', { name: 'Previous' })).toHaveAttribute('aria-disabled', 'true');
+
+    await userEvent.click(within(pages).getByRole('button', { name: 'Next' }));
+    expect(await within(pages).findByText('Showing 11–20 of 23')).toBeInTheDocument();
+    expect(within(section).getByText('Mia added “Item 13”')).toBeInTheDocument();
+
+    await userEvent.click(within(pages).getByRole('button', { name: 'Next' }));
+    expect(await within(pages).findByText('Showing 21–23 of 23')).toBeInTheDocument();
+    expect(within(section).getAllByRole('listitem')).toHaveLength(3);
+    const next = within(pages).getByRole('button', { name: 'Next' });
+    expect(next).toHaveAttribute('aria-disabled', 'true');
+    await userEvent.click(next);
+    expect(within(pages).getByText('Showing 21–23 of 23')).toBeInTheDocument();
+
+    await userEvent.click(within(pages).getByRole('button', { name: 'Previous' }));
+    expect(await within(pages).findByText('Showing 11–20 of 23')).toBeInTheDocument();
+
+    await userEvent.click(within(section).getByRole('button', { name: 'Hide' }));
+    expect(within(section).queryByRole('list')).not.toBeInTheDocument();
+  });
+
+  it('leaves out the page controls when the history fits on one page', async () => {
+    const entries: ActivityEntry[] = [{ id: 'a-1', kind: 'Created', detail: null, actorEmail: 'kat@example.com', actorName: null, createdAt: '2026-10-10T09:00:00Z' }];
+    fakeApi({
+      ...routes([]),
+      'GET /api/v1/ideas/idea-1/activity?page=1&pageSize=10': { status: 200, body: { items: entries, totalCount: 1, page: 1, pageSize: 10 } },
+    });
+    renderApp('/ideas/idea-1');
+
+    const section = await screen.findByRole('region', { name: 'Activity' });
+    await userEvent.click(within(section).getByRole('button', { name: 'Show' }));
+
+    expect(await within(section).findByText('kat@example.com created the idea')).toBeInTheDocument();
+    expect(within(section).queryByRole('navigation')).not.toBeInTheDocument();
   });
 
   it.each<[ActivityEntry['kind'], string | null, string]>([
