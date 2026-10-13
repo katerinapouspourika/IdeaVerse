@@ -113,10 +113,12 @@ describe('PeoplePage', () => {
     await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Role of mia@example.com' }), 'Admin');
     await confirmDialog('Make admin');
     await userEvent.click(await screen.findByRole('button', { name: 'Revoke invitation for new@example.com' }));
+    await confirmDialog('Revoke');
 
     await waitFor(() => expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ role: 'Admin' }));
     expect(await screen.findByText('mia@example.com is now an admin')).toBeInTheDocument();
     await waitFor(() => expect(calls.some((c) => c.method === 'DELETE')).toBe(true));
+    expect(await screen.findByText('Revoked the invitation for new@example.com')).toBeInTheDocument();
   });
 
   it('keeps a role when the change is cancelled', async () => {

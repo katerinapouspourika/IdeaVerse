@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { Notification } from '../api/types';
-import { anIdea, fakeApi, ideasRoute, signedIn } from '../test/fakeApi';
+import { anIdea, fakeApi, ideasRoute, signedIn, signedInAccount } from '../test/fakeApi';
 import { renderApp } from '../test/render';
 
 const tomorrow: Notification = {
@@ -85,6 +85,20 @@ describe('Notifications', () => {
     expect(await screen.findByRole('heading', { name: 'Black Friday teaser' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/ideas/idea-1');
     expect(calls.some((c) => c.path === '/api/v1/notifications/n-2/read')).toBe(true);
+  });
+
+  it('shows when each arrived in the account’s time zone', async () => {
+    fakeApi({
+      ...routes([tomorrow], 1),
+      'GET /api/v1/account': { status: 200, body: { ...signedInAccount, timeZone: 'Pacific/Kiritimati' } },
+    });
+
+    renderApp('/notifications');
+
+    // 08:00 UTC on 26 Nov is 22:00 the same day in Kiritimati (UTC+14).
+    const time = await screen.findByText(/26 Nov 2026|Nov 26, 2026/);
+    expect(time).toHaveAttribute('datetime', tomorrow.createdAt);
+    expect(time.textContent).toMatch(/22:00|10:00\s?PM/);
   });
 
   it('explains when there are no notifications yet', async () => {
