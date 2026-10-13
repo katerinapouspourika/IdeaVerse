@@ -7,6 +7,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 using Pouspourika.IdeaVerse.Api.Auth;
+using Pouspourika.IdeaVerse.Api.Ideas;
 using Pouspourika.IdeaVerse.Api.Validation;
 
 /// <summary>
@@ -24,10 +25,10 @@ internal static class ComponentEndpoints
     var group = endpoints.MapGroup("/api/v1/ideas/{ideaId:guid}/components").WithTags("Components").RequireAuthorization();
 
     group.MapGet("/", ListAsync);
-    group.MapPost("/", CreateAsync).WithValidation<CreateComponentRequest>();
-    group.MapPut("/order", ReorderAsync).WithValidation<ReorderComponentsRequest>();
-    group.MapPut("/{componentId:guid}", UpdateAsync).WithValidation<UpdateComponentRequest>();
-    group.MapDelete("/{componentId:guid}", DeleteAsync);
+    group.MapPost("/", CreateAsync).WithValidation<CreateComponentRequest>().RejectWhenArchived();
+    group.MapPut("/order", ReorderAsync).WithValidation<ReorderComponentsRequest>().RejectWhenArchived();
+    group.MapPut("/{componentId:guid}", UpdateAsync).WithValidation<UpdateComponentRequest>().RejectWhenArchived();
+    group.MapDelete("/{componentId:guid}", DeleteAsync).RejectWhenArchived();
 
     var workspace = endpoints.MapGroup("/api/v1/workspaces/{workspaceId:guid}").WithTags("Components").RequireAuthorization();
     workspace.MapGet("/assignments", ListAssignedAsync);

@@ -14,6 +14,8 @@ export function TeamSection({ idea }: { idea: Idea }) {
   const { account } = useAuth();
   const confirm = useConfirm();
   const toast = useToast();
+  // An archived idea's team stays as it is until the idea is restored.
+  const archived = Boolean(idea.archivedAt);
 
   const removeMember = async (member: Member) => {
     const leaving = member.email === account?.email;
@@ -36,7 +38,7 @@ export function TeamSection({ idea }: { idea: Idea }) {
         <ul className="team">
           {members.data.map((member) => {
             const isMe = member.email === account?.email;
-            const canRemove = member.role === 'Member' && (idea.canManage || isMe);
+            const canRemove = !archived && member.role === 'Member' && (idea.canManage || isMe);
             return (
               <li key={member.userId}>
                 <span>
@@ -59,7 +61,9 @@ export function TeamSection({ idea }: { idea: Idea }) {
       )}
       <LoadError queries={members} />
       <ErrorMessage error={remove.error} />
-      {idea.canManage ? (
+      {archived ? (
+        <p className="muted small">The team can’t change while the idea is archived.</p>
+      ) : idea.canManage ? (
         <AddMemberForm idea={idea} team={members.data ?? []} />
       ) : (
         <p className="muted small">Only the idea’s owner and the workspace’s admins can add or remove team members.</p>
