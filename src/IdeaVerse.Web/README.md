@@ -90,7 +90,7 @@ It needs an ffmpeg with libx264, libvpx-vp9 and libwebp (set `FFMPEG` when it is
 > The API types in `src/api/types.ts` are written by hand to mirror `src/IdeaVerse.Api`. Update them in the same change as the API contract.
 
 > [!NOTE]
-> "Today" follows the account's time zone (the browser's until the account has one), matching the API's notion of "today" and "overdue".
+> "Today" follows the account's time zone (the browser's until the account has one), matching the API's notion of "today" and "overdue". When the browser's time zone differs from the account's, as while travelling, a prompt above each signed-in page (`components/TimeZonePrompt`) offers to switch to it or keep the saved one; keeping it is remembered in this browser for that time zone, so the prompt returns only from somewhere else.
 
 > [!NOTE]
 > The look is "bright and friendly": colours, radii, and shadows are CSS variables at the top of `src/styles.css`, built from the logo's navy and sky blue with a warm yellow accent, and redefined for dark mode. In light mode the page is a warm linen (`--bg`) with white cards (`--surface`), so each card stands apart from the page. The font is Nunito, bundled from `@fontsource-variable/nunito` rather than loaded from Google.

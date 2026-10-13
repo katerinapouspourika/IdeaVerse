@@ -269,6 +269,17 @@ a {
   color: inherit;
 }
 
+/* Offers to follow the device's time zone; a card laid out as a row. */
+.card.time-zone-prompt {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.time-zone-prompt p {
+  margin: 0;
+}
+
 .card.danger {
   border-color: var(--danger);
 }
