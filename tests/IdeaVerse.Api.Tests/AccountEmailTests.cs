@@ -137,6 +137,41 @@ public class AccountEmailTests
     await Assert.That(reset.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
   }
 
+  [Test]
+  public async Task ChangePassword_SignsOutOtherSessionsButNotThisOne()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync(Email, withWorkspace: false);
+    using var other = factory.CreateClient();
+    (await other.PostAsJsonAsync("/api/v1/auth/login?useCookies=true", Credentials)).Dispose();
+
+    using var change = await client.PostAsJsonAsync("/api/v1/auth/manage/info", new { oldPassword = IdeaVerseApiFactory.Password, newPassword = "N3w-passw0rd!" });
+    factory.Time.Advance(TimeSpan.FromMinutes(2));
+    using var here = await client.GetAsync("/api/v1/account");
+    using var there = await other.GetAsync("/api/v1/account");
+
+    await Assert.That(change.StatusCode).IsEqualTo(HttpStatusCode.OK);
+    await Assert.That(here.StatusCode).IsEqualTo(HttpStatusCode.OK);
+    await Assert.That(there.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+  }
+
+  [Test]
+  public async Task ResetPassword_SignsOutEverySession()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync(Email, withWorkspace: false);
+    var anonymous = factory.CreateClient();
+    (await anonymous.PostAsJsonAsync("/api/v1/auth/forgotPassword", new { email = Email })).Dispose();
+    var link = FakeMailSender.LinkIn(factory.Mail.Take(Email, IdentityEmailSender.PasswordResetSubject), $"{IdeaVerseApiFactory.AppUrl}/reset-password");
+    var code = System.Web.HttpUtility.ParseQueryString(link.Query)["code"];
+
+    (await anonymous.PostAsJsonAsync("/api/v1/auth/resetPassword", new { email = Email, resetCode = code, newPassword = "N3w-passw0rd!" })).Dispose();
+    factory.Time.Advance(TimeSpan.FromMinutes(2));
+    using var account = await client.GetAsync("/api/v1/account");
+
+    await Assert.That(account.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+  }
+
   private static async Task<string?> DetailAsync(HttpResponseMessage response)
   {
     using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
