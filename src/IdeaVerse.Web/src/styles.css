@@ -519,6 +519,22 @@ textarea:focus-visible,
   background: linear-gradient(90deg, var(--sky), var(--ok));
 }
 
+/* The checklist card's summary: "2 of 5 done" and its percentage over a full-width bar. */
+.checklist-progress {
+  display: grid;
+  gap: 6px;
+}
+
+.checklist-progress .progress-fill {
+  transition: width 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checklist-progress .progress-fill {
+    transition: none;
+  }
+}
+
 .checklist,
 .team {
   list-style: none;
