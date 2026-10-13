@@ -62,7 +62,7 @@ function formatOffset(minutes: number): string {
 }
 
 /** A readable name for a zone: its city, then the most specific region, such as "Buenos Aires (Argentina)". */
-function placeName(zone: string): string {
+export function placeName(zone: string): string {
   const parts = currentZoneName(zone).split('/').map((part) => part.replaceAll('_', ' '));
   const city = parts.at(-1) ?? zone;
   const region = parts.at(-2);

@@ -41,7 +41,8 @@ builder.Services
     o.SignIn.RequireConfirmedEmail = builder.Configuration.GetValue("Auth:RequireConfirmedEmail", defaultValue: true);
   })
   .AddEntityFrameworkStores<IdeaVerseDbContext>();
-builder.Services.AddTransient<IEmailSender<User>, IdentityEmailSender>();
+builder.Services.AddTransient<IdentityEmailSender>();
+builder.Services.AddTransient<IEmailSender<User>>(services => services.GetRequiredService<IdentityEmailSender>());
 builder.Services.ConfigureApplicationCookie(o =>
 {
   o.Cookie.Name = "IdeaVerse.Auth";

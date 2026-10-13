@@ -198,6 +198,20 @@ public class AccountEndpointsTests
   }
 
   [Test]
+  public async Task ChangeEmail_ToAddressAnotherAccountUses_IsRefusedWithoutEmailingIt()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    using var other = await factory.CreateSignedInClientAsync("taken@example.com", withWorkspace: false);
+
+    using var request = await client.PostAsJsonAsync("/api/v1/auth/manage/info", new { newEmail = "Taken@example.com" });
+
+    await Assert.That(request.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+    await Assert.That((await request.ReadValidationErrorsAsync())["newEmail"]).IsEquivalentTo([Auth.EmailChangeFilter.TakenMessage]);
+    await Assert.That(factory.Mail.Sent).IsEmpty();
+  }
+
+  [Test]
   public async Task Delete_WrongPassword_ReturnsValidationProblemAndKeepsAccount()
   {
     await using var factory = new IdeaVerseApiFactory();

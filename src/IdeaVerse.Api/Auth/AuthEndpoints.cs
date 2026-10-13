@@ -19,7 +19,8 @@ internal static class AuthEndpoints
   /// <remarks>
   /// The web app signs in with <c>POST /api/v1/auth/login?useCookies=true</c>, which issues an HTTP-only cookie. A
   /// successful password reset also unlocks the account (<see cref="ResetPasswordUnlockFilter"/>), and changing the
-  /// password signs out the account's other sessions (<see cref="PasswordChangeSignInFilter"/>). Password reset and
+  /// password signs out the account's other sessions (<see cref="PasswordChangeSignInFilter"/>). A change of email to
+  /// an address another account uses is refused up front (<see cref="EmailChangeFilter"/>). Password reset and
   /// confirmation emails are limited per address (<see cref="AccountEmailThrottleFilter"/>).
   /// </remarks>
   /// <param name="endpoints">The route builder.</param>
@@ -31,6 +32,7 @@ internal static class AuthEndpoints
     group.MapGroup(string.Empty).AddEndpointFilter<ResetPasswordUnlockFilter>().MapIdentityApi<User>();
     group.MapPost("/logout", LogoutAsync).RequireAuthorization();
     group.MapPost("/confirm", ConfirmAsync).AllowAnonymous();
+    group.AddEndpointFilter<EmailChangeFilter>();
     group.AddEndpointFilter<AccountEmailThrottleFilter>();
     return endpoints;
   }
@@ -44,15 +46,18 @@ internal static class AuthEndpoints
   /// opening the link again, or a link for an address already confirmed, confirms nothing and signs no one in. A change
   /// of address is confirmed without signing in, since the person already has a session where they asked for it; that
   /// session, if it is the one confirming, is kept signed in, while the account's other sessions are signed out.
+  /// The old address is then told of the change, so its owner notices one they did not make.
   /// </remarks>
   /// <param name="request">The values from the link.</param>
   /// <param name="userManager">The user manager.</param>
   /// <param name="signInManager">The sign-in manager.</param>
+  /// <param name="emailSender">Tells the old address about a change of address.</param>
   /// <returns>Whether the user is now signed in, or 401 when the link is not valid.</returns>
   private static async Task<Results<Ok<ConfirmEmailResponse>, UnauthorizedHttpResult>> ConfirmAsync(
     ConfirmEmailRequest request,
     UserManager<User> userManager,
-    SignInManager<User> signInManager)
+    SignInManager<User> signInManager,
+    IdentityEmailSender emailSender)
   {
     var user = await userManager.FindByIdAsync(request.UserId).ConfigureAwait(false);
     var code = Decode(request.Code);
@@ -63,6 +68,7 @@ internal static class AuthEndpoints
 
     if (request.ChangedEmail is { } changed)
     {
+      var previous = user.Email;
       if (!await ChangeEmailAsync(userManager, user, changed, code).ConfigureAwait(false))
       {
         return TypedResults.Unauthorized();
@@ -72,6 +78,11 @@ internal static class AuthEndpoints
       if (userManager.GetUserId(signInManager.Context.User) == user.Id)
       {
         await signInManager.RefreshSignInAsync(user).ConfigureAwait(false);
+      }
+
+      if (previous is not null)
+      {
+        await emailSender.SendEmailChangedAsync(previous, changed).ConfigureAwait(false);
       }
 
       return TypedResults.Ok(new ConfirmEmailResponse(SignedIn: false));

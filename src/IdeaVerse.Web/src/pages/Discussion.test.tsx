@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { browserTimeZone, formatMoment, setTimeZone } from '../api/dates';
 import type { ActivityEntry, Comment } from '../api/types';
 import { anIdea, fakeApi, signedIn } from '../test/fakeApi';
 import { confirmDialog } from '../test/dialog';
@@ -167,5 +168,19 @@ describe('Activity', () => {
   ])('describes %s', (kind, detail, expected) => {
     const sentence = describeActivity({ id: 'x', kind, detail, actorEmail: 'mia@example.com', actorName: 'Mia', createdAt: '2026-10-10T09:00:00Z' });
     expect(sentence).toContain(expected);
+  });
+
+  it('shows a planned start time in the reader’s own time zone', () => {
+    const entry: ActivityEntry = { id: 'x', kind: 'StartChanged', detail: '2026-11-02T13:30Z', actorEmail: 'mia@example.com', actorName: 'Mia', createdAt: '2026-10-10T09:00:00Z' };
+
+    setTimeZone('Pacific/Honolulu');
+    const inHonolulu = describeActivity(entry);
+    setTimeZone('Asia/Tokyo');
+    const inTokyo = describeActivity(entry);
+    setTimeZone(browserTimeZone());
+
+    expect(inHonolulu).toBe(`Mia set the start to ${formatMoment('2026-11-02T13:30Z', 'Pacific/Honolulu')}`);
+    expect(inTokyo).toBe(`Mia set the start to ${formatMoment('2026-11-02T13:30Z', 'Asia/Tokyo')}`);
+    expect(inHonolulu).not.toBe(inTokyo);
   });
 });

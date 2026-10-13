@@ -267,6 +267,7 @@ public class StartReminderTests
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
+    await owner.SetTimeZoneAsync("America/Phoenix");
     var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(30))).ReadIdeaAsync();
 
     await SetStartAsync(owner, idea.Id, Today.AddDays(20), new TimeOnly(15, 30));
@@ -275,7 +276,9 @@ public class StartReminderTests
 
     var activity = await owner.GetFromJsonAsync<Activity.ActivityPageResponse>($"/api/v1/ideas/{idea.Id}/activity", Json.Options);
     var starts = activity!.Items.Where(a => a.Kind == Activity.ActivityKind.StartChanged).Select(a => a.Detail ?? string.Empty).ToList();
-    var expected = Today.AddDays(20).ToString("O", CultureInfo.InvariantCulture) + "T15:30";
+
+    // 15:30 in Phoenix (UTC-7), recorded as the moment so each reader sees it in their own time zone.
+    var expected = Today.AddDays(20).ToString("O", CultureInfo.InvariantCulture) + "T22:30Z";
     await Assert.That(starts).IsEquivalentTo([string.Empty, expected], CollectionOrdering.Matching);
   }
 
