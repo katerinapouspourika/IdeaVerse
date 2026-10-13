@@ -139,6 +139,39 @@ describe('IdeaPage', () => {
     );
   });
 
+  it('sums up the checklist’s progress at the top of its card, and updates it as components are done', async () => {
+    let saved = [budget, { ...budget, id: 'c-2', title: 'Book the venue', isDone: true }];
+    fakeApi({
+      ...ideaRoutes({}, [owner]),
+      'GET /api/v1/ideas/idea-1/components': () => ({ status: 200, body: saved }),
+      'PUT /api/v1/ideas/idea-1/components/c-1': (body) => {
+        saved = [{ ...budget, ...(body as Partial<Component>) }, saved[1]!];
+        return { status: 200, body: saved[0] };
+      },
+    });
+    renderApp('/ideas/idea-1');
+
+    const checklist = await screen.findByRole('region', { name: 'What it needs' });
+    const progress = await within(checklist).findByRole('progressbar', { name: '1 of 2 done' });
+    expect(progress).toHaveAttribute('aria-valuenow', '1');
+    expect(progress).toHaveAttribute('aria-valuemax', '2');
+    expect(within(checklist).getByText('50%')).toBeInTheDocument();
+    expect(screen.queryByText(/ready$/)).not.toBeInTheDocument();
+
+    await userEvent.click(within(checklist).getByRole('checkbox', { name: /Budget sign-off/ }));
+
+    expect(await within(checklist).findByRole('progressbar', { name: 'All 2 done' })).toHaveAttribute('aria-valuenow', '2');
+    expect(within(checklist).getByText('100%')).toBeInTheDocument();
+  });
+
+  it('leaves the progress out while the checklist is empty', async () => {
+    fakeApi({ ...ideaRoutes({}, [owner]), 'GET /api/v1/ideas/idea-1/components': { status: 200, body: [] } });
+    renderApp('/ideas/idea-1');
+
+    expect(await screen.findByText('Nothing listed yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
   it('unticks a component again when the API rejects the change', async () => {
     fakeApi({
       ...ideaRoutes({}, [owner]),

@@ -6,7 +6,6 @@ import { ApiError } from '../api/client';
 import { describeDue, formatDate } from '../api/dates';
 import { useIdea } from '../api/queries';
 import { LoadError } from '../components/ErrorMessage';
-import { Progress } from '../components/Progress';
 import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
@@ -95,7 +94,6 @@ export function IdeaPanel({ id, onClose }: { id: string; onClose: () => void }) 
               </p>
               <Tags tags={idea.data.tags} />
               {idea.data.description ? <p className="description">{idea.data.description}</p> : <p className="muted">No description yet.</p>}
-              <Progress done={idea.data.completedComponentCount} total={idea.data.componentCount} />
             </section>
             <PriorityCard idea={idea.data} />
             <ComponentsSection ideaId={idea.data.id} workspaceId={idea.data.workspaceId} canEdit={idea.data.canEdit} />

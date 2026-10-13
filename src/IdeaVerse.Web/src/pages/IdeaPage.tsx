@@ -11,7 +11,6 @@ import { useConfirm, useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
 import { Menu } from '../components/Menu';
 import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
-import { Progress } from '../components/Progress';
 import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
@@ -102,7 +101,6 @@ function IdeaDetail({ idea }: { idea: Idea }) {
               </p>
               <Tags tags={idea.tags} />
               {idea.description ? <p className="description">{idea.description}</p> : <p className="muted">No description yet.</p>}
-              <Progress done={idea.completedComponentCount} total={idea.componentCount} />
               {idea.canEdit ? (
                 <ImproveIdea idea={idea} />
               ) : (
