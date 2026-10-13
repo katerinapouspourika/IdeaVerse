@@ -67,6 +67,22 @@ describe('Getting started', () => {
     expect(screen.queryByRole('region', { name: 'Get started' })).not.toBeInTheDocument();
     expect(localStorage.getItem('ideaverse.getting-started.hidden.ws-1')).toBe('1');
   });
+
+  it('gives a member who joined someone else’s workspace only their own steps', async () => {
+    fakeApi({
+      ...signedIn,
+      'GET /api/v1/workspaces': { status: 200, body: [aWorkspace({ role: 'Member', memberCount: 3 })] },
+      [ideasRoute]: { status: 200, body: [anIdea({ role: 'Member', ownerEmail: 'leo@example.com', componentCount: 4 })] },
+    });
+    renderApp('/');
+
+    const checklist = await screen.findByRole('region', { name: 'Get started' });
+    expect(within(checklist).getByText('0 of 3 done')).toBeInTheDocument();
+    expect(within(checklist).getByRole('link', { name: 'Add your first idea' })).toBeInTheDocument();
+    expect(within(checklist).getByRole('link', { name: 'List what your idea needs' })).toHaveAttribute('href', '/ideas');
+    expect(within(checklist).queryByText(/Invite a teammate/)).not.toBeInTheDocument();
+    expect(within(checklist).queryByText(/Create a workspace/)).not.toBeInTheDocument();
+  });
 });
 
 describe('Removing a component', () => {

@@ -96,7 +96,7 @@ describe('Starting an idea from a template', () => {
     expect(within(form).getByLabelText('Title')).toHaveValue('');
     expect(within(form).getByLabelText('Title')).toHaveAttribute('placeholder', 'Launch: [product name]');
     expect(within(form).getByLabelText('Title')).toHaveAccessibleDescription('Suggested: Launch: [product name]');
-    expect(within(form).getByLabelText('Implement by')).toHaveValue(addDays(todayIso(), launch.days));
+    expect(within(form).getByLabelText('Target date')).toHaveValue(addDays(todayIso(), launch.days));
     await userEvent.type(within(form).getByLabelText('Title'), 'Launch: Atlas');
     await userEvent.click(within(form).getByRole('button', { name: 'Add idea' }));
 

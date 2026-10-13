@@ -120,7 +120,7 @@ function HeroPreview() {
           <span className="badge">In progress</span>
         </div>
         <div className="row spread small">
-          <span className="muted">Due in 6 days</span>
+          <span className="muted">Target date in 6 days</span>
           <span className="progress-track">
             <span className="progress-fill" style={{ width: '70%' }} />
           </span>
@@ -136,7 +136,7 @@ function HeroPreview() {
           <span className="badge status-postponed">Postponed</span>
         </div>
         <div className="row spread small">
-          <span className="muted">Due in 3 weeks</span>
+          <span className="muted">Target date in 3 weeks</span>
           <span className="progress-track">
             <span className="progress-fill" style={{ width: '35%' }} />
           </span>

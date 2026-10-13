@@ -3,12 +3,11 @@ import { canChange, maxScore, minScore, type Idea, type PriorityInput } from '..
 import { useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
 import { placementHints, placementLabels, placementOf } from './priority';
-import { VoteButton } from './VoteButton';
 
 const scoreLabels: Record<number, string> = { 1: 'Very low', 2: 'Low', 3: 'Medium', 4: 'High', 5: 'Very high' };
 const scores = Array.from({ length: maxScore - minScore + 1 }, (_, i) => minScore + i);
 
-/** Votes, and the idea's impact and effort scores, which its team can change; each change saves straight away. */
+/** The idea's impact and effort scores, which its team can change; each change saves straight away. */
 export function PriorityCard({ idea }: { idea: Idea }) {
   const setPriority = useSetPriority();
   const toast = useToast();
@@ -21,10 +20,7 @@ export function PriorityCard({ idea }: { idea: Idea }) {
 
   return (
     <section className="card stack" aria-labelledby="priority-heading">
-      <div className="row spread">
-        <h2 id="priority-heading">Priority</h2>
-        <VoteButton idea={idea} />
-      </div>
+      <h2 id="priority-heading">Priority</h2>
       {canScore ? (
         <div className="row wrap priority-scores">
           <ScoreSelect label="Impact" value={shown.impact} saving={setPriority.isPending} onChange={(impact) => save({ impact, effort: shown.effort })} />

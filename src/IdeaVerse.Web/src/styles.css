@@ -2502,6 +2502,50 @@ a:focus-visible {
   color: var(--muted);
 }
 
+/*
+ * A title link stretched over its card or row, so a click anywhere on it opens the idea, while the link stays the one
+ * thing to tab to. Controls inside sit above it (`.board-move`).
+ */
+.board-card,
+.timeline-row {
+  position: relative;
+}
+
+.stretched-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.stretched-link:focus-visible {
+  outline: none;
+}
+
+.stretched-link:focus-visible::after {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.board-card .stretched-link::after {
+  border-radius: var(--radius);
+}
+
+.board-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-lift);
+}
+
+.board-card:hover .board-title {
+  color: var(--accent);
+}
+
+.board-move {
+  position: relative;
+  z-index: 2;
+}
+
 .board-move select {
   width: 100%;
   min-height: 34px;
@@ -2538,6 +2582,11 @@ a:focus-visible {
 .vote-button {
   gap: 4px;
   font-variant-numeric: tabular-nums;
+}
+
+/* Beside an idea's title it keeps its own width, rather than stretching like the buttons in a wrapping row on phones. */
+.row.wrap > .vote-button {
+  flex: none;
 }
 
 .vote-button.voted {
@@ -2977,6 +3026,15 @@ a:focus-visible {
 .timeline-row {
   min-height: 52px;
   border-bottom: 1px solid var(--border);
+}
+
+.timeline-row:hover {
+  background: var(--accent-soft);
+}
+
+.timeline-row:hover .timeline-title {
+  color: var(--accent);
+  text-decoration: underline;
 }
 
 .timeline-row:last-child {

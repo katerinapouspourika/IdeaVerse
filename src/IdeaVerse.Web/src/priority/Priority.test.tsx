@@ -63,6 +63,35 @@ describe('Voting', () => {
     expect(await screen.findByRole('button', { name: 'Vote for Spring launch, 0 votes' })).toHaveAttribute('aria-pressed', 'false');
     expect(calls.some((c) => c.method === 'DELETE' && c.path === '/api/v1/ideas/idea-1/vote')).toBe(true);
   });
+
+  it('puts the vote beside the idea’s title rather than in the Priority card', async () => {
+    fakeApi(ideaRoutes(anIdea({ title: 'Spring launch', voteCount: 4 })));
+    renderApp('/ideas/idea-1');
+
+    const title = await screen.findByRole('heading', { level: 1, name: 'Spring launch' });
+    const vote = screen.getByRole('button', { name: 'Vote for Spring launch, 4 votes' });
+    expect(title.parentElement).toContainElement(vote);
+    expect(within(screen.getByRole('region', { name: 'Priority' })).queryByRole('button', { name: /Vote for/ })).not.toBeInTheDocument();
+  });
+
+  it('votes from beside the title in the side panel', async () => {
+    const launch = stored(anIdea({ title: 'Spring launch', voteCount: 0 }));
+    fakeApi({
+      ...ideaRoutes(launch),
+      [ideasRoute]: launch.list,
+      'PUT /api/v1/ideas/idea-1/vote': launch.save({ voteCount: 1, hasVoted: true }),
+    });
+    renderApp('/ideas?idea=idea-1');
+
+    const panel = await screen.findByRole('dialog', { name: 'Spring launch' });
+    const title = within(panel).getByRole('heading', { name: 'Spring launch' });
+    expect(title.parentElement).toContainElement(within(panel).getByRole('button', { name: 'Vote for Spring launch, 0 votes' }));
+    expect(within(within(panel).getByRole('region', { name: 'Priority' })).queryByRole('button', { name: /Vote for/ })).not.toBeInTheDocument();
+
+    await userEvent.click(within(panel).getByRole('button', { name: 'Vote for Spring launch, 0 votes' }));
+
+    expect(await within(panel).findByRole('button', { name: 'Vote for Spring launch, 1 vote' })).toHaveAttribute('aria-pressed', 'true');
+  });
 });
 
 describe('Impact and effort', () => {
