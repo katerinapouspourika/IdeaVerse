@@ -17,7 +17,8 @@ internal static class AuthEndpoints
   /// Maps the Identity endpoints (register, login, password reset, account info) plus logout.
   /// </summary>
   /// <remarks>
-  /// The web app signs in with <c>POST /api/v1/auth/login?useCookies=true</c>, which issues an HTTP-only cookie.
+  /// The web app signs in with <c>POST /api/v1/auth/login?useCookies=true</c>, which issues an HTTP-only cookie. A
+  /// change of email to an address another account uses is refused up front (<see cref="EmailChangeFilter"/>).
   /// </remarks>
   /// <param name="endpoints">The route builder.</param>
   /// <returns>The same route builder.</returns>
@@ -27,6 +28,7 @@ internal static class AuthEndpoints
     group.MapIdentityApi<User>();
     group.MapPost("/logout", LogoutAsync).RequireAuthorization();
     group.MapPost("/confirm", ConfirmAsync).AllowAnonymous();
+    group.AddEndpointFilter<EmailChangeFilter>();
     return endpoints;
   }
 
@@ -38,15 +40,18 @@ internal static class AuthEndpoints
   /// sign-in form. Only the first confirmation signs in: Identity's confirmation codes stay valid for their lifetime, so
   /// opening the link again, or a link for an address already confirmed, confirms nothing and signs no one in. A change
   /// of address is confirmed without signing in, since the person already has a session where they asked for it.
+  /// The old address is then told of the change, so its owner notices one they did not make.
   /// </remarks>
   /// <param name="request">The values from the link.</param>
   /// <param name="userManager">The user manager.</param>
   /// <param name="signInManager">The sign-in manager.</param>
+  /// <param name="emailSender">Tells the old address about a change of address.</param>
   /// <returns>Whether the user is now signed in, or 401 when the link is not valid.</returns>
   private static async Task<Results<Ok<ConfirmEmailResponse>, UnauthorizedHttpResult>> ConfirmAsync(
     ConfirmEmailRequest request,
     UserManager<User> userManager,
-    SignInManager<User> signInManager)
+    SignInManager<User> signInManager,
+    IdentityEmailSender emailSender)
   {
     var user = await userManager.FindByIdAsync(request.UserId).ConfigureAwait(false);
     var code = Decode(request.Code);
@@ -57,9 +62,18 @@ internal static class AuthEndpoints
 
     if (request.ChangedEmail is { } changed)
     {
-      return await ChangeEmailAsync(userManager, user, changed, code).ConfigureAwait(false)
-        ? TypedResults.Ok(new ConfirmEmailResponse(SignedIn: false))
-        : TypedResults.Unauthorized();
+      var previous = user.Email;
+      if (!await ChangeEmailAsync(userManager, user, changed, code).ConfigureAwait(false))
+      {
+        return TypedResults.Unauthorized();
+      }
+
+      if (previous is not null)
+      {
+        await emailSender.SendEmailChangedAsync(previous, changed).ConfigureAwait(false);
+      }
+
+      return TypedResults.Ok(new ConfirmEmailResponse(SignedIn: false));
     }
 
     if (user.EmailConfirmed)

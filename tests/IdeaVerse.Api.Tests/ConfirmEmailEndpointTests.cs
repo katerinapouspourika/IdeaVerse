@@ -84,6 +84,20 @@ public class ConfirmEmailEndpointTests
     await Assert.That(login.StatusCode).IsEqualTo(HttpStatusCode.OK);
   }
 
+  [Test]
+  public async Task Confirm_ChangedEmail_TellsTheOldAddress()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync("kat@old.example.com", withWorkspace: false);
+    (await client.PostAsJsonAsync("/api/v1/auth/manage/info", new { newEmail = "kat@new.example.com" })).Dispose();
+    var link = FakeMailSender.LinkIn(factory.Mail.Take("kat@new.example.com", IdentityEmailSender.ChangeEmailSubject), $"{IdeaVerseApiFactory.AppUrl}/confirm-email");
+
+    (await client.PostAsJsonAsync("/api/v1/auth/confirm", RequestFrom(link), Json.Options)).Dispose();
+    var notice = factory.Mail.Take("kat@old.example.com", IdentityEmailSender.EmailChangedSubject);
+
+    await Assert.That(notice.Body).Contains("kat@new.example.com");
+  }
+
   private static async Task<ConfirmEmailRequest> RegisterAsync(IdeaVerseApiFactory factory, HttpClient client)
   {
     (await client.PostAsJsonAsync("/api/v1/auth/register", new { email = Email, password = IdeaVerseApiFactory.Password })).Dispose();
