@@ -320,6 +320,23 @@ public class StartReminderTests
     await Assert.That((await StartRemindersAsync(member)).Single().Message).EndsWith($"on {date}.");
   }
 
+  [Test]
+  public async Task Notifications_StartRemindersFromOneRun_ListTheSoonestStartFirst()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    var later = await (await owner.CreateIdeaAsync("Later", Today.AddDays(30))).ReadIdeaAsync();
+    var sooner = await (await owner.CreateIdeaAsync("Sooner", Today.AddDays(30))).ReadIdeaAsync();
+    await SetStartAsync(owner, later.Id, Today.AddDays(12));
+    await SetStartAsync(owner, sooner.Id, Today.AddDays(6));
+
+    factory.Time.Advance(TimeSpan.FromDays(3));
+    await factory.RunRemindersAsync();
+
+    var titles = (await StartRemindersAsync(owner)).Select(n => n.IdeaTitle);
+    await Assert.That(titles).IsEquivalentTo(["Sooner", "Later"], CollectionOrdering.Matching);
+  }
+
   private static async Task<IdeaResponse> SetStartAsync(HttpClient client, Guid ideaId, DateOnly? date, TimeOnly? time = null)
   {
     using var response = await client.PutAsJsonAsync($"/api/v1/ideas/{ideaId}/start", new SetStartRequest(date, time), Json.Options);

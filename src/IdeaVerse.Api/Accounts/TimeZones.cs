@@ -19,7 +19,28 @@ internal static class TimeZones
   /// <param name="id">The identifier to check.</param>
   /// <returns><see langword="true"/> for identifiers such as <c>Europe/Athens</c> or <c>UTC</c>; <see langword="false"/> for Windows names such as <c>GTB Standard Time</c>.</returns>
   public static bool IsKnownIanaId(string id)
-    => TimeZoneInfo.TryFindSystemTimeZoneById(id, out var zone) && zone.HasIanaId;
+    => IanaName(id) is not null;
+
+  /// <summary>
+  /// Returns the IANA identifier <paramref name="id"/> names, spelled as the time zone database spells it.
+  /// </summary>
+  /// <param name="id">The identifier, in any case, such as <c>utc</c> or <c>europe/athens</c>.</param>
+  /// <returns>The identifier, such as <c>UTC</c> or <c>Europe/Athens</c>; <see langword="null"/> for an unknown zone or a Windows name.</returns>
+  public static string? IanaName(string id)
+  {
+    if (string.Equals(id, TimeZoneInfo.Utc.Id, StringComparison.OrdinalIgnoreCase))
+    {
+      return TimeZoneInfo.Utc.Id;
+    }
+
+    if (TimeZoneInfo.TryFindSystemTimeZoneById(id, out var zone) && zone.HasIanaId)
+    {
+      return zone.Id;
+    }
+
+    return TimeZoneInfo.GetSystemTimeZones()
+      .FirstOrDefault(z => z.HasIanaId && string.Equals(z.Id, id, StringComparison.OrdinalIgnoreCase))?.Id;
+  }
 
   /// <summary>
   /// Gets the current local time in a time zone.

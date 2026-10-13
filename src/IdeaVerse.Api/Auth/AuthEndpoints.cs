@@ -18,14 +18,15 @@ internal static class AuthEndpoints
   /// </summary>
   /// <remarks>
   /// The web app signs in with <c>POST /api/v1/auth/login?useCookies=true</c>, which issues an HTTP-only cookie. A
-  /// change of email to an address another account uses is refused up front (<see cref="EmailChangeFilter"/>).
+  /// successful password reset also unlocks the account (<see cref="ResetPasswordUnlockFilter"/>). A change of email to
+  /// an address another account uses is refused up front (<see cref="EmailChangeFilter"/>).
   /// </remarks>
   /// <param name="endpoints">The route builder.</param>
   /// <returns>The same route builder.</returns>
   public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder endpoints)
   {
     var group = endpoints.MapGroup("/api/v1/auth").WithTags("Auth");
-    group.MapIdentityApi<User>();
+    group.MapGroup(string.Empty).AddEndpointFilter<ResetPasswordUnlockFilter>().MapIdentityApi<User>();
     group.MapPost("/logout", LogoutAsync).RequireAuthorization();
     group.MapPost("/confirm", ConfirmAsync).AllowAnonymous();
     group.AddEndpointFilter<EmailChangeFilter>();

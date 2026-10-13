@@ -76,6 +76,7 @@ builder.Services.AddWebAppCompression();
 
 var app = builder.Build();
 
+app.UseSecurityHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseWebAppFiles();

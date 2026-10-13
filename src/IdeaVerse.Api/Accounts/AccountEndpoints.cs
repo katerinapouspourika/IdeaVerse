@@ -75,7 +75,7 @@ internal static class AccountEndpoints
       return TypedResults.NotFound();
     }
 
-    account.TimeZone = request.TimeZone;
+    account.TimeZone = TimeZones.IanaName(request.TimeZone) ?? request.TimeZone;
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     return TypedResults.Ok(AccountResponse.From(account));
   }

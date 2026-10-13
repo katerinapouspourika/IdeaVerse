@@ -25,8 +25,8 @@ internal static class MemberEndpoints
     var group = endpoints.MapGroup("/api/v1/ideas/{ideaId:guid}/members").WithTags("Members").RequireAuthorization();
 
     group.MapGet("/", ListAsync);
-    group.MapPost("/", AddAsync).WithValidation<AddMemberRequest>().RejectWhenArchived();
-    group.MapDelete("/{memberUserId}", RemoveAsync).RejectWhenArchived();
+    group.MapPost("/", AddAsync).WithValidation<AddMemberRequest>().RejectTeamChangeWhenArchived();
+    group.MapDelete("/{memberUserId}", RemoveAsync).RejectTeamChangeWhenArchived();
 
     return endpoints;
   }
