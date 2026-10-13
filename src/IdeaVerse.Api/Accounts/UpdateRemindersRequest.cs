@@ -18,7 +18,7 @@ public sealed record UpdateRemindersRequest(bool EmailReminders, [property: Requ
   {
     if (ReminderKinds?.Any(kind => !ReminderSchedule.Stages.Contains(kind)) == true)
     {
-      yield return new ValidationResult("Choose from ComingUp, Tomorrow, Today, and Overdue.", [nameof(ReminderKinds)]);
+      yield return new ValidationResult("Choose from StartingSoon, ComingUp, Tomorrow, Today, and Overdue.", [nameof(ReminderKinds)]);
     }
   }
 }

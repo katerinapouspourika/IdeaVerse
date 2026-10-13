@@ -62,3 +62,9 @@ export function formatMoment(isoInstant: string, timeZone: string = currentTimeZ
     timeZone,
   });
 }
+
+/** Formats when an idea starts: its date, with the time in the account's time zone when one was given. */
+export function formatStart(idea: { startDate: string | null; startTime: string | null; startsAt: string | null }): string | null {
+  if (!idea.startDate) return null;
+  return idea.startTime && idea.startsAt ? formatMoment(idea.startsAt) : formatDate(idea.startDate);
+}

@@ -58,6 +58,8 @@ public sealed partial class ReminderService(
       ReminderKind.AddedToTeam => $"You're on the team: {content.IdeaTitle}",
       ReminderKind.Commented => $"New comment on {content.IdeaTitle}",
       ReminderKind.Mentioned => $"You were mentioned on {content.IdeaTitle}",
+      ReminderKind.StartingSoon => $"Starting soon: {content.IdeaTitle}",
+      ReminderKind.AddComponents => $"Add components to {content.IdeaTitle}",
       _ => throw new ArgumentOutOfRangeException(nameof(content), content.Kind, "Unknown notification kind."),
     };
   }
@@ -68,7 +70,7 @@ public sealed partial class ReminderService(
   /// <param name="logger">Target logger.</param>
   /// <param name="exception">The failure.</param>
   /// <param name="notificationId">The notification whose email failed.</param>
-  [LoggerMessage(Level = LogLevel.Warning, Message = "Could not email reminder {NotificationId}; it will be retried on the next run")]
+  [LoggerMessage(Level = LogLevel.Warning, Message = "Could not email reminder {NotificationId}; it will be retried later")]
   private static partial void LogEmailFailed(ILogger logger, Exception exception, Guid notificationId);
 
   /// <summary>
@@ -86,7 +88,8 @@ public sealed partial class ReminderService(
     var now = timeProvider.GetUtcNow();
     var horizon = DateOnly.FromDateTime(now.UtcDateTime).AddDays(ReminderSchedule.WindowDays + 1);
     var created = await RaiseIdeaRemindersAsync(now, horizon, cancellationToken).ConfigureAwait(false)
-      + await RaiseComponentRemindersAsync(now, horizon, cancellationToken).ConfigureAwait(false);
+      + await RaiseComponentRemindersAsync(now, horizon, cancellationToken).ConfigureAwait(false)
+      + await RaiseStartRemindersAsync(now, cancellationToken).ConfigureAwait(false);
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     return created;
   }
@@ -128,6 +131,95 @@ public sealed partial class ReminderService(
         if (DueStage(recipients, userId, idea.TargetDate) is { } kind && !idea.Sent.Any(s => s.UserId == userId && s.Kind == kind))
         {
           context.Notifications.Add(new Notification { UserId = userId, IdeaId = idea.Id, Kind = kind, TargetDate = idea.TargetDate, CreatedAt = now });
+          created++;
+        }
+      }
+    }
+
+    return created;
+  }
+
+  /// <summary>
+  /// Adds the start reminders now due, and the nudge to add components, for each person on the team of each idea about to start.
+  /// </summary>
+  /// <remarks>
+  /// Each person's reminders follow <see cref="StartSchedule"/>, counted from when the start was set or, for someone added to
+  /// the team later, from when they joined. Only the latest reminder due is raised, so a missed run never sends stale ones.
+  /// The nudge goes only while the idea still has no components. Ideas already in progress, done, or archived are skipped, as
+  /// are people who turned start reminders off.
+  /// </remarks>
+  /// <param name="now">The current time.</param>
+  /// <param name="cancellationToken">Token to cancel the query.</param>
+  /// <returns>How many notifications were added.</returns>
+  private async Task<int> RaiseStartRemindersAsync(DateTimeOffset now, CancellationToken cancellationToken)
+  {
+    var horizon = now + StartSchedule.Window + TimeSpan.FromDays(1);
+    var ideas = await context.Ideas
+      .AsNoTracking()
+      .Where(i => i.StartsAt != null && i.StartsAt > now && i.StartsAt <= horizon)
+      .Where(i => (i.Status == IdeaStatus.Planned || i.Status == IdeaStatus.Postponed) && i.ArchivedAt == null)
+      .AsSplitQuery()
+      .Select(i => new
+      {
+        i.Id,
+        i.TargetDate,
+        StartsAt = i.StartsAt!.Value,
+        StartSetAt = i.StartSetAt ?? i.CreatedAt,
+        i.OwnerId,
+        Members = i.Members.Select(m => new { m.UserId, m.AddedAt }).ToList(),
+        WorkspaceUserIds = i.Workspace!.Members.Select(w => w.UserId).ToList(),
+        HasComponents = i.Components.Any(),
+        Sent = context.Notifications
+          .Where(n => n.IdeaId == i.Id && n.StartsAt == i.StartsAt && (n.Kind == ReminderKind.StartingSoon || n.Kind == ReminderKind.AddComponents))
+          .Select(n => new { n.UserId, n.Kind, n.DueAt })
+          .ToList(),
+      })
+      .ToListAsync(cancellationToken)
+      .ConfigureAwait(false);
+
+    var recipients = await LoadRecipientsAsync(ideas.SelectMany(i => i.Members.Select(m => m.UserId).Append(i.OwnerId)), cancellationToken).ConfigureAwait(false);
+    var created = 0;
+    foreach (var idea in ideas)
+    {
+      var team = idea.Members
+        .Select(m => (m.UserId, NoticeFrom: m.AddedAt > idea.StartSetAt ? m.AddedAt : idea.StartSetAt))
+        .Prepend((UserId: idea.OwnerId, NoticeFrom: idea.StartSetAt))
+        .DistinctBy(p => p.UserId, StringComparer.Ordinal)
+        .Where(p => idea.WorkspaceUserIds.Contains(p.UserId, StringComparer.Ordinal));
+      foreach (var (userId, noticeFrom) in team)
+      {
+        var (zone, muted) = recipients.GetValueOrDefault(userId, (TimeZoneInfo.Utc, 0));
+        if (!User.Wants(muted, ReminderKind.StartingSoon))
+        {
+          continue;
+        }
+
+        if (StartSchedule.DueReminder(idea.StartsAt, noticeFrom, now) is { } dueAt
+          && !idea.Sent.Any(s => s.UserId == userId && s.Kind == ReminderKind.StartingSoon && s.DueAt == dueAt))
+        {
+          Add(ReminderKind.StartingSoon, dueAt);
+        }
+
+        if (!idea.HasComponents
+          && StartSchedule.NudgeAt(idea.StartsAt, noticeFrom, zone) is { } nudgeAt
+          && nudgeAt <= now
+          && !idea.Sent.Any(s => s.UserId == userId && s.Kind == ReminderKind.AddComponents && s.DueAt > noticeFrom))
+        {
+          Add(ReminderKind.AddComponents, nudgeAt);
+        }
+
+        void Add(ReminderKind kind, DateTimeOffset dueAt)
+        {
+          context.Notifications.Add(new Notification
+          {
+            UserId = userId,
+            IdeaId = idea.Id,
+            Kind = kind,
+            TargetDate = idea.TargetDate,
+            StartsAt = idea.StartsAt,
+            DueAt = dueAt,
+            CreatedAt = now,
+          });
           created++;
         }
       }
@@ -220,7 +312,7 @@ public sealed partial class ReminderService(
   /// Emails notifications that have not been emailed yet and are recent enough to still be useful.
   /// </summary>
   /// <remarks>
-  /// A failed email is logged and left for the next run; one failure does not stop the rest.
+  /// A failed email is logged and tried again once <see cref="ReminderOptions.EmailRetryInterval"/> has passed; one failure does not stop the rest.
   /// Notifications that no longer concern their recipient (see <see cref="NotificationAccess.StillRelevant"/>), about archived ideas, or for people
   /// who turned reminder emails off, are not emailed; nor are comments, unless the recipient asked for comment emails.
   /// </remarks>
@@ -231,10 +323,12 @@ public sealed partial class ReminderService(
     var settings = options.Value;
     var now = timeProvider.GetUtcNow();
     var oldest = now - settings.EmailRetryWindow;
+    var lastFailure = now - settings.EmailRetryInterval;
 
     var pending = await context.StillRelevant()
       .Where(n => n.EmailedAt == null && n.CreatedAt >= oldest && n.User!.EmailReminders && n.Idea!.ArchivedAt == null)
       .Where(n => n.Kind != ReminderKind.Commented || n.User!.EmailComments)
+      .Where(n => n.EmailFailedAt == null || n.EmailFailedAt <= lastFailure)
       .Select(n => new
       {
         Notification = n,
@@ -244,6 +338,8 @@ public sealed partial class ReminderService(
         ComponentTitle = n.Component!.Title,
         ActorName = n.Actor!.DisplayName,
         ActorEmail = n.Actor.Email,
+        n.Idea.StartDate,
+        StartHasTime = n.Idea.StartTime != null,
       })
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
@@ -252,21 +348,23 @@ public sealed partial class ReminderService(
     foreach (var item in pending.Where(p => !string.IsNullOrEmpty(p.Email)))
     {
       var notification = item.Notification;
+      var zone = TimeZones.Find(item.TimeZone);
       var content = new NotificationContent(
         notification.Kind,
         item.IdeaTitle,
         notification.TargetDate,
         item.ComponentTitle,
         item.ActorName ?? item.ActorEmail,
-        notification.Detail);
-      var message = ReminderSchedule.Message(content, timeProvider.TodayIn(TimeZones.Find(item.TimeZone)));
+        notification.Detail,
+        StartContent.For(notification.StartsAt, notification.CreatedAt, zone, item.StartDate, item.StartHasTime));
+      var message = ReminderSchedule.Message(content, timeProvider.TodayIn(zone));
       var link = app.Value.Link($"/ideas/{notification.IdeaId}");
       var reason = notification.Kind == ReminderKind.Mentioned
         ? "You get this because someone mentioned you in IdeaVerse."
         : notification.ComponentId is null
           ? "You get this because you are on this idea's team in IdeaVerse."
           : "You get this because this is assigned to you in IdeaVerse.";
-      var mail = EmailLayout.Compose(item.Email!, Subject(content), new EmailContent(item.IdeaTitle, [message], new EmailAction("Open the idea", new Uri(link)), reason), app.Value);
+      var mail = EmailLayout.Compose(item.Email!, Subject(content), new EmailContent(item.IdeaTitle, [message], new EmailAction(notification.Kind == ReminderKind.AddComponents ? "Add components" : "Open the idea", new Uri(link)), reason), app.Value);
 
       try
       {
@@ -278,6 +376,8 @@ public sealed partial class ReminderService(
       catch (Exception ex) when (ex is not OperationCanceledException)
       {
         LogEmailFailed(logger, ex, notification.Id);
+        notification.EmailFailedAt = timeProvider.GetUtcNow();
+        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
       }
     }
 

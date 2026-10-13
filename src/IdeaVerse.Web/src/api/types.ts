@@ -84,6 +84,12 @@ export interface Idea {
   impact: number | null;
   /** How much work it would take, 1–5; `null` until scored. */
   effort: number | null;
+  /** ISO date work is planned to start, `YYYY-MM-DD`; `null` when none is planned. */
+  startDate: string | null;
+  /** Time of day work starts, `HH:mm:ss`, as entered; `null` when none was given. */
+  startTime: string | null;
+  /** The moment work starts; `null` when none is planned. */
+  startsAt: string | null;
 }
 
 export interface IdeaInput {
@@ -92,6 +98,17 @@ export interface IdeaInput {
   targetDate: string;
   /** Omit to leave an idea's tags as they are. */
   tags?: string[];
+  /** Only when creating: when work starts, on or before the target date. */
+  startDate?: string | null;
+  /** Only when creating: the time of day work starts, `HH:mm`, in the user's time zone. */
+  startTime?: string | null;
+}
+
+/** When work on an idea starts; a `null` date clears it. */
+export interface StartInput {
+  startDate: string | null;
+  /** `HH:mm`, in the user's time zone; optional. */
+  startTime: string | null;
 }
 
 export type IdeaSort = 'TargetDate' | 'Title' | 'Updated' | 'Created' | 'Votes' | 'Priority';
@@ -169,8 +186,18 @@ export interface Member {
   addedAt: string;
 }
 
-/** What a notification is about: a countdown stage (the first four), or something a teammate did. */
-export type ReminderKind = 'ComingUp' | 'Tomorrow' | 'Today' | 'Overdue' | 'Assigned' | 'AddedToTeam' | 'Commented' | 'Mentioned';
+/** What a notification is about: a countdown stage (`ComingUp`, `Tomorrow`, `Today`, `Overdue`), a start reminder (`StartingSoon`, `AddComponents`), or something a teammate did. */
+export type ReminderKind =
+  | 'ComingUp'
+  | 'Tomorrow'
+  | 'Today'
+  | 'Overdue'
+  | 'Assigned'
+  | 'AddedToTeam'
+  | 'Commented'
+  | 'Mentioned'
+  | 'StartingSoon'
+  | 'AddComponents';
 
 export interface Notification {
   id: string;
@@ -286,7 +313,8 @@ export type ActivityKind =
   | 'TagsChanged'
   | 'Archived'
   | 'Restored'
-  | 'Rescored';
+  | 'Rescored'
+  | 'StartChanged';
 
 export interface ActivityEntry {
   id: string;

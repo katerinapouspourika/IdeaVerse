@@ -46,6 +46,10 @@ export function describeActivity(entry: ActivityEntry): string {
       return `${who} restored the idea`;
     case 'Rescored':
       return detail ? `${who} scored it: ${detail.toLowerCase()}` : `${who} cleared its scores`;
+    case 'StartChanged':
+      return detail
+        ? `${who} set the start to ${formatDate(detail.slice(0, 10))}${detail.length > 10 ? ` at ${detail.slice(11)}` : ''}`
+        : `${who} cleared the start`;
   }
 }
 

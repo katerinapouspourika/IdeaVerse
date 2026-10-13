@@ -14,4 +14,9 @@ internal static class TargetDateRules
   /// Error message for a target date before the user's today.
   /// </summary>
   public const string NotInPastMessage = "The target date cannot be in the past.";
+
+  /// <summary>
+  /// Error message for a target date before the idea's planned start.
+  /// </summary>
+  public const string NotBeforeStartMessage = "The target date cannot be before the start date.";
 }

@@ -13,9 +13,15 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
   /// </summary>
   private const string CountdownFilter = "\"Kind\" IN ('ComingUp', 'Tomorrow', 'Today', 'Overdue')";
 
+  /// <summary>
+  /// SQL condition matching start reminders, which are raised at most once per moment they are due.
+  /// </summary>
+  private const string StartFilter = "\"Kind\" IN ('StartingSoon', 'AddComponents')";
+
   /// <inheritdoc/>
   /// <remarks>
-  /// Two partial unique indexes keep each countdown stage to one reminder per person: one for ideas and one for components.
+  /// Two partial unique indexes keep each countdown stage to one reminder per person, one for ideas and one for components,
+  /// and a third keeps each start reminder to one per person.
   /// </remarks>
   public void Configure(EntityTypeBuilder<Notification> builder)
   {
@@ -31,6 +37,9 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
     builder.HasIndex(n => new { n.ComponentId, n.UserId, n.Kind, n.TargetDate })
       .IsUnique()
       .HasFilter($"\"ComponentId\" IS NOT NULL AND {CountdownFilter}");
+    builder.HasIndex(n => new { n.IdeaId, n.UserId, n.Kind, n.DueAt })
+      .IsUnique()
+      .HasFilter(StartFilter);
     builder.HasIndex(n => new { n.UserId, n.CreatedAt });
   }
 }

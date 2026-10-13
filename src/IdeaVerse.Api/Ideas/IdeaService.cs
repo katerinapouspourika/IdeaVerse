@@ -157,6 +157,22 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
     }
 
     var now = timeProvider.GetUtcNow();
+    DateTimeOffset? startsAt = null;
+    if (request.StartDate is { } startDate)
+    {
+      var zone = await calendar.ZoneAsync(userId, cancellationToken).ConfigureAwait(false);
+      if (StartProblem(startDate, request.StartTime, request.TargetDate, zone, now) is { } problem)
+      {
+        return IdeaChangeResult.Invalid(problem.Member, problem.Message);
+      }
+
+      startsAt = Notifications.StartSchedule.ToInstant(startDate, request.StartTime ?? Notifications.StartSchedule.DefaultTime, zone);
+    }
+    else if (request.StartTime is not null)
+    {
+      return IdeaChangeResult.Invalid(nameof(SetStartRequest.StartTime), "Choose a start date for the start time.");
+    }
+
     var idea = new Idea
     {
       WorkspaceId = workspaceId,
@@ -164,6 +180,10 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
       Title = request.Title.Trim(),
       Description = Normalize(request.Description),
       TargetDate = request.TargetDate,
+      StartDate = request.StartDate,
+      StartTime = request.StartDate is null ? null : request.StartTime,
+      StartsAt = startsAt,
+      StartSetAt = startsAt is null ? null : now,
       Tags = tags,
       CreatedAt = now,
       UpdatedAt = now,
@@ -195,6 +215,11 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
     if (request.TargetDate != idea.TargetDate && request.TargetDate < await calendar.TodayAsync(userId, cancellationToken).ConfigureAwait(false))
     {
       return IdeaChangeResult.Invalid(TargetDateRules.MemberName, TargetDateRules.NotInPastMessage);
+    }
+
+    if (request.TargetDate < idea.StartDate)
+    {
+      return IdeaChangeResult.Invalid(TargetDateRules.MemberName, TargetDateRules.NotBeforeStartMessage);
     }
 
     var tags = idea.Tags;
@@ -312,6 +337,63 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
   }
 
   /// <summary>
+  /// Plans when work on an idea the user can edit starts, or clears it.
+  /// </summary>
+  /// <remarks>
+  /// The start is fixed as a moment in the user's time zone, at <see cref="Notifications.StartSchedule.DefaultTime"/> without a
+  /// time, and the start reminders count from now. Setting the same start again changes nothing.
+  /// </remarks>
+  /// <param name="userId">The signed-in user's identifier.</param>
+  /// <param name="id">The idea identifier.</param>
+  /// <param name="request">The validated request.</param>
+  /// <param name="cancellationToken">Token to cancel the operation.</param>
+  /// <returns>The outcome: invalid for a start after the target date, a date in the past, or a time already passed.</returns>
+  public async Task<IdeaChangeResult> SetStartAsync(string userId, Guid id, SetStartRequest request, CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(request);
+
+    var idea = await context.EditableIdeas(userId).FirstOrDefaultAsync(i => i.Id == id, cancellationToken).ConfigureAwait(false);
+    if (idea is null)
+    {
+      return IdeaChangeResult.Denied(await context.DenialAsync(userId, id, cancellationToken).ConfigureAwait(false), NotOnTeamMessage);
+    }
+
+    if (idea.Status == IdeaStatus.Done || idea.ArchivedAt is not null)
+    {
+      return IdeaChangeResult.Conflict("A completed or archived idea has no start to plan.");
+    }
+
+    if (request.StartDate == idea.StartDate && request.StartTime == idea.StartTime)
+    {
+      return IdeaChangeResult.Changed((await GetAsync(userId, id, cancellationToken).ConfigureAwait(false))!);
+    }
+
+    var now = timeProvider.GetUtcNow();
+    DateTimeOffset? startsAt = null;
+    if (request.StartDate is { } date)
+    {
+      var zone = await calendar.ZoneAsync(userId, cancellationToken).ConfigureAwait(false);
+      if (StartProblem(date, request.StartTime, idea.TargetDate, zone, now) is { } problem)
+      {
+        return IdeaChangeResult.Invalid(problem.Member, problem.Message);
+      }
+
+      startsAt = Notifications.StartSchedule.ToInstant(date, request.StartTime ?? Notifications.StartSchedule.DefaultTime, zone);
+    }
+    else if (request.StartTime is not null)
+    {
+      return IdeaChangeResult.Invalid(nameof(SetStartRequest.StartTime), "Choose a start date for the start time.");
+    }
+
+    context.Record(idea.Id, userId, ActivityKind.StartChanged, now, DescribeStart(request.StartDate, request.StartTime));
+    idea.StartDate = request.StartDate;
+    idea.StartTime = request.StartDate is null ? null : request.StartTime;
+    idea.StartsAt = startsAt;
+    idea.StartSetAt = startsAt is null ? null : now;
+    return await SaveAsync(userId, idea, cancellationToken).ConfigureAwait(false);
+  }
+
+  /// <summary>
   /// Adds or removes the user's vote for an idea in their workspace. Voting twice, or withdrawing a vote never cast, changes nothing.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
@@ -382,6 +464,45 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
       .ConfigureAwait(false);
     return deleted > 0 ? ChangeOutcome.Changed : await context.DenialAsync(userId, id, cancellationToken).ConfigureAwait(false);
   }
+
+  /// <summary>
+  /// Checks a new start: on or before the target date, not before the user's today, and not at a time already passed.
+  /// </summary>
+  /// <param name="date">The start date.</param>
+  /// <param name="time">The start time, if given.</param>
+  /// <param name="targetDate">The idea's target date.</param>
+  /// <param name="zone">The user's time zone.</param>
+  /// <param name="now">The current time.</param>
+  /// <returns>The member and message of the problem, or <see langword="null"/> when the start is fine.</returns>
+  private static (string Member, string Message)? StartProblem(DateOnly date, TimeOnly? time, DateOnly targetDate, TimeZoneInfo zone, DateTimeOffset now)
+  {
+    if (date > targetDate)
+    {
+      return (nameof(SetStartRequest.StartDate), "The start date must be on or before the target date.");
+    }
+
+    if (date < DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, zone).DateTime))
+    {
+      return (nameof(SetStartRequest.StartDate), "The start date cannot be in the past.");
+    }
+
+    return time is { } at && Notifications.StartSchedule.ToInstant(date, at, zone) <= now
+      ? (nameof(SetStartRequest.StartTime), "That start time has already passed.")
+      : null;
+  }
+
+  /// <summary>
+  /// Describes a start for the activity history: its date, with its time when one was given, or empty when it was cleared.
+  /// </summary>
+  /// <param name="date">The start date.</param>
+  /// <param name="time">The start time.</param>
+  /// <returns>The detail.</returns>
+  private static string DescribeStart(DateOnly? date, TimeOnly? time)
+    => date is not { } day
+      ? string.Empty
+      : time is { } at
+        ? $"{day.ToString("O", CultureInfo.InvariantCulture)}T{at.ToString("HH:mm", CultureInfo.InvariantCulture)}"
+        : day.ToString("O", CultureInfo.InvariantCulture);
 
   /// <summary>
   /// Describes one score for the activity history, such as "Impact 4" or "effort not scored".

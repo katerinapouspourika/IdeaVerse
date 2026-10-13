@@ -31,6 +31,9 @@ using Pouspourika.IdeaVerse.Api.Data;
 /// <param name="HasVoted">Whether the signed-in user voted for it.</param>
 /// <param name="Impact">How much the idea would help, 1 to 5, if scored.</param>
 /// <param name="Effort">How much work it would take, 1 to 5, if scored.</param>
+/// <param name="StartDate">The date work is planned to start, or <see langword="null"/> when none is planned.</param>
+/// <param name="StartTime">The time of day work starts, as entered, or <see langword="null"/> when none was given.</param>
+/// <param name="StartsAt">The moment work starts, or <see langword="null"/> when no start is planned.</param>
 public sealed record IdeaResponse(
   Guid Id,
   Guid WorkspaceId,
@@ -55,7 +58,10 @@ public sealed record IdeaResponse(
   int VoteCount,
   bool HasVoted,
   int? Impact,
-  int? Effort)
+  int? Effort,
+  DateOnly? StartDate,
+  TimeOnly? StartTime,
+  DateTimeOffset? StartsAt)
 {
   /// <summary>
   /// Builds a query projection from <see cref="Idea"/> to its response, counting components and checking access in the database.
@@ -89,5 +95,8 @@ public sealed record IdeaResponse(
       i.Votes.Count,
       i.Votes.Any(v => v.UserId == userId),
       i.Impact,
-      i.Effort);
+      i.Effort,
+      i.StartDate,
+      i.StartTime,
+      i.StartsAt);
 }

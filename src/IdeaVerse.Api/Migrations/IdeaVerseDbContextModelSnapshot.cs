@@ -435,6 +435,18 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                     b.Property<int>("PostponeCount")
                         .HasColumnType("integer");
 
+                    b.Property<DateOnly?>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset?>("StartSetAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<TimeOnly?>("StartTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<DateTimeOffset?>("StartsAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -550,6 +562,12 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<DateTimeOffset?>("DueAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("EmailFailedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTimeOffset?>("EmailedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -562,6 +580,9 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                         .HasColumnType("character varying(20)");
 
                     b.Property<DateTimeOffset?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("StartsAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateOnly>("TargetDate")
@@ -580,6 +601,10 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                     b.HasIndex("ComponentId", "UserId", "Kind", "TargetDate")
                         .IsUnique()
                         .HasFilter("\"ComponentId\" IS NOT NULL AND \"Kind\" IN ('ComingUp', 'Tomorrow', 'Today', 'Overdue')");
+
+                    b.HasIndex("IdeaId", "UserId", "Kind", "DueAt")
+                        .IsUnique()
+                        .HasFilter("\"Kind\" IN ('StartingSoon', 'AddComponents')");
 
                     b.HasIndex("IdeaId", "UserId", "Kind", "TargetDate")
                         .IsUnique()
