@@ -2070,6 +2070,19 @@ a:focus-visible {
   font-size: 0.92rem;
 }
 
+/* On narrow screens the bell sits mid-header, so its panel spans the header instead of hanging off the left edge. */
+@media (max-width: 600px) {
+  .bell-menu {
+    position: static;
+  }
+
+  .notification-popover {
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+}
+
 /* Toasts */
 .toasts {
   position: fixed;
