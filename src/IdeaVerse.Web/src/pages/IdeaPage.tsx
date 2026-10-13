@@ -17,6 +17,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
 import { TagInput } from '../components/TagInput';
 import { PriorityCard } from '../priority/PriorityCard';
+import { VoteButton } from '../priority/VoteButton';
 import { usePageMeta } from '../seo/usePageMeta';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { ActivitySection } from './ActivitySection';
@@ -85,6 +86,7 @@ function IdeaDetail({ idea }: { idea: Idea }) {
                 <div className="row wrap">
                   <h1>{idea.title}</h1>
                   {idea.canEdit && !idea.archivedAt ? <QuickStatus idea={idea} /> : <StatusBadge idea={idea} />}
+                  <VoteButton idea={idea} />
                 </div>
                 <div className="row">
                   {idea.canEdit && (
