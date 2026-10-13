@@ -12,7 +12,7 @@ const maxLogoBytes = 512 * 1024;
 
 /**
  * Lets the owner and admins give the workspace a colour from the preset palette and a logo, shown beside its name in the
- * header. Fonts stay the app's own.
+ * header. Fonts stay the app's own. It sits under the Workspace heading in Settings, so its own heading is a level below.
  */
 export function BrandingCard({ workspace }: { workspace: Workspace }) {
   const change = useChangeBranding(workspace.id);
@@ -32,7 +32,10 @@ export function BrandingCard({ workspace }: { workspace: Workspace }) {
 
   return (
     <section className="card stack" aria-labelledby="branding-heading">
-      <h2 id="branding-heading">Look</h2>
+      <h3 id="branding-heading">Logo and colour</h3>
+      <p className="muted small">
+        Everyone in {workspace.name} sees them beside the workspace’s name at the top of every page, so it’s easy to tell which workspace they’re in.
+      </p>
       <fieldset className="stack tight">
         <legend>Colour</legend>
         <div className="swatches">
@@ -74,7 +77,7 @@ export function BrandingCard({ workspace }: { workspace: Workspace }) {
             </button>
           )}
         </div>
-        <small className="muted">A square PNG, JPEG, or WebP image of up to 512 KB. It shows beside the workspace’s name.</small>
+        <small className="muted">A square PNG, JPEG, or WebP image of up to 512 KB. Without one, the workspace’s initial shows on its colour.</small>
         {logoError && (
           <p role="alert" className="error">
             {logoError}
