@@ -82,7 +82,7 @@ function Brand() {
   return (
     <Link to="/" className="brand">
       <img src="/logo.png" alt="" className="logo" width="34" height="34" />
-      IdeaVerse
+      <span className="brand-name">IdeaVerse</span>
     </Link>
   );
 }
@@ -131,7 +131,7 @@ function AppBar() {
   };
 
   return (
-    <header className="topbar">
+    <header className="topbar app">
       <Brand />
       <nav id="site-menu" className={menu.open ? 'site-menu app open' : 'site-menu app'} aria-label="Main">
         <WorkspaceSwitcher />

@@ -36,7 +36,7 @@ describe('Timeline view', () => {
     expect(parseFloat(bars[1]!.style.width)).toBeGreaterThan(0);
   });
 
-  it('opens an idea in the side panel', async () => {
+  it('opens an idea in the side panel from its row', async () => {
     fakeApi({
       ...signedIn,
       [ideasRoute]: { status: 200, body: [soon] },
@@ -47,7 +47,11 @@ describe('Timeline view', () => {
     renderApp('/ideas');
     await userEvent.click(await screen.findByRole('button', { name: 'Timeline' }));
 
-    await userEvent.click(screen.getByRole('link', { name: 'Spring launch' }));
+    const title = screen.getByRole('link', { name: 'Spring launch' });
+    // Stretched over its whole row, bar included, so a click anywhere on the row opens the idea.
+    expect(title).toHaveClass('stretched-link');
+    expect(within(title.closest('li')!).getAllByRole('link')).toEqual([title]);
+    await userEvent.click(title);
 
     expect(await screen.findByRole('dialog', { name: 'Spring launch' })).toBeInTheDocument();
   });

@@ -48,7 +48,7 @@ The API also serves the web app (`src/IdeaVerse.Web`) from `wwwroot` when one is
 | `DELETE` | `/api/v1/workspaces/{id}` | Owner only: delete it with all its ideas, components, teams, reminders, people, and invitations. |
 | `POST` | `/api/v1/workspaces/{id}/transfer` | Owner only: make the person with `userId` the owner; the previous owner becomes an admin and can then leave. |
 | `GET` | `/api/v1/workspaces/{id}/members` | List its people: owner, then admins, then members, each by email. |
-| `PUT` | `/api/v1/workspaces/{id}/members/{userId}` | Owner or admin: make someone `Admin` or `Member`. The owner's role cannot change (409). |
+| `PUT` | `/api/v1/workspaces/{id}/members/{userId}` | Owner or admin: make someone else `Admin` or `Member`. Nobody can change their own role (403), and the owner's role cannot change (409). |
 | `DELETE` | `/api/v1/workspaces/{id}/members/{userId}` | Owner or admin removes someone, or anyone leaves. Takes them off the teams of its ideas; ideas they own stay. The owner cannot leave (409). |
 
 - **Invitations** — owners and admins invite people by email, whether or not they have an account yet. The email links to the web app's `/invitations` page. An invitation belongs to the email address: whoever signs in with that confirmed address sees it, so someone new signs up first and finds it waiting. Invitations last seven days. Inviting an address that already has an open invitation returns 409, so nobody gets a second email or a changed role by accident; resending it renews it with its original role, and inviting an address whose invitation expired renews it with the new role. Accepting, declining, or revoking deletes it, and so does removing the admin who sent it or making them a member.
