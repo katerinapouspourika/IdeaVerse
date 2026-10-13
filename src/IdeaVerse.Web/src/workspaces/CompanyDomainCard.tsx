@@ -1,5 +1,5 @@
 import { useDiscoverySettings, useSaveDiscoverySettings } from '../api/queries';
-import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 
 /**
  * Lets the owner and admins have colleagues find the workspace by their company email domain, hide it from them again,
@@ -11,7 +11,7 @@ export function CompanyDomainCard({ workspaceId }: { workspaceId: string }) {
   const data = settings.data;
 
   if (!data) {
-    return <ErrorMessage error={settings.error} />;
+    return <LoadError queries={settings} />;
   }
 
   return (

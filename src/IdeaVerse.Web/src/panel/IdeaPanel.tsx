@@ -5,8 +5,7 @@ import { Link } from 'react-router';
 import { ApiError } from '../api/client';
 import { describeDue, formatDate } from '../api/dates';
 import { useIdea } from '../api/queries';
-import { ErrorMessage } from '../components/ErrorMessage';
-import { Progress } from '../components/Progress';
+import { LoadError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
@@ -76,7 +75,7 @@ export function IdeaPanel({ id, onClose }: { id: string; onClose: () => void }) 
             {idea.error instanceof ApiError && idea.error.status === 404 ? (
               <p className="muted">This idea doesn’t exist or isn’t in one of your workspaces.</p>
             ) : (
-              <ErrorMessage error={idea.error} />
+              <LoadError queries={idea} />
             )}
           </>
         )}
@@ -95,7 +94,6 @@ export function IdeaPanel({ id, onClose }: { id: string; onClose: () => void }) 
               </p>
               <Tags tags={idea.data.tags} />
               {idea.data.description ? <p className="description">{idea.data.description}</p> : <p className="muted">No description yet.</p>}
-              <Progress done={idea.data.completedComponentCount} total={idea.data.componentCount} />
             </section>
             <PriorityCard idea={idea.data} />
             <ComponentsSection ideaId={idea.data.id} workspaceId={idea.data.workspaceId} canEdit={idea.data.canEdit} />

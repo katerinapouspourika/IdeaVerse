@@ -11,6 +11,8 @@ interface Workspaces {
   current: Workspace | null;
   isLoading: boolean;
   error: unknown;
+  /** Loads the workspaces again, as after a failed load. */
+  refetch: () => unknown;
   select: (workspaceId: string) => void;
 }
 
@@ -49,7 +51,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <WorkspaceContext value={{ all, current, isLoading: account !== null && workspaces.isLoading, error: workspaces.error, select }}>
+    <WorkspaceContext
+      value={{ all, current, isLoading: account !== null && workspaces.isLoading, error: workspaces.error, refetch: workspaces.refetch, select }}
+    >
       {children}
     </WorkspaceContext>
   );

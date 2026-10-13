@@ -34,21 +34,92 @@ public class InvitationEndpointsTests
   }
 
   [Test]
-  public async Task Invite_SameEmailAgain_RenewsAndResendsTheInvitation()
+  public async Task Invite_EmailWithOpenInvitation_ReturnsConflictAndKeepsIt()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
     var workspace = await owner.WorkspaceAsync();
     (await InviteAsync(owner, workspace.Id, InviteeEmail)).Dispose();
+    var sentAt = factory.Time.GetUtcNow();
     factory.Time.Advance(TimeSpan.FromDays(3));
 
     using var response = await InviteAsync(owner, workspace.Id, "INVITEE@example.com", WorkspaceRole.Admin);
+    var problem = await response.Content.ReadAsStringAsync();
+    var open = await ListAsync(owner, workspace.Id);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+    await Assert.That(problem).Contains($"{InviteeEmail} already has an open invitation.");
+    await Assert.That(open.Single().Role).IsEqualTo(WorkspaceRole.Member);
+    await Assert.That(open.Single().ExpiresAt).IsEqualTo(sentAt + Invitation.Lifetime);
+    await Assert.That(factory.Mail.Sent.Count(m => m.Subject == InvitationService.Subject(workspace.Name))).IsEqualTo(1);
+  }
+
+  [Test]
+  public async Task Invite_EmailWithExpiredInvitation_RenewsItWithTheNewRole()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    var workspace = await owner.WorkspaceAsync();
+    (await InviteAsync(owner, workspace.Id, InviteeEmail)).Dispose();
+    factory.Time.Advance(Invitation.Lifetime + TimeSpan.FromMinutes(1));
+
+    using var response = await InviteAsync(owner, workspace.Id, InviteeEmail, WorkspaceRole.Admin);
     var open = await ListAsync(owner, workspace.Id);
 
     await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
     await Assert.That(open.Single().Role).IsEqualTo(WorkspaceRole.Admin);
     await Assert.That(open.Single().ExpiresAt).IsEqualTo(factory.Time.GetUtcNow() + Invitation.Lifetime);
     await Assert.That(factory.Mail.Sent.Count(m => m.Subject == InvitationService.Subject(workspace.Name))).IsEqualTo(2);
+  }
+
+  [Test]
+  public async Task Resend_OpenInvitation_RenewsAndEmailsItWithItsRole()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    var workspace = await owner.WorkspaceAsync();
+    (await InviteAsync(owner, workspace.Id, InviteeEmail, WorkspaceRole.Admin)).Dispose();
+    var invitation = (await ListAsync(owner, workspace.Id)).Single();
+    factory.Time.Advance(TimeSpan.FromDays(3));
+
+    using var response = await owner.PostAsync($"/api/v1/workspaces/{workspace.Id}/invitations/{invitation.Id}/resend", content: null);
+    var resent = await response.Content.ReadFromJsonAsync<InvitationResponse>(Json.Options);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+    await Assert.That(resent!.Id).IsEqualTo(invitation.Id);
+    await Assert.That(resent.Role).IsEqualTo(WorkspaceRole.Admin);
+    await Assert.That(resent.ExpiresAt).IsEqualTo(factory.Time.GetUtcNow() + Invitation.Lifetime);
+    await Assert.That(factory.Mail.Sent.Count(m => m.Subject == InvitationService.Subject(workspace.Name))).IsEqualTo(2);
+  }
+
+  [Test]
+  public async Task Resend_ByMember_ReturnsForbiddenAndSendsNothing()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var member = await factory.CreateSignedInClientAsync("member@example.com");
+    await factory.JoinAsync(owner, member, "member@example.com");
+    var workspaceId = await owner.WorkspaceIdAsync();
+    (await InviteAsync(owner, workspaceId, InviteeEmail)).Dispose();
+    var invitation = (await ListAsync(owner, workspaceId)).Single();
+    factory.Mail.Take(InviteeEmail, InvitationService.Subject((await owner.WorkspaceAsync()).Name));
+
+    using var response = await member.PostAsync($"/api/v1/workspaces/{workspaceId}/invitations/{invitation.Id}/resend", content: null);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+    await Assert.That(factory.Mail.Sent.Any(m => m.To == InviteeEmail)).IsFalse();
+  }
+
+  [Test]
+  public async Task Resend_UnknownInvitation_ReturnsNotFound()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+
+    using var response = await owner.PostAsync($"/api/v1/workspaces/{await owner.WorkspaceIdAsync()}/invitations/{Guid.NewGuid()}/resend", content: null);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+    await Assert.That(factory.Mail.Sent).IsEmpty();
   }
 
   [Test]

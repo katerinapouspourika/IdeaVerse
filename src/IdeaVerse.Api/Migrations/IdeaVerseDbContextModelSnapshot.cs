@@ -319,6 +319,9 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<bool>("EmailComments")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
 

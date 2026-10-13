@@ -23,13 +23,13 @@ export function IdeaCalendar({ ideas }: { ideas: Idea[] }) {
 
   return (
     <section className="card stack" aria-labelledby="calendar-heading">
-      <div className="row spread">
+      <div className="row spread calendar-nav">
         <button type="button" className="button ghost" onClick={() => setMonth(shiftMonth(month, -1))}>
-          <ChevronLeft aria-hidden="true" size={18} /> Previous month
+          <ChevronLeft aria-hidden="true" size={18} /> <span className="calendar-nav-label">Previous month</span>
         </button>
         <h2 id="calendar-heading">{title}</h2>
         <button type="button" className="button ghost" onClick={() => setMonth(shiftMonth(month, 1))}>
-          Next month <ChevronRight aria-hidden="true" size={18} />
+          <span className="calendar-nav-label">Next month</span> <ChevronRight aria-hidden="true" size={18} />
         </button>
       </div>
       <table className="calendar">

@@ -25,6 +25,7 @@ internal static class InvitationEndpoints
     var sent = endpoints.MapGroup("/api/v1/workspaces/{workspaceId:guid}/invitations").WithTags("Invitations").RequireAuthorization();
     sent.MapGet("/", ListAsync);
     sent.MapPost("/", InviteAsync).WithValidation<InviteRequest>();
+    sent.MapPost("/{invitationId:guid}/resend", ResendAsync);
     sent.MapDelete("/{invitationId:guid}", RevokeAsync);
 
     var received = endpoints.MapGroup("/api/v1/invitations").WithTags("Invitations").RequireAuthorization();
@@ -60,14 +61,17 @@ internal static class InvitationEndpoints
   }
 
   /// <summary>
-  /// Invites an email address to a workspace, or sends an open invitation again.
+  /// Invites an email address to a workspace.
   /// </summary>
   /// <param name="workspaceId">The workspace identifier.</param>
   /// <param name="request">The validated request.</param>
   /// <param name="user">The signed-in user.</param>
   /// <param name="service">The invitation service.</param>
   /// <param name="cancellationToken">Token to cancel the request.</param>
-  /// <returns>201 with a new invitation, 200 with a renewed one, 404, 403 for a member, or 400 for someone already in the workspace.</returns>
+  /// <returns>
+  /// 201 with a new invitation, 200 with a renewed expired one, 404, 403 for a member, 400 for someone already in the workspace,
+  /// or 409 for an address with an open invitation.
+  /// </returns>
   private static async Task<Results<Created<InvitationResponse>, Ok<InvitationResponse>, NotFound, ValidationProblem, ProblemHttpResult>> InviteAsync(
     Guid workspaceId,
     InviteRequest request,
@@ -86,7 +90,34 @@ internal static class InvitationEndpoints
         [JsonNamingPolicy.CamelCase.ConvertName(result.Field!)] = [result.Message!],
       }),
       ChangeOutcome.Forbidden => AdminsOnly(),
-      ChangeOutcome.Conflict or _ => throw new UnreachableException($"Unhandled outcome {result.Outcome}."),
+      ChangeOutcome.Conflict => TypedResults.Problem(detail: result.Message, statusCode: StatusCodes.Status409Conflict),
+      _ => throw new UnreachableException($"Unhandled outcome {result.Outcome}."),
+    };
+  }
+
+  /// <summary>
+  /// Sends an invitation again with a fresh expiry and its original role.
+  /// </summary>
+  /// <param name="workspaceId">The workspace identifier.</param>
+  /// <param name="invitationId">The invitation identifier.</param>
+  /// <param name="user">The signed-in user.</param>
+  /// <param name="service">The invitation service.</param>
+  /// <param name="cancellationToken">Token to cancel the request.</param>
+  /// <returns>The renewed invitation, 404, or 403 for a member.</returns>
+  private static async Task<Results<Ok<InvitationResponse>, NotFound, ProblemHttpResult>> ResendAsync(
+    Guid workspaceId,
+    Guid invitationId,
+    ClaimsPrincipal user,
+    InvitationService service,
+    CancellationToken cancellationToken)
+  {
+    var result = await service.ResendAsync(user.GetUserId(), workspaceId, invitationId, cancellationToken).ConfigureAwait(false);
+    return result.Outcome switch
+    {
+      ChangeOutcome.Changed => TypedResults.Ok(result.Invitation!),
+      ChangeOutcome.NotFound => TypedResults.NotFound(),
+      ChangeOutcome.Forbidden => AdminsOnly(),
+      ChangeOutcome.Invalid or ChangeOutcome.Conflict or _ => throw new UnreachableException($"Unhandled outcome {result.Outcome}."),
     };
   }
 

@@ -71,6 +71,37 @@ describe('PeoplePage', () => {
     expect(await within(form).findByText('This person is already in the workspace.')).toBeInTheDocument();
   });
 
+  it('explains that an address already has an open invitation', async () => {
+    fakeApi({
+      ...peopleRoutes('Owner', [kat]),
+      'POST /api/v1/workspaces/ws-1/invitations': {
+        status: 409,
+        body: { detail: 'new@example.com already has an open invitation. Resend it from the list of people waiting to join.' },
+      },
+    });
+    renderApp('/people');
+
+    const form = await screen.findByRole('form', { name: 'Invite people' });
+    await userEvent.type(within(form).getByLabelText('Email'), 'new@example.com');
+    await userEvent.click(within(form).getByRole('button', { name: 'Send invitation' }));
+
+    expect(await within(form).findByText(/new@example.com already has an open invitation/)).toBeInTheDocument();
+    expect(within(form).queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('resends an open invitation with its own role', async () => {
+    const calls = fakeApi({
+      ...peopleRoutes('Owner', [kat]),
+      'POST /api/v1/workspaces/ws-1/invitations/inv-1/resend': { status: 200, body: pending },
+    });
+    renderApp('/people');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Resend invitation to new@example.com' }));
+
+    expect(await screen.findByText('Invitation sent again to new@example.com')).toBeInTheDocument();
+    expect(calls.find((c) => c.path.endsWith('/resend'))?.body).toBeUndefined();
+  });
+
   it('changes a role and revokes an invitation', async () => {
     const calls = fakeApi({
       ...peopleRoutes('Owner', [kat, mia]),
@@ -80,10 +111,38 @@ describe('PeoplePage', () => {
     renderApp('/people');
 
     await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Role of mia@example.com' }), 'Admin');
+    await confirmDialog('Make admin');
     await userEvent.click(await screen.findByRole('button', { name: 'Revoke invitation for new@example.com' }));
 
     await waitFor(() => expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ role: 'Admin' }));
+    expect(await screen.findByText('mia@example.com is now an admin')).toBeInTheDocument();
     await waitFor(() => expect(calls.some((c) => c.method === 'DELETE')).toBe(true));
+  });
+
+  it('keeps a role when the change is cancelled', async () => {
+    const admin: WorkspaceMember = { ...mia, role: 'Admin' };
+    const calls = fakeApi(peopleRoutes('Owner', [kat, admin]));
+    renderApp('/people');
+
+    const role = await screen.findByRole('combobox', { name: 'Role of mia@example.com' });
+    await userEvent.selectOptions(role, 'Member');
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toHaveTextContent('Make mia@example.com a member?');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    expect(role).toHaveValue('Admin');
+    expect(calls.some((c) => c.method === 'PUT')).toBe(false);
+  });
+
+  it('does not let an admin change their own role', async () => {
+    const me: WorkspaceMember = { ...mia, userId: 'u-me', email: 'kat@example.com', role: 'Admin' };
+    const owner: WorkspaceMember = { ...kat, userId: 'u-leo', email: 'leo@example.com' };
+    fakeApi(peopleRoutes('Owner', [owner, me, mia]));
+    renderApp('/people');
+
+    const members = within(await screen.findByRole('region', { name: 'Members' }));
+    expect(await members.findByRole('combobox', { name: 'Role of mia@example.com' })).toBeInTheDocument();
+    expect(members.queryByRole('combobox', { name: 'Role of kat@example.com' })).not.toBeInTheDocument();
   });
 
   it('shows a member the people without management, and lets them leave', async () => {

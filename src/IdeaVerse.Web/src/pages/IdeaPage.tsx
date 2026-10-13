@@ -10,8 +10,7 @@ import { personLabel, statuses, statusLabels, type Idea, type IdeaStatus } from 
 import { useConfirm, useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
 import { Menu } from '../components/Menu';
-import { ErrorMessage, fieldError } from '../components/ErrorMessage';
-import { Progress } from '../components/Progress';
+import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
@@ -43,7 +42,7 @@ export function IdeaPage() {
   }
 
   if (!idea.data) {
-    return <ErrorMessage error={idea.error} />;
+    return <LoadError queries={idea} />;
   }
 
   return <IdeaDetail idea={idea.data} />;
@@ -102,7 +101,6 @@ function IdeaDetail({ idea }: { idea: Idea }) {
               </p>
               <Tags tags={idea.tags} />
               {idea.description ? <p className="description">{idea.description}</p> : <p className="muted">No description yet.</p>}
-              <Progress done={idea.completedComponentCount} total={idea.componentCount} />
               {idea.canEdit ? (
                 <ImproveIdea idea={idea} />
               ) : (
@@ -112,9 +110,6 @@ function IdeaDetail({ idea }: { idea: Idea }) {
               )}
             </section>
           )}
-          <ComponentsSection ideaId={idea.id} workspaceId={idea.workspaceId} canEdit={idea.canEdit} />
-          <DiscussionSection ideaId={idea.id} workspaceId={idea.workspaceId} />
-          <ActivitySection ideaId={idea.id} />
         </div>
 
         <aside className="stack idea-side" aria-label="Idea details">
@@ -122,6 +117,12 @@ function IdeaDetail({ idea }: { idea: Idea }) {
           <PriorityCard idea={idea} />
           <TeamSection idea={idea} />
         </aside>
+
+        <div className="stack idea-work">
+          <ComponentsSection ideaId={idea.id} workspaceId={idea.workspaceId} canEdit={idea.canEdit} />
+          <DiscussionSection ideaId={idea.id} workspaceId={idea.workspaceId} />
+          <ActivitySection ideaId={idea.id} />
+        </div>
       </div>
     </div>
   );
