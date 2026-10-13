@@ -113,12 +113,12 @@ function WorkspaceDashboard({ workspace }: { workspace: Workspace }) {
 
         <section className="card stack" aria-labelledby="reminders-heading">
           <div className="row spread">
-            <h2 id="reminders-heading">Latest reminders</h2>
+            <h2 id="reminders-heading">Latest notifications</h2>
             <Link to="/notifications" className="small">
               See all
             </Link>
           </div>
-          {notifications.data?.items.length === 0 && <p className="muted">No reminders yet.</p>}
+          {notifications.data?.items.length === 0 && <p className="muted">No notifications yet.</p>}
           {notifications.data && notifications.data.items.length > 0 && (
             <ul className="mini-list">
               {notifications.data.items.slice(0, listSize).map((n) => (
