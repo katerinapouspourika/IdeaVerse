@@ -68,6 +68,8 @@ describe('Remembered sign-in', () => {
 
     release(new Response(JSON.stringify(signedIn['GET /api/v1/account'].body), { status: 200 }));
     await waitFor(() => expect(within(screen.getByRole('banner')).getByRole('link', { name: 'Ideas' })).toBeInTheDocument());
+    // The signed-in header may hide the name on narrow phones, but the logo link keeps it.
+    expect(within(screen.getByRole('banner')).getByRole('link', { name: 'IdeaVerse' })).toBeInTheDocument();
   });
 
   it('shows visitors the public links while the account loads', async () => {

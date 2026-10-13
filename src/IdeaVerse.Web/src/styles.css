@@ -194,6 +194,30 @@ a {
   min-width: 0;
 }
 
+/* On phones the header keeps the page's 16px gutter and packs its buttons closer, so it never scrolls sideways. */
+@media (max-width: 600px) {
+  .topbar {
+    gap: 8px;
+    padding: 10px 16px;
+  }
+
+  .account {
+    gap: 4px;
+  }
+}
+
+/* Signed in, the header holds five buttons; on the narrowest phones the logo stands alone (the link keeps its name). */
+@media (max-width: 420px) {
+  .topbar.app .brand-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
 .content {
   flex: 1;
   width: 100%;
