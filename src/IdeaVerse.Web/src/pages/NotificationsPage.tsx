@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 
+import { formatMoment } from '../api/dates';
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from '../api/queries';
 import type { Notification, ReminderKind } from '../api/types';
 import { ErrorMessage, LoadError } from '../components/ErrorMessage';
@@ -66,7 +67,7 @@ function NotificationItem({ notification }: { notification: Notification }) {
       <div className="row spread wrap">
         <span className={`badge kind-${notification.kind.toLowerCase()}`}>{kindLabels[notification.kind]}</span>
         <time className="muted small" dateTime={notification.createdAt}>
-          {new Date(notification.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+          {formatMoment(notification.createdAt)}
         </time>
       </div>
       <p className="notification-message">{notification.message}</p>
