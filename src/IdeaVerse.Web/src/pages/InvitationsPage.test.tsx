@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 
 import type { ReceivedInvitation } from '../api/types';
 import { anIdea, aWorkspace, fakeApi, ideasRoute, signedIn } from '../test/fakeApi';
+import { confirmDialog } from '../test/dialog';
 import { renderApp } from '../test/render';
 
 const invitation: ReceivedInvitation = {
@@ -51,6 +52,8 @@ describe('InvitationsPage', () => {
     renderApp('/invitations');
 
     await userEvent.click(await screen.findByRole('button', { name: 'Decline Globex' }));
+    expect(calls.some((c) => c.method === 'DELETE')).toBe(false);
+    await confirmDialog('Decline');
 
     expect(await screen.findByText(/You have no open invitations/)).toBeInTheDocument();
     expect(calls.some((c) => c.method === 'DELETE')).toBe(true);
