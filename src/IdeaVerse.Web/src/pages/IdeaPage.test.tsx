@@ -241,3 +241,58 @@ describe('IdeaPage', () => {
     await waitFor(() => expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ email: 'leo@example.com' }));
   });
 });
+
+describe('Archived idea', () => {
+  const archivedAt = '2026-10-05T09:00:00Z';
+
+  function archivedRoutes(access: Partial<Idea>) {
+    return { ...ideaRoutes(access, [owner, mia]), 'GET /api/v1/ideas/idea-1': { status: 200, body: anIdea({ ...access, componentCount: 1, archivedAt }) } };
+  }
+
+  it('is read-only for its owner apart from the discussion, until restored', async () => {
+    let archived = true;
+    const calls = fakeApi({
+      ...archivedRoutes({}),
+      'GET /api/v1/ideas/idea-1': () => ({ status: 200, body: anIdea({ componentCount: 1, archivedAt: archived ? archivedAt : null }) }),
+      'POST /api/v1/ideas/idea-1/restore': () => {
+        archived = false;
+        return { status: 200, body: anIdea({ componentCount: 1 }) };
+      },
+    });
+    renderApp('/ideas/idea-1');
+
+    const banner = await screen.findByText(/This idea is archived and read-only/);
+    expect(banner).toHaveTextContent('Restore it to make changes.');
+    expect(await screen.findByText('Budget sign-off')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit details' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Status' })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Budget sign-off' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Edit Budget sign-off' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'Add component' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'Postpone idea' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Impact')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Vote for Black Friday teaser/ })).toBeEnabled();
+    expect(await screen.findByText('The team can’t change while the idea is archived.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'Add team member' })).not.toBeInTheDocument();
+    expect(screen.getByRole('form', { name: 'Add comment' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Restore' }));
+
+    expect(await screen.findByRole('button', { name: 'Edit details' })).toBeInTheDocument();
+    expect(calls.some((c) => c.method === 'POST' && c.path === '/api/v1/ideas/idea-1/restore')).toBe(true);
+    expect(screen.queryByText(/This idea is archived/)).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Budget sign-off' })).toBeEnabled();
+  });
+
+  it('tells a team member who can restore it, without a Restore button', async () => {
+    fakeApi(archivedRoutes(asMember));
+    renderApp('/ideas/idea-1');
+
+    expect(await screen.findByText(/This idea is archived and read-only/)).toHaveTextContent('Its owner or a workspace admin can restore it.');
+    expect(screen.queryByRole('button', { name: 'Restore' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit details' })).not.toBeInTheDocument();
+    expect(await screen.findByText('The team can’t change while the idea is archived.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Leave' })).not.toBeInTheDocument();
+  });
+});

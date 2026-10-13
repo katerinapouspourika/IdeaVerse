@@ -5,6 +5,7 @@ import { Link } from 'react-router';
 import { ApiError } from '../api/client';
 import { describeDue, formatDate } from '../api/dates';
 import { useIdea } from '../api/queries';
+import { canChange } from '../api/types';
 import { LoadError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
@@ -96,7 +97,7 @@ export function IdeaPanel({ id, onClose }: { id: string; onClose: () => void }) 
               {idea.data.description ? <p className="description">{idea.data.description}</p> : <p className="muted">No description yet.</p>}
             </section>
             <PriorityCard idea={idea.data} />
-            <ComponentsSection ideaId={idea.data.id} workspaceId={idea.data.workspaceId} canEdit={idea.data.canEdit} />
+            <ComponentsSection ideaId={idea.data.id} workspaceId={idea.data.workspaceId} canEdit={canChange(idea.data)} />
           </>
         )}
       </div>

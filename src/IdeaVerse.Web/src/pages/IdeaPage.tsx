@@ -6,7 +6,7 @@ import { ImproveIdea } from '../ai/ImproveIdea';
 import { ApiError } from '../api/client';
 import { addDays, describeDue, formatDate, todayIso } from '../api/dates';
 import { useArchiveIdea, useDeleteIdea, useIdea, useMoveIdea, usePostponeIdea, useUpdateIdea } from '../api/queries';
-import { personLabel, statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
+import { canChange, personLabel, statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
 import { useConfirm, useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
 import { Menu } from '../components/Menu';
@@ -51,6 +51,7 @@ export function IdeaPage() {
 function IdeaDetail({ idea }: { idea: Idea }) {
   const [editing, setEditing] = useState(false);
   const { all, current, select } = useWorkspace();
+  const changeable = canChange(idea);
   const ideaWorkspaceId = idea.workspaceId;
   const matchedIdea = useRef<string | null>(null);
 
@@ -76,17 +77,17 @@ function IdeaDetail({ idea }: { idea: Idea }) {
 
       <div className="idea-layout">
         <div className="stack idea-main">
-          {editing ? (
+          {editing && changeable ? (
             <EditIdeaForm idea={idea} onDone={() => setEditing(false)} />
           ) : (
             <section className="card stack">
               <div className="row spread wrap idea-heading">
                 <div className="row wrap">
                   <h1>{idea.title}</h1>
-                  {idea.canEdit && !idea.archivedAt ? <QuickStatus idea={idea} /> : <StatusBadge idea={idea} />}
+                  {changeable ? <QuickStatus idea={idea} /> : <StatusBadge idea={idea} />}
                 </div>
                 <div className="row">
-                  {idea.canEdit && (
+                  {changeable && (
                     <button type="button" className="button primary small" onClick={() => setEditing(true)}>
                       <Pencil aria-hidden="true" size={16} />
                       Edit details
@@ -101,9 +102,9 @@ function IdeaDetail({ idea }: { idea: Idea }) {
               </p>
               <Tags tags={idea.tags} />
               {idea.description ? <p className="description">{idea.description}</p> : <p className="muted">No description yet.</p>}
-              {idea.canEdit ? (
+              {changeable ? (
                 <ImproveIdea idea={idea} />
-              ) : (
+              ) : idea.archivedAt ? null : (
                 <p className="muted small">
                   {personLabel(idea.ownerName, idea.ownerEmail)}’s idea. You can follow it here; only its team and the workspace’s admins can change it.
                 </p>
@@ -119,7 +120,7 @@ function IdeaDetail({ idea }: { idea: Idea }) {
         </aside>
 
         <div className="stack idea-work">
-          <ComponentsSection ideaId={idea.id} workspaceId={idea.workspaceId} canEdit={idea.canEdit} />
+          <ComponentsSection ideaId={idea.id} workspaceId={idea.workspaceId} canEdit={changeable} />
           <DiscussionSection ideaId={idea.id} workspaceId={idea.workspaceId} />
           <ActivitySection ideaId={idea.id} />
         </div>
@@ -162,7 +163,7 @@ function QuickStatus({ idea }: { idea: Idea }) {
 
 /** When the idea is due, who owns it, and, for its team, a quick way to postpone it. */
 function ScheduleCard({ idea }: { idea: Idea }) {
-  const canPostpone = idea.canEdit && idea.status !== 'Done' && !idea.archivedAt;
+  const canPostpone = canChange(idea) && idea.status !== 'Done';
   return (
     <section className="card stack" aria-labelledby="schedule-heading">
       <h2 id="schedule-heading">Schedule</h2>
@@ -338,7 +339,10 @@ function ArchivedBanner({ idea }: { idea: Idea }) {
   return (
     <div className="archived-banner stack" role="status">
       <div className="row spread wrap">
-        <span>This idea is archived. It’s hidden from the list and sends no reminders.</span>
+        <span>
+          This idea is archived and read-only: it’s hidden from the list and sends no reminders, but you can still discuss it and vote for it.{' '}
+          {idea.canManage ? 'Restore it to make changes.' : 'Its owner or a workspace admin can restore it.'}
+        </span>
         {idea.canManage && (
           <button type="button" className="button small" onClick={() => restore.mutate(false, { onSuccess: () => toast({ message: 'Idea restored' }) })} disabled={restore.isPending}>
             Restore

@@ -1,5 +1,5 @@
 import { useSetPriority } from '../api/queries';
-import { maxScore, minScore, type Idea, type PriorityInput } from '../api/types';
+import { canChange, maxScore, minScore, type Idea, type PriorityInput } from '../api/types';
 import { useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
 import { placementHints, placementLabels, placementOf } from './priority';
@@ -14,7 +14,7 @@ export function PriorityCard({ idea }: { idea: Idea }) {
   const toast = useToast();
   const shown = setPriority.isPending ? { ...idea, ...setPriority.variables.priority } : idea;
   const placement = placementOf(shown);
-  const canScore = idea.canEdit && !idea.archivedAt;
+  const canScore = canChange(idea);
 
   const save = (priority: PriorityInput) =>
     setPriority.mutate({ idea, priority }, { onError: () => toast({ message: 'Couldn’t save the score. Try again.', tone: 'error' }) });

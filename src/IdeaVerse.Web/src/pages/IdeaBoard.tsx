@@ -4,7 +4,7 @@ import { Link } from 'react-router';
 
 import { describeDue } from '../api/dates';
 import { useMoveIdea } from '../api/queries';
-import { statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
+import { canChange, statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
 import { useToast } from '../components/Feedback';
 import { Progress } from '../components/Progress';
 import { Tags } from '../components/Tags';
@@ -99,10 +99,11 @@ export function IdeaBoard({ ideas }: { ideas: Idea[] }) {
 function BoardCard({ idea, status, onMove }: { idea: Idea; status: IdeaStatus; onMove: (status: IdeaStatus) => void }) {
   const [dragging, setDragging] = useState(false);
   const { linkProps } = useIdeaPanel();
+  const movable = canChange(idea);
   return (
     <li
       className={['card', 'board-card', idea.isOverdue ? 'is-overdue' : '', dragging ? 'dragging' : ''].filter(Boolean).join(' ')}
-      draggable={idea.canEdit}
+      draggable={movable}
       onDragStart={(event) => {
         event.dataTransfer.setData(dragType, idea.id);
         event.dataTransfer.effectAllowed = 'move';
@@ -114,12 +115,12 @@ function BoardCard({ idea, status, onMove }: { idea: Idea; status: IdeaStatus; o
         <Link {...linkProps(idea.id)} className="board-title">
           {idea.title}
         </Link>
-        {idea.canEdit && <GripVertical aria-hidden="true" size={16} className="grip" />}
+        {movable && <GripVertical aria-hidden="true" size={16} className="grip" />}
       </div>
       <span className={idea.isOverdue ? 'overdue-text small' : 'muted small'}>Due {describeDue(idea.targetDate)}</span>
       <Progress done={idea.completedComponentCount} total={idea.componentCount} />
       <Tags tags={idea.tags} />
-      {idea.canEdit && (
+      {movable && (
         <label className="board-move small">
           <span className="visually-hidden">Status of {idea.title}</span>
           <select value={status} onChange={(e) => onMove(e.target.value as IdeaStatus)}>

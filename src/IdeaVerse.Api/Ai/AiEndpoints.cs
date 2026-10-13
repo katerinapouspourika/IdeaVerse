@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 
 using Pouspourika.IdeaVerse.Agents.Models;
 using Pouspourika.IdeaVerse.Api.Auth;
+using Pouspourika.IdeaVerse.Api.Ideas;
 using Pouspourika.IdeaVerse.Api.Validation;
 
 /// <summary>
@@ -27,8 +28,8 @@ internal static class AiEndpoints
     workspace.MapPost("/brainstorm", BrainstormAsync).WithValidation<BrainstormRequest>();
 
     var idea = endpoints.MapGroup("/api/v1/ideas/{ideaId:guid}/ai").WithTags("AI help").RequireAuthorization();
-    idea.MapPost("/components", SuggestComponentsAsync);
-    idea.MapPost("/improve", ImproveAsync);
+    idea.MapPost("/components", SuggestComponentsAsync).RejectWhenArchived();
+    idea.MapPost("/improve", ImproveAsync).RejectWhenArchived();
 
     return endpoints;
   }

@@ -7,6 +7,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 using Pouspourika.IdeaVerse.Api.Auth;
+using Pouspourika.IdeaVerse.Api.Ideas;
 using Pouspourika.IdeaVerse.Api.Validation;
 
 /// <summary>
@@ -24,8 +25,8 @@ internal static class MemberEndpoints
     var group = endpoints.MapGroup("/api/v1/ideas/{ideaId:guid}/members").WithTags("Members").RequireAuthorization();
 
     group.MapGet("/", ListAsync);
-    group.MapPost("/", AddAsync).WithValidation<AddMemberRequest>();
-    group.MapDelete("/{memberUserId}", RemoveAsync);
+    group.MapPost("/", AddAsync).WithValidation<AddMemberRequest>().RejectWhenArchived();
+    group.MapDelete("/{memberUserId}", RemoveAsync).RejectWhenArchived();
 
     return endpoints;
   }
