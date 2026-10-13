@@ -351,6 +351,19 @@ function OpenInvitations({ workspaceId }: { workspaceId: string }) {
   const resend = useResendInvitation(workspaceId);
   const revoke = useRevokeInvitation(workspaceId);
   const toast = useToast();
+  const confirm = useConfirm();
+
+  const revokeFor = async (invitation: Invitation) => {
+    const ok = await confirm({
+      title: `Revoke the invitation for ${invitation.email}?`,
+      message: 'Their invitation link stops working. You can invite them again later.',
+      confirmLabel: 'Revoke',
+      danger: true,
+    });
+    if (ok) {
+      revoke.mutate(invitation.id, { onSuccess: () => toast({ message: `Revoked the invitation for ${invitation.email}` }) });
+    }
+  };
 
   const resendTo = (invitation: Invitation) =>
     resend.mutate(invitation.id, { onSuccess: () => toast({ message: `Invitation sent again to ${invitation.email}`, tone: 'success' }) });
@@ -386,7 +399,7 @@ function OpenInvitations({ workspaceId }: { workspaceId: string }) {
                 className="button ghost small"
                 aria-label={`Revoke invitation for ${invitation.email}`}
                 disabled={revoke.isPending}
-                onClick={() => revoke.mutate(invitation.id)}
+                onClick={() => void revokeFor(invitation)}
               >
                 Revoke
               </button>

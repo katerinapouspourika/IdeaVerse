@@ -4,6 +4,7 @@ import { formatDate } from '../api/dates';
 import { useAcceptInvitation, useDeclineInvitation, useReceivedInvitations } from '../api/queries';
 import { personLabel, type ReceivedInvitation } from '../api/types';
 import { ErrorMessage, LoadError } from '../components/ErrorMessage';
+import { useConfirm } from '../components/Feedback';
 import { useWorkspace } from './WorkspaceContext';
 
 /** The user's open invitations, each with Join and Decline; joining opens the workspace. */
@@ -13,6 +14,19 @@ export function ReceivedInvitations({ emptyText }: { emptyText?: string }) {
   const decline = useDeclineInvitation();
   const { select } = useWorkspace();
   const navigate = useNavigate();
+  const confirm = useConfirm();
+
+  const declineInvitation = async (invitation: ReceivedInvitation) => {
+    const ok = await confirm({
+      title: `Decline the invitation to ${invitation.workspaceName}?`,
+      message: 'To join later, you will need a new invitation.',
+      confirmLabel: 'Decline',
+      danger: true,
+    });
+    if (ok) {
+      decline.mutate(invitation.id);
+    }
+  };
 
   const join = (invitation: ReceivedInvitation) => {
     accept.mutate(invitation.id, {
@@ -64,7 +78,7 @@ export function ReceivedInvitations({ emptyText }: { emptyText?: string }) {
                 className="button ghost small"
                 aria-label={`Decline ${invitation.workspaceName}`}
                 disabled={decline.isPending}
-                onClick={() => decline.mutate(invitation.id)}
+                onClick={() => void declineInvitation(invitation)}
               >
                 Decline
               </button>
