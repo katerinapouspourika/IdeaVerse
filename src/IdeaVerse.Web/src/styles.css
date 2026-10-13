@@ -2605,6 +2605,11 @@ a:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
+/* Beside an idea's title it keeps its own width, rather than stretching like the buttons in a wrapping row on phones. */
+.row.wrap > .vote-button {
+  flex: none;
+}
+
 .vote-button.voted {
   background: var(--accent-soft);
   border-color: var(--accent);

@@ -26,7 +26,7 @@ public class ReminderScheduleTests
   {
     var message = ReminderSchedule.Message(ReminderKind.ComingUp, "Launch", Today.AddDays(5), Today);
 
-    await Assert.That(message).IsEqualTo("“Launch” is due in 5 days, on Thu 15 Oct 2026.");
+    await Assert.That(message).IsEqualTo("The target date for “Launch” is in 5 days, on Thu 15 Oct 2026.");
   }
 
   [Test]
@@ -34,6 +34,14 @@ public class ReminderScheduleTests
   {
     var message = ReminderSchedule.Message(ReminderKind.Overdue, "Launch", Today.AddDays(-2), Today);
 
-    await Assert.That(message).Contains("Postpone it or mark it done");
+    await Assert.That(message).IsEqualTo("The target date for “Launch” was Thu 8 Oct 2026 and it isn’t done. Postpone it or mark it done so it doesn’t slip away.");
+  }
+
+  [Test]
+  public async Task Message_ComponentTomorrow_SaysItIsDue()
+  {
+    var message = ReminderSchedule.Message(new NotificationContent(ReminderKind.Tomorrow, "Launch", Today.AddDays(1), "Budget"), Today);
+
+    await Assert.That(message).IsEqualTo("“Budget” for “Launch” is due tomorrow, Sun 11 Oct 2026.");
   }
 }

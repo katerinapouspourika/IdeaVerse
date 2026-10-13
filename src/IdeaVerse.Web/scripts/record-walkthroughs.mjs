@@ -167,8 +167,8 @@ const walkthroughs = {
     await click(page, page.getByRole('button', { name: 'New idea' }));
     const form = page.getByRole('form', { name: 'New idea' });
     await type(page, form.getByLabel('Title'), 'Spring product launch');
-    await click(page, form.getByLabel('Implement by'));
-    await form.getByLabel('Implement by').fill(isoIn(6));
+    await click(page, form.getByLabel('Target date'));
+    await form.getByLabel('Target date').fill(isoIn(6));
     await type(page, form.getByLabel(/Description/), 'Teaser videos, a launch event, and a press kit.');
     await type(page, form.getByLabel(/Tags/), 'marketing, q2');
     await click(page, form.getByRole('button', { name: 'Add idea' }));
