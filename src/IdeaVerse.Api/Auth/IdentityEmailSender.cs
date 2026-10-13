@@ -34,6 +34,11 @@ internal sealed class IdentityEmailSender(IMailSender mailSender, IOptions<AppOp
   /// </summary>
   public const string PasswordResetSubject = "Reset your IdeaVerse password";
 
+  /// <summary>
+  /// Subject of the email telling the old address that the account's email changed.
+  /// </summary>
+  public const string EmailChangedSubject = "Your IdeaVerse email was changed";
+
   /// <inheritdoc/>
   /// <remarks>
   /// Keeps the query of Identity's confirmation link (user id, code, and any changed email) and points it at the web app's
@@ -79,6 +84,28 @@ internal sealed class IdentityEmailSender(IMailSender mailSender, IOptions<AppOp
   /// <inheritdoc/>
   public Task SendPasswordResetLinkAsync(User user, string email, string resetLink)
     => SendResetAsync(email, WebUtility.HtmlDecode(resetLink));
+
+  /// <summary>
+  /// Tells an account's old address that the account now signs in with a new one.
+  /// </summary>
+  /// <param name="previous">The old address, which gets the email.</param>
+  /// <param name="current">The new address.</param>
+  /// <returns>A task that completes when the email is sent.</returns>
+  public Task SendEmailChangedAsync(string previous, string current)
+    => mailSender.SendAsync(
+      EmailLayout.Compose(
+        previous,
+        EmailChangedSubject,
+        new EmailContent(
+          "Your email address was changed",
+          [
+            $"Your IdeaVerse account now signs in with {current} instead of this address.",
+            "If you didn't make this change, contact us right away so we can secure your account.",
+          ],
+          new EmailAction("Contact us", new Uri(app.Value.Link("/contact"))),
+          "If you made this change, there is nothing more to do."),
+        app.Value),
+      CancellationToken.None);
 
   /// <summary>
   /// Sends the password reset email.
