@@ -10,6 +10,7 @@ import { readAccountProblems } from '../auth/identityErrors';
 import { meetsPasswordRules } from '../auth/passwordRules';
 import { PasswordRules } from '../auth/PasswordRules';
 import { Field } from '../components/Field';
+import { useInlineValidation } from '../components/useInlineValidation';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { useConfirm } from '../components/Feedback';
 import { usePageMeta } from '../seo/usePageMeta';
@@ -321,39 +322,59 @@ function EmailForm({ account }: { account: Account }) {
 function PasswordForm() {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [weak, setWeak] = useState(false);
   const save = useSave();
   const problems = save.error ? readAccountProblems(save.error) : null;
+  // Checked here first, so a weak new password is not reported as a wrong current one.
+  const validation = useInlineValidation({
+    oldPassword: () => (oldPassword ? undefined : 'Enter your current password.'),
+    newPassword: () =>
+      newPassword ? (meetsPasswordRules(newPassword) ? undefined : 'Your new password doesn’t meet every rule yet.') : 'Choose a new password.',
+  });
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    // Checked here first, so a weak new password is not reported as a wrong current one.
-    setWeak(!meetsPasswordRules(newPassword));
-    if (!meetsPasswordRules(newPassword)) {
+    if (!validation.validate(event)) {
       return;
     }
     void save.run(async () => {
       await request('POST', '/api/v1/auth/manage/info', { oldPassword, newPassword });
       setOldPassword('');
       setNewPassword('');
+      validation.reset();
     });
   };
 
   return (
-    <form className="card stack" onSubmit={submit} aria-label="Password">
+    <form className="card stack" onSubmit={submit} aria-label="Password" noValidate>
       <h2>Password</h2>
-      <Field label="Current password" error={problems?.currentPassword}>
+      <Field label="Current password" error={validation.errors.oldPassword ?? problems?.currentPassword}>
         {(props) => (
-          <input {...props} type="password" required autoComplete="current-password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} />
+          <input
+            {...props}
+            type="password"
+            required
+            autoComplete="current-password"
+            value={oldPassword}
+            onChange={(e) => setOldPassword(e.target.value)}
+            onBlur={validation.blur('oldPassword')}
+          />
         )}
       </Field>
       <Field
         label="New password"
         hint={<PasswordRules password={newPassword} />}
-        error={weak ? 'Your new password doesn’t meet every rule yet.' : problems?.password}
+        error={validation.errors.newPassword ?? problems?.password}
       >
         {(props) => (
-          <input {...props} type="password" required autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+          <input
+            {...props}
+            type="password"
+            required
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            onBlur={validation.blur('newPassword')}
+          />
         )}
       </Field>
       {problems?.other && (
@@ -381,9 +402,13 @@ function DeleteAccountForm() {
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const save = useSave();
+  const validation = useInlineValidation({ password: () => (password ? undefined : 'Enter your password to confirm.') });
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!validation.validate(event)) {
+      return;
+    }
     const ok = await confirm({
       title: 'Delete your IdeaVerse account?',
       message: 'Your account and the workspaces only you are in are deleted for good. This cannot be undone.',
@@ -400,15 +425,23 @@ function DeleteAccountForm() {
   };
 
   return (
-    <form className="card danger stack" onSubmit={(event) => void submit(event)} aria-label="Delete account">
+    <form className="card danger stack" onSubmit={(event) => void submit(event)} aria-label="Delete account" noValidate>
       <h2>Delete account</h2>
       <p className="muted small">
         Workspaces only you are in are deleted with everything in them. Ideas you own in other workspaces pass to each workspace’s owner.
         If you own a workspace other people use, hand it over from its People page first.
       </p>
-      <Field label="Password" error={fieldError(save.error, 'password')}>
+      <Field label="Password" error={validation.errors.password ?? fieldError(save.error, 'password')}>
         {(props) => (
-          <input {...props} type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input
+            {...props}
+            type="password"
+            required
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onBlur={validation.blur('password')}
+          />
         )}
       </Field>
       <ErrorMessage error={save.error} />

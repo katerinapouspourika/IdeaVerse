@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 import { useCreateWorkspace } from '../api/queries';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
+import { requiredProblem, useInlineValidation } from '../components/useInlineValidation';
 import { useWorkspace } from './WorkspaceContext';
 
 /**
@@ -23,9 +24,13 @@ export function CreateWorkspaceForm({
   const { select } = useWorkspace();
   const navigate = useNavigate();
   const [name, setName] = useState('');
+  const validation = useInlineValidation({ name: () => requiredProblem(name, 'Give your workspace a name.') });
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (!validation.validate(event)) {
+      return;
+    }
     create.mutate(name, {
       onSuccess: (workspace) => {
         onCreated?.();
@@ -36,12 +41,20 @@ export function CreateWorkspaceForm({
   };
 
   return (
-    <form className="card stack" onSubmit={submit} aria-label="Create workspace">
+    <form className="card stack" onSubmit={submit} aria-label="Create workspace" noValidate>
       <h2>{heading}</h2>
       <p className="muted small">A workspace holds your company’s or team’s ideas. Name it after your company or team, and change it any time.</p>
-      <Field label="Workspace name" error={fieldError(create.error, 'name')}>
+      <Field label="Workspace name" error={validation.errors.name ?? fieldError(create.error, 'name')}>
         {(props) => (
-          <input {...props} required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Acme Marketing" />
+          <input
+            {...props}
+            required
+            maxLength={100}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={validation.blur('name')}
+            placeholder="e.g. Acme Marketing"
+          />
         )}
       </Field>
       <ErrorMessage error={create.error} />

@@ -21,6 +21,7 @@ import { Field } from '../components/Field';
 import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 import { useConfirm, useToast } from '../components/Feedback';
 import { Skeleton } from '../components/Skeleton';
+import { emailProblem, useInlineValidation } from '../components/useInlineValidation';
 import { usePageMeta } from '../seo/usePageMeta';
 import { canManageWorkspace, useWorkspace } from '../workspaces/WorkspaceContext';
 import { CompanyDomainCard } from '../workspaces/CompanyDomainCard';
@@ -299,29 +300,42 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<WorkspaceRole>('Member');
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const validation = useInlineValidation({ email: () => emailProblem(email, 'Enter the email address to invite.') });
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     setSentTo(null);
+    if (!validation.validate(event)) {
+      return;
+    }
     invite.mutate(
       { email, role },
       {
         onSuccess: (invitation) => {
           setSentTo(invitation.email);
           setEmail('');
+          validation.reset();
         },
       },
     );
   };
 
   return (
-    <form className="card stack" onSubmit={submit} aria-label="Invite people">
+    <form className="card stack" onSubmit={submit} aria-label="Invite people" noValidate>
       <h2>Invite people</h2>
       <p className="muted small">They get an email with a link. People without an account sign up with that address and find the invitation waiting.</p>
       <div className="row wrap end">
-        <Field label="Email" error={fieldError(invite.error, 'email')} className="grow">
+        <Field label="Email" error={validation.errors.email ?? fieldError(invite.error, 'email')} className="grow">
           {(props) => (
-            <input {...props} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" />
+            <input
+              {...props}
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={validation.blur('email')}
+              placeholder="name@company.com"
+            />
           )}
         </Field>
         <Field label="Role" error={fieldError(invite.error, 'role')}>

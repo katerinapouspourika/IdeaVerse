@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router';
 import { forgotPassword } from '../api/account';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { Field } from '../components/Field';
+import { emailProblem, useInlineValidation } from '../components/useInlineValidation';
 import { usePageMeta } from '../seo/usePageMeta';
 
 export function ForgotPasswordPage() {
@@ -14,9 +15,13 @@ export function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const validation = useInlineValidation({ email: () => emailProblem(email) });
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!validation.validate(event)) {
+      return;
+    }
     setPending(true);
     setError(null);
     try {
@@ -45,9 +50,19 @@ export function ForgotPasswordPage() {
     <section className="card auth">
       <h1>Reset your password</h1>
       <p className="muted">Enter your account’s email and we’ll send you a link to choose a new password.</p>
-      <form onSubmit={(event) => void submit(event)} className="stack">
-        <Field label="Email">
-          {(props) => <input {...props} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />}
+      <form onSubmit={(event) => void submit(event)} className="stack" noValidate>
+        <Field label="Email" error={validation.errors.email}>
+          {(props) => (
+            <input
+              {...props}
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={validation.blur('email')}
+            />
+          )}
         </Field>
         <ErrorMessage error={error} />
         <button type="submit" className="button primary" disabled={pending}>

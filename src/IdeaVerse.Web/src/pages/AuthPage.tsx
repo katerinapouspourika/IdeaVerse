@@ -10,6 +10,7 @@ import { meetsPasswordRules } from '../auth/passwordRules';
 import { PasswordRules } from '../auth/PasswordRules';
 import { Field } from '../components/Field';
 import { ResendConfirmation } from '../components/ResendConfirmation';
+import { emailProblem, useInlineValidation } from '../components/useInlineValidation';
 import { usePageMeta } from '../seo/usePageMeta';
 import { rememberTemplate } from '../templates/pendingTemplate';
 import { findTemplate } from '../templates/templates';
@@ -70,6 +71,13 @@ export function AuthPage({ mode }: { mode: Mode }) {
       rememberTemplate(chosen.slug);
     }
   }, [chosen]);
+  const validation = useInlineValidation({
+    email: () => emailProblem(email),
+    password: () =>
+      mode === 'login'
+        ? (password ? undefined : 'Enter your password.')
+        : ((password ? undefined : 'Choose a password.') ?? (meetsPasswordRules(password) ? undefined : 'Your password doesn’t meet every rule yet.')),
+  });
   const switchTo = chosen ? `${text.switchTo}?template=${chosen.slug}` : text.switchTo;
 
   // Someone who chose a template before signing up goes straight to their ideas, where it opens.
@@ -102,8 +110,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (mode === 'register' && !meetsPasswordRules(password)) {
-      setProblems({ duplicateEmail: false, expiredLink: false, password: 'Your password doesn’t meet every rule yet.' });
+    if (!validation.validate(event)) {
       return;
     }
     setPending(true);
@@ -144,10 +151,18 @@ export function AuthPage({ mode }: { mode: Mode }) {
           You’ll start with the <strong>{chosen.name}</strong> template once you’re in.
         </p>
       )}
-      <form onSubmit={(event) => void submit(event)} className="stack">
-        <Field label="Email" error={problems?.email}>
+      <form onSubmit={(event) => void submit(event)} className="stack" noValidate>
+        <Field label="Email" error={validation.errors.email ?? problems?.email}>
           {(props) => (
-            <input {...props} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input
+              {...props}
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={validation.blur('email')}
+            />
           )}
         </Field>
         {problems?.duplicateEmail && (
@@ -160,7 +175,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
             </Link>
           </p>
         )}
-        <Field label="Password" hint={mode === 'register' ? <PasswordRules password={password} /> : undefined} error={problems?.password}>
+        <Field label="Password" hint={mode === 'register' ? <PasswordRules password={password} /> : undefined} error={validation.errors.password ?? problems?.password}>
           {(props) => (
             <input
               {...props}
@@ -169,6 +184,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onBlur={validation.blur('password')}
             />
           )}
         </Field>

@@ -7,6 +7,7 @@ import { useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { TagInput } from '../components/TagInput';
+import { requiredProblem, useInlineValidation } from '../components/useInlineValidation';
 import { findTemplate, templates, type IdeaTemplate } from '../templates/templates';
 
 interface NewIdeaFormProps {
@@ -46,6 +47,12 @@ export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, o
   const [startTime, setStartTime] = useState('');
   const template = findTemplate(templateSlug);
   const suggestion = template && hasPlaceholder(template.title) ? template.title : undefined;
+  const validation = useInlineValidation({
+    title: () => requiredProblem(title, 'Give your idea a title.'),
+    targetDate: () => (!targetDate ? 'Choose a target date.' : targetDate < today ? 'Choose today or a later date.' : undefined),
+    startDate: () =>
+      !startDate ? undefined : startDate < today ? 'Choose today or a later date.' : startDate > targetDate ? 'Start on or before the target date.' : undefined,
+  });
 
   const chooseTemplate = (slug: string) => {
     setTemplateSlug(slug);
@@ -60,6 +67,9 @@ export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, o
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!validation.validate(event)) {
+      return;
+    }
     const idea = await create.mutateAsync({ title, description: description || null, targetDate, tags, startDate: startDate || null, startTime: (startDate && startTime) || null }).catch(() => null);
     if (!idea) {
       return;
@@ -81,7 +91,7 @@ export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, o
   const saving = create.isPending || addComponents.isPending;
 
   return (
-    <form className="card stack" onSubmit={(event) => void submit(event)} aria-label="New idea">
+    <form className="card stack" onSubmit={(event) => void submit(event)} aria-label="New idea" noValidate>
       <h2>New idea</h2>
       <Field label="Start from" hint={template ? `Adds ${template.components.length} things it needs once saved.` : undefined}>
         {(props) => (
@@ -105,7 +115,7 @@ export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, o
           </ul>
         </details>
       )}
-      <Field label="Title" hint={suggestion ? `Suggested: ${suggestion}` : undefined} error={fieldError(create.error, 'title')}>
+      <Field label="Title" hint={suggestion ? `Suggested: ${suggestion}` : undefined} error={validation.errors.title ?? fieldError(create.error, 'title')}>
         {(props) => (
           <input
             {...props}
@@ -113,23 +123,40 @@ export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, o
             maxLength={200}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            onBlur={validation.blur('title')}
             placeholder={suggestion ?? 'e.g. Black Friday teaser campaign'}
           />
         )}
       </Field>
-      <Field label="Target date" error={fieldError(create.error, 'targetDate')}>
+      <Field label="Target date" error={validation.errors.targetDate ?? fieldError(create.error, 'targetDate')}>
         {(props) => (
-          <input {...props} type="date" required min={today} value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+          <input
+            {...props}
+            type="date"
+            required
+            min={today}
+            value={targetDate}
+            onChange={(e) => setTargetDate(e.target.value)}
+            onBlur={validation.blur('targetDate')}
+          />
         )}
       </Field>
       <div className="row wrap">
         <Field
           label=<>Starts <span className="muted">(optional)</span></>
           hint="Plan a start to get reminders before it, from 10 days ahead."
-          error={fieldError(create.error, 'startDate')}
+          error={validation.errors.startDate ?? fieldError(create.error, 'startDate')}
         >
           {(props) => (
-            <input {...props} type="date" min={today} max={targetDate} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <input
+              {...props}
+              type="date"
+              min={today}
+              max={targetDate}
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              onBlur={validation.blur('startDate')}
+            />
           )}
         </Field>
         <Field label=<>Start time <span className="muted">(optional)</span></> error={fieldError(create.error, 'startTime')}>
