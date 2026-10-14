@@ -120,15 +120,19 @@ function IdeaDetail({ idea }: { idea: Idea }) {
           )}
         </div>
 
+        {/* In reading order, which is also the phone layout: the work comes before the details and the activity last. */}
+        <div className="stack idea-work">
+          <ComponentsSection ideaId={idea.id} workspaceId={idea.workspaceId} canEdit={changeable} />
+          <DiscussionSection ideaId={idea.id} workspaceId={idea.workspaceId} />
+        </div>
+
         <aside className="stack idea-side" aria-label="Idea details">
           <ScheduleCard idea={idea} />
           <PriorityCard idea={idea} />
           <TeamSection idea={idea} />
         </aside>
 
-        <div className="stack idea-work">
-          <ComponentsSection ideaId={idea.id} workspaceId={idea.workspaceId} canEdit={changeable} />
-          <DiscussionSection ideaId={idea.id} workspaceId={idea.workspaceId} />
+        <div className="stack idea-activity">
           <ActivitySection ideaId={idea.id} />
         </div>
       </div>
