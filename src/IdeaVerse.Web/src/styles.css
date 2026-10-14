@@ -1666,7 +1666,7 @@ h3 {
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -1844,7 +1844,7 @@ h3 {
   }
 
   .steps {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .landing-hero {
@@ -1861,7 +1861,8 @@ h3 {
 }
 
 @media (max-width: 560px) {
-  .feature-grid {
+  .feature-grid,
+  .steps {
     grid-template-columns: minmax(0, 1fr);
   }
 

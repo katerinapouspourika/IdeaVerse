@@ -17,6 +17,17 @@ describe('Public pages', () => {
     expect(router.state.location.pathname).toBe('/register');
   });
 
+  it('names prioritising among the home page’s features, and the same steps as How it works', async () => {
+    fakeApi(signedOut);
+    renderApp('/');
+
+    expect(await screen.findByRole('heading', { name: 'Decide what’s worth doing' })).toBeInTheDocument();
+    expect(screen.getByText(/score impact and effort, and spot the quick wins on the priority matrix/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Four steps from spark to done' })).toBeInTheDocument();
+    const steps = within(screen.getByRole('heading', { name: 'Four steps from spark to done' }).closest('section')!).getAllByRole('listitem');
+    expect(steps.map((step) => within(step).getByRole('heading').textContent)).toEqual(walkthroughs.map((w) => w.title));
+  });
+
   it('shows a video and its steps for every walkthrough', async () => {
     fakeApi(signedOut);
     renderApp('/how-it-works');
