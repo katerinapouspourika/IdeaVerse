@@ -70,20 +70,39 @@ describe('AuthPage', () => {
     expect(router.state.location.pathname).toBe('/invitations');
   });
 
-  it('ticks off the password rules as they are met, and stops a weak password before calling the API', async () => {
+  it('ticks off the password rule once it is met, and stops a short password before calling the API', async () => {
     const calls = fakeApi(signedOut);
     renderApp('/register');
 
     await userEvent.type(await screen.findByLabelText('Email'), 'kat@example.com');
     const password = screen.getByLabelText('Password');
-    await userEvent.type(password, 'Password');
+    await userEvent.type(password, 'abcdefghijk');
     const rules = within(screen.getByRole('list', { name: 'Requirements' }));
-    expect(rules.getByText('An uppercase letter')).toHaveTextContent('(done)');
-    expect(rules.getByText('A number')).toHaveTextContent('(not yet)');
+    expect(rules.getAllByRole('listitem')).toHaveLength(1);
+    expect(rules.getByText('At least 12 characters')).toHaveTextContent('(not yet)');
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(password).toHaveAccessibleDescription(expect.stringContaining('Your password doesn’t meet every rule yet.'));
+    expect(password).toHaveAccessibleDescription(expect.stringContaining('Your password needs at least 12 characters.'));
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
+
+    await userEvent.type(password, 'l');
+    expect(rules.getByText('At least 12 characters')).toHaveTextContent('(done)');
+  });
+
+  it('shows and hides the password with the button inside the field', async () => {
+    fakeApi(signedOut);
+    renderApp('/register');
+
+    const password = await screen.findByLabelText('Password');
+    await userEvent.type(password, 'a secret phrase');
+    expect(password).toHaveAttribute('type', 'password');
+    expect(password).toHaveAttribute('autocomplete', 'new-password');
+    await userEvent.click(screen.getByRole('button', { name: 'Show password', pressed: false }));
+
+    expect(password).toHaveAttribute('type', 'text');
+    expect(password).toHaveValue('a secret phrase');
+    await userEvent.click(screen.getByRole('button', { name: 'Hide password', pressed: true }));
+    expect(password).toHaveAttribute('type', 'password');
   });
 
   it('puts the API’s password rule in plain words under the password', async () => {
@@ -91,17 +110,17 @@ describe('AuthPage', () => {
       ...signedOut,
       'POST /api/v1/auth/register': {
         status: 400,
-        body: { title: 'One or more validation errors occurred.', errors: { PasswordRequiresDigit: ['Passwords must have at least one digit (\'0\'-\'9\').'] } },
+        body: { title: 'One or more validation errors occurred.', errors: { PasswordTooShort: ['Passwords must be at least 12 characters.'] } },
       },
     });
     renderApp('/register');
 
     await userEvent.type(await screen.findByLabelText('Email'), 'kat@example.com');
-    await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!');
+    await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!-long');
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
-    await waitFor(() => expect(screen.getByLabelText('Password')).toHaveAccessibleDescription(expect.stringContaining('Your password needs a number.')));
-    expect(screen.queryByText(/\('0'-'9'\)/)).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText('Password')).toHaveAccessibleDescription(expect.stringContaining('Your password needs at least 12 characters.')));
+    expect(screen.queryByText(/Passwords must be/)).not.toBeInTheDocument();
   });
 
   it('offers to sign in or reset the password when the email already has an account', async () => {
@@ -115,7 +134,7 @@ describe('AuthPage', () => {
     const router = renderApp('/register');
 
     await userEvent.type(await screen.findByLabelText('Email'), 'kat@example.com');
-    await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!');
+    await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!-long');
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
     await waitFor(() => expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('An account with this email already exists.'));

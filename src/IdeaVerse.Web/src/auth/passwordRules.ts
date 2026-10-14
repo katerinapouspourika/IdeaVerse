@@ -1,13 +1,20 @@
-/** IdeaVerse's password rules: ASP.NET Core Identity's defaults, which the API enforces. */
+/** The shortest password the API accepts. */
+export const minimumPasswordLength = 12;
+
+/** IdeaVerse's password rules, which the API enforces: one length rule rather than composition rules. */
 export const passwordRules = [
-  { id: 'length', label: 'At least 6 characters', missing: 'at least 6 characters', test: (p: string) => p.length >= 6 },
-  { id: 'lower', label: 'A lowercase letter', missing: 'a lowercase letter', test: (p: string) => /[a-z]/.test(p) },
-  { id: 'upper', label: 'An uppercase letter', missing: 'an uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
-  { id: 'digit', label: 'A number', missing: 'a number', test: (p: string) => /[0-9]/.test(p) },
-  { id: 'symbol', label: 'A symbol, like ! or #', missing: 'a symbol, like ! or #', test: (p: string) => /[^a-zA-Z0-9]/.test(p) },
+  {
+    id: 'length',
+    label: `At least ${minimumPasswordLength} characters`,
+    missing: `at least ${minimumPasswordLength} characters`,
+    test: (p: string) => p.length >= minimumPasswordLength,
+  },
 ] as const;
 
 /** Whether a password meets every rule. */
 export function meetsPasswordRules(password: string) {
   return passwordRules.every((rule) => rule.test(password));
 }
+
+/** What to say under a new password that does not meet the rules yet. */
+export const weakPasswordMessage = `Your password needs at least ${minimumPasswordLength} characters.`;

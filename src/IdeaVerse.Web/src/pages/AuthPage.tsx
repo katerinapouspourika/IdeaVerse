@@ -6,9 +6,10 @@ import { ApiError } from '../api/client';
 import { afterSignIn } from '../auth/afterSignIn';
 import { useAuth } from '../auth/AuthContext';
 import { readAccountProblems, type AccountProblems } from '../auth/identityErrors';
-import { meetsPasswordRules } from '../auth/passwordRules';
+import { meetsPasswordRules, weakPasswordMessage } from '../auth/passwordRules';
 import { PasswordRules } from '../auth/PasswordRules';
 import { Field } from '../components/Field';
+import { PasswordInput } from '../components/PasswordInput';
 import { ResendConfirmation } from '../components/ResendConfirmation';
 import { usePageMeta } from '../seo/usePageMeta';
 import { rememberTemplate } from '../templates/pendingTemplate';
@@ -103,7 +104,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (mode === 'register' && !meetsPasswordRules(password)) {
-      setProblems({ duplicateEmail: false, expiredLink: false, password: 'Your password doesn’t meet every rule yet.' });
+      setProblems({ duplicateEmail: false, expiredLink: false, password: weakPasswordMessage });
       return;
     }
     setPending(true);
@@ -162,9 +163,8 @@ export function AuthPage({ mode }: { mode: Mode }) {
         )}
         <Field label="Password" hint={mode === 'register' ? <PasswordRules password={password} /> : undefined} error={problems?.password}>
           {(props) => (
-            <input
+            <PasswordInput
               {...props}
-              type="password"
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               required
               value={password}
