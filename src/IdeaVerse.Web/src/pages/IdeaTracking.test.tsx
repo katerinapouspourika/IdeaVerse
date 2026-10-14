@@ -33,13 +33,51 @@ describe('Idea tracking', () => {
       [`${ideasRoute}?tag=ops`]: { status: 200, body: [hiring] },
     });
     renderApp('/ideas');
-    const card = (await screen.findByText('Spring launch')).closest('a')!;
+    const card = (await screen.findByText('Spring launch')).closest('li')!;
     expect(within(card).getByRole('list', { name: 'Tags' })).toHaveTextContent('marketing');
 
     await userEvent.selectOptions(await screen.findByLabelText('Tag'), 'ops');
 
     await waitFor(() => expect(screen.queryByText('Spring launch')).not.toBeInTheDocument());
     expect(screen.getByText('Hiring plan')).toBeInTheDocument();
+  });
+
+  it('filters by a tag clicked on an idea in the list', async () => {
+    fakeApi({
+      ...signedIn,
+      [ideasRoute]: { status: 200, body: [launch, hiring] },
+      'GET /api/v1/workspaces/ws-1/tags': { status: 200, body: ['marketing', 'ops'] },
+      [`${ideasRoute}?tag=ops`]: { status: 200, body: [hiring] },
+    });
+    const router = renderApp('/ideas');
+    const card = (await screen.findByText('Hiring plan')).closest('li')!;
+
+    await userEvent.click(within(card).getByRole('link', { name: 'Ideas tagged ops' }));
+
+    await waitFor(() => expect(screen.queryByText('Spring launch')).not.toBeInTheDocument());
+    expect(screen.getByText('Hiring plan')).toBeInTheDocument();
+    expect(screen.getByLabelText('Tag')).toHaveValue('ops');
+    expect(router.state.location.search).toBe('');
+  });
+
+  it('opens the ideas with a tag clicked on an idea’s page', async () => {
+    fakeApi({
+      ...signedIn,
+      'GET /api/v1/ideas/idea-1': { status: 200, body: launch },
+      'GET /api/v1/ideas/idea-1/components': { status: 200, body: [] },
+      'GET /api/v1/ideas/idea-1/comments': { status: 200, body: [] },
+      'GET /api/v1/ideas/idea-1/members': { status: 200, body: [] },
+      'GET /api/v1/workspaces/ws-1/tags': { status: 200, body: ['marketing', 'ops'] },
+      [`${ideasRoute}?tag=marketing`]: { status: 200, body: [launch] },
+    });
+    const router = renderApp('/ideas/idea-1');
+    const tags = await screen.findByRole('list', { name: 'Tags' });
+
+    await userEvent.click(within(tags).getByRole('link', { name: 'Ideas tagged marketing' }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/ideas'));
+    expect(await screen.findByLabelText('Tag')).toHaveValue('marketing');
+    expect(await screen.findByRole('link', { name: 'Spring launch' })).toBeInTheDocument();
   });
 
   it('sorts through the API', async () => {
