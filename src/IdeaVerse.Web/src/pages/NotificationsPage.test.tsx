@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { Notification } from '../api/types';
@@ -108,5 +108,33 @@ describe('Notifications', () => {
 
     expect(await screen.findByText(/Reminders and updates about your ideas appear here/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Mark all as read' })).not.toBeInTheDocument();
+  });
+
+  it('shows the unread count on the app icon, and clears it once all are read', async () => {
+    const setAppBadge = vi.fn(() => Promise.resolve());
+    const clearAppBadge = vi.fn(() => Promise.resolve());
+    Object.assign(navigator, { setAppBadge, clearAppBadge });
+    let unread = 1;
+    fakeApi({
+      ...signedIn,
+      'GET /api/v1/notifications': () => ({ status: 200, body: { items: unread ? [tomorrow] : [{ ...tomorrow, readAt: '2026-11-26T09:00:00Z' }], unreadCount: unread } }),
+      'POST /api/v1/notifications/read-all': () => {
+        unread = 0;
+        return { status: 204 };
+      },
+    });
+
+    try {
+      renderApp('/notifications');
+      await waitFor(() => expect(setAppBadge).toHaveBeenCalledWith(1));
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Mark all as read' }));
+      await waitFor(() => expect(clearAppBadge).toHaveBeenCalled());
+      expect(setAppBadge).toHaveBeenCalledTimes(1);
+    } finally {
+      cleanup();
+      Reflect.deleteProperty(navigator, 'setAppBadge');
+      Reflect.deleteProperty(navigator, 'clearAppBadge');
+    }
   });
 });
