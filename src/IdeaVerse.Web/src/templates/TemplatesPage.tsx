@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 
 import { cardGridClass } from '../components/cardGrid';
+import { CtaBand } from '../components/CtaBand';
 import { publicPages } from '../seo/pages';
 import { usePageMeta } from '../seo/usePageMeta';
 import { templates } from './templates';
@@ -32,6 +33,7 @@ export function TemplatesPage() {
           ))}
         </ul>
       </section>
+      <CtaBand title="Ready to start from a plan?" text="Free to start. Pick a template once you’re in, or begin with a blank idea." />
     </div>
   );
 }
