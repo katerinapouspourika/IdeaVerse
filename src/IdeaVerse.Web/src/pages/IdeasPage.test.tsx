@@ -2,7 +2,7 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { ReceivedInvitation } from '../api/types';
-import { anIdea, aWorkspace, fakeApi, ideasRoute, signedIn } from '../test/fakeApi';
+import { anIdea, aWorkspace, fakeApi, ideasRoute, signedIn, signedInAccount } from '../test/fakeApi';
 import { renderApp } from '../test/render';
 
 describe('IdeasPage', () => {
@@ -228,6 +228,61 @@ describe('IdeasPage', () => {
 
       expect(await screen.findByRole('heading', { name: 'Ideas' })).toBeInTheDocument();
       expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ name: 'Acme Marketing' });
+    });
+
+    it('asks for the user’s name while creating their first workspace, so teammates see it', async () => {
+      let workspaces: unknown[] = [];
+      const calls = fakeApi({
+        ...signedIn,
+        'GET /api/v1/workspaces': () => ({ status: 200, body: workspaces }),
+        'PUT /api/v1/account/profile': (body) => ({ status: 200, body: { ...signedInAccount, ...(body as object) } }),
+        'POST /api/v1/workspaces': (body) => {
+          workspaces = [aWorkspace({ name: (body as { name: string }).name })];
+          return { status: 201, body: workspaces[0] };
+        },
+        [ideasRoute]: { status: 200, body: [] },
+      });
+      renderApp('/ideas');
+
+      const form = await screen.findByRole('form', { name: 'Create workspace' });
+      expect(within(form).getByLabelText('Your name')).toHaveValue('');
+      await userEvent.type(within(form).getByLabelText('Workspace name'), 'Acme Marketing');
+      await userEvent.type(within(form).getByLabelText('Your name'), '  Kat Smith ');
+      await userEvent.click(within(form).getByRole('button', { name: 'Create workspace' }));
+
+      expect(await screen.findByRole('heading', { name: 'Invite your team to Acme Marketing' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Account: Kat Smith' })).toBeInTheDocument();
+      expect(calls.filter((c) => c.method === 'PUT' || c.method === 'POST').map((c) => [c.method, c.path, c.body])).toEqual([
+        ['PUT', '/api/v1/account/profile', { displayName: 'Kat Smith' }],
+        ['POST', '/api/v1/workspaces', { name: 'Acme Marketing' }],
+      ]);
+    });
+
+    it('keeps the name the user already has, and leaves it alone unless changed', async () => {
+      const calls = fakeApi({
+        ...signedIn,
+        'GET /api/v1/account': { status: 200, body: { ...signedInAccount, displayName: 'Kat Smith' } },
+        'GET /api/v1/workspaces': { status: 200, body: [] },
+        'POST /api/v1/workspaces': { status: 201, body: aWorkspace() },
+        [ideasRoute]: { status: 200, body: [] },
+      });
+      renderApp('/ideas');
+
+      const form = await screen.findByRole('form', { name: 'Create workspace' });
+      expect(within(form).getByLabelText('Your name')).toHaveValue('Kat Smith');
+      await userEvent.type(within(form).getByLabelText('Workspace name'), 'Acme Marketing');
+      await userEvent.click(within(form).getByRole('button', { name: 'Create workspace' }));
+
+      await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.path === '/api/v1/workspaces')).toBe(true));
+      expect(calls.some((c) => c.method === 'PUT')).toBe(false);
+    });
+
+    it('does not ask an existing user for their name when they start another workspace', async () => {
+      fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
+      renderApp('/workspaces/new');
+
+      const form = await screen.findByRole('form', { name: 'Create workspace' });
+      expect(within(form).queryByLabelText('Your name')).not.toBeInTheDocument();
     });
 
     it('invites the team in the second step, keeping only the addresses that were refused', async () => {
