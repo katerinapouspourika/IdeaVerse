@@ -237,7 +237,7 @@ describe('IdeasPage', () => {
         },
         [ideasRoute]: { status: 200, body: [] },
       });
-      renderApp('/ideas');
+      const router = renderApp('/ideas');
 
       expect(await screen.findByRole('heading', { name: 'Welcome to IdeaVerse' })).toBeInTheDocument();
       expect(screen.getByRole('list', { name: 'Setting up your workspace' })).toHaveTextContent('1Name your workspace2Invite your team');
@@ -248,7 +248,8 @@ describe('IdeasPage', () => {
       expect(await screen.findByRole('heading', { name: 'Invite your team to Acme Marketing' })).toBeInTheDocument();
       await userEvent.click(screen.getByRole('button', { name: 'Skip for now' }));
 
-      expect(await screen.findByRole('heading', { name: 'Ideas' })).toBeInTheDocument();
+      expect(await screen.findByRole('region', { name: 'Get started' })).toBeInTheDocument();
+      expect(router.state.location.pathname).toBe('/');
       expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ name: 'Acme Marketing' });
     });
 
@@ -278,6 +279,12 @@ describe('IdeasPage', () => {
         { email: 'kat@example.com', role: 'Admin' },
       ]);
       expect(router.state.location.pathname).toBe('/workspaces/ws-1/invite');
+
+      await userEvent.clear(within(form).getByLabelText('Email 1'));
+      await userEvent.type(within(form).getByLabelText('Email 1'), 'leo@example.com');
+      await userEvent.click(within(form).getByRole('button', { name: 'Send invitations' }));
+
+      await waitFor(() => expect(router.state.location.pathname).toBe('/'));
     });
 
     it('does not offer to invite to a workspace the user cannot manage', async () => {
