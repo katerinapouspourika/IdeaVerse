@@ -1,6 +1,6 @@
 import { Palette } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
 
 import { formatDate } from '../api/dates';
 import {
@@ -30,9 +30,23 @@ import { JoinRequestsCard } from '../workspaces/JoinRequestsCard';
 /** The current workspace's people and invitations; owners and admins manage them here. */
 export function PeoplePage() {
   usePageMeta('People', { index: false });
-  const { current, isLoading } = useWorkspace();
+  const { all, current, isLoading, select } = useWorkspace();
+  const [params, setParams] = useSearchParams();
+  // Emails about a workspace's people link here as `?workspace={id}`, so they open on that workspace whichever was last chosen.
+  const linked = params.get('workspace');
+  const linkedWorkspace = all.find((w) => w.id === linked);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (linked === null || isLoading) {
+      return;
+    }
+    if (linkedWorkspace && current?.id !== linkedWorkspace.id) {
+      select(linkedWorkspace.id);
+    }
+    setParams({}, { replace: true });
+  }, [linked, linkedWorkspace, current, isLoading, select, setParams]);
+
+  if (isLoading || (linkedWorkspace && current?.id !== linkedWorkspace.id)) {
     return <Skeleton variant="page" lines={4} />;
   }
 
@@ -49,11 +63,11 @@ function People({ workspace }: { workspace: Workspace }) {
   return (
     <div className="stack">
       <WorkspaceName workspace={workspace} canManage={canManage} />
+      {canManage && <JoinRequestsCard workspaceId={workspace.id} />}
       <MemberList workspace={workspace} canManage={canManage} />
       {canManage ? (
         <>
           <InviteForm workspaceId={workspace.id} />
-          <JoinRequestsCard workspaceId={workspace.id} />
           <InviteLinkCard workspaceId={workspace.id} />
           <CompanyDomainCard workspaceId={workspace.id} />
           <OpenInvitations workspaceId={workspace.id} />
@@ -374,7 +388,7 @@ function OpenInvitations({ workspaceId }: { workspaceId: string }) {
 
   return (
     <section className="card stack" aria-labelledby="open-invitations-heading">
-      <h2 id="open-invitations-heading">Waiting to join</h2>
+      <h2 id="open-invitations-heading">Pending invitations</h2>
       <ul className="team">
         {invitations.data.map((invitation) => (
           <li key={invitation.id}>

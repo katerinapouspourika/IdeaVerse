@@ -266,7 +266,7 @@ public sealed class InvitationService(
   /// <param name="email">The invited address.</param>
   /// <returns>The message.</returns>
   private static string AlreadyInvitedMessage(string email)
-    => $"{email} already has an open invitation. Resend it from the list of people waiting to join.";
+    => $"{email} already has an open invitation. Resend it from Pending invitations on the People page.";
 
   /// <summary>
   /// Queries the open invitations for the user's email, provided the user has confirmed it.

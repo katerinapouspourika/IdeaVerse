@@ -330,7 +330,7 @@ public sealed class DiscoveryService(IdeaVerseDbContext context, IMailSender mai
     var content = new EmailContent(
       $"{requester} asked to join {workspaceName}",
       [$"{requester} works at your company and found {workspaceName} on IdeaVerse. Approve to add them as a member, or decline."],
-      new EmailAction("Review requests", new Uri(app.Value.Link("/people"))),
+      new EmailAction("Review requests", new Uri(app.Value.Link($"/people?workspace={workspaceId}"))),
       "You get this because you are an owner or admin of this workspace. You can hide it from your company on the People page.");
     foreach (var manager in managers.OfType<string>())
     {

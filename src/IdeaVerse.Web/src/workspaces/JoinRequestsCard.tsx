@@ -14,7 +14,7 @@ export function JoinRequestsCard({ workspaceId }: { workspaceId: string }) {
 
   return (
     <section className="card stack" aria-labelledby="join-requests-heading">
-      <h2 id="join-requests-heading">Asking to join</h2>
+      <h2 id="join-requests-heading">Join requests</h2>
       <ul className="team">
         {requests.data.map((request) => {
           const who = personLabel(request.name, request.email);

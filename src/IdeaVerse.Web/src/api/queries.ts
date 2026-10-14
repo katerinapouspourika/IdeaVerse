@@ -233,10 +233,12 @@ export function useRequestToJoin() {
   });
 }
 
-export function useJoinRequests(workspaceId: string) {
+/** The people asking to join a workspace; only its owner and admins may list them, so pass `enabled` for anyone else. */
+export function useJoinRequests(workspaceId: string, enabled = true) {
   return useQuery({
     queryKey: keys.joinRequests(workspaceId),
     queryFn: () => request<JoinRequest[]>('GET', `/api/v1/workspaces/${workspaceId}/join-requests`),
+    enabled,
   });
 }
 

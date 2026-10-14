@@ -38,7 +38,7 @@ describe('PeoplePage', () => {
     const members = within(screen.getByRole('region', { name: 'Members' }));
     expect(await members.findByText('Owner')).toBeInTheDocument();
     expect(members.getByRole('combobox', { name: 'Role of mia@example.com' })).toHaveValue('Member');
-    expect(within(screen.getByRole('region', { name: 'Waiting to join' })).getByText('new@example.com')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Pending invitations' })).getByText('new@example.com')).toBeInTheDocument();
   });
 
   it('lets an admin invite someone by email and role', async () => {
@@ -76,7 +76,7 @@ describe('PeoplePage', () => {
       ...peopleRoutes('Owner', [kat]),
       'POST /api/v1/workspaces/ws-1/invitations': {
         status: 409,
-        body: { detail: 'new@example.com already has an open invitation. Resend it from the list of people waiting to join.' },
+        body: { detail: 'new@example.com already has an open invitation. Resend it from Pending invitations on the People page.' },
       },
     });
     renderApp('/people');
@@ -205,6 +205,35 @@ describe('PeoplePage', () => {
     expect(await screen.findByRole('heading', { name: 'Welcome to IdeaVerse' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
     expect(calls.some((c) => c.method === 'DELETE' && c.path === '/api/v1/workspaces/ws-1')).toBe(true);
+  });
+
+  it('opens on the workspace an email links to', async () => {
+    fakeApi({
+      ...peopleRoutes('Owner', [kat]),
+      'GET /api/v1/workspaces': { status: 200, body: [aWorkspace(), aWorkspace({ id: 'ws-2', name: 'Globex', role: 'Admin' })] },
+      'GET /api/v1/workspaces/ws-2/members': { status: 200, body: [kat] },
+      'GET /api/v1/workspaces/ws-2/invitations': { status: 200, body: [] },
+      'GET /api/v1/workspaces/ws-2/join-requests': { status: 200, body: [] },
+    });
+    const router = renderApp('/people?workspace=ws-2');
+
+    expect(await screen.findByRole('heading', { name: 'People in Globex' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveValue('ws-2');
+    await waitFor(() => expect(router.state.location.search).toBe(''));
+  });
+
+  it('marks the phone menu when invitations are waiting inside it', async () => {
+    fakeApi({
+      ...peopleRoutes('Member', [kat, mia]),
+      'GET /api/v1/invitations': {
+        status: 200,
+        body: [{ id: 'inv-9', workspaceId: 'ws-2', workspaceName: 'Globex', role: 'Member', invitedByEmail: 'leo@example.com', invitedByName: null, expiresAt: '2099-01-08T09:00:00Z' }],
+      },
+    });
+    renderApp('/people');
+
+    expect(await screen.findByRole('button', { name: 'Menu, 1 waiting' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Invitations (1)' })).toBeInTheDocument();
   });
 
   it('hides the danger zone from everyone but the owner', async () => {
