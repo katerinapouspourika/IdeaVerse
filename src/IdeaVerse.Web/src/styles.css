@@ -2130,6 +2130,11 @@ a:focus-visible {
   color: var(--danger);
 }
 
+.menu-check {
+  margin-left: auto;
+  color: var(--accent);
+}
+
 .popover {
   display: flex;
   flex-direction: column;

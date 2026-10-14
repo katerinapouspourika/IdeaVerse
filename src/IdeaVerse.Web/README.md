@@ -71,7 +71,7 @@ It needs an ffmpeg with libx264, libvpx-vp9 and libwebp (set `FFMPEG` when it is
 - `components/Skeleton.tsx`: loading placeholders in the shape of the content.
 - `components/ErrorMessage.tsx`: `ErrorMessage` shows why a form submission failed; `LoadError` shows that something on the page couldn't load, in plain words, with Try again to load it again (a refusal the API explains, such as a 403, shows its own message instead). Use `LoadError` for query failures.
 - Icons come from `lucide-react`; mark decorative ones `aria-hidden`.
-- The header's theme button cycles between the device's colour scheme, light, and dark (`src/theme.ts`), remembered in the browser and applied by `index.html` before the page paints.
+- The header's theme menu picks light, dark, or the device's colour scheme (`src/theme.ts`); its icon shows the scheme in effect. The choice is remembered in the browser and applied by `index.html` before the page paints.
 - The layout has a "Skip to content" link, moves focus to the page after each navigation, and honours "reduce motion". Public pages (those whose route `handle` is `fullWidth`) end with the full footer of Product, Explore, and Company links; signed-in app pages get a slim one-line footer with Help (the How it works page), Privacy, and Terms.
 - The header fits phones down to 320px wide without scrolling sideways: below 600px it keeps the page's 16px gutter, and signed in, below 420px it shows the logo without the IdeaVerse name (the link keeps it as its accessible name).
 
