@@ -1,4 +1,4 @@
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { ReceivedInvitation } from '../api/types';
@@ -101,6 +101,28 @@ describe('IdeasPage', () => {
     expect(await screen.findByText('No ideas match these filters.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
     expect(calls.some((c) => c.path === '/api/v1/workspaces/ws-1/ideas?status=Done')).toBe(true);
+  });
+
+  it('fades the edges of the status tabs that have more tabs beyond them', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [anIdea()] } });
+    renderApp('/ideas');
+    await screen.findByText('Black Friday teaser');
+    const row = screen.getByRole('navigation', { name: 'Filter by status' });
+    expect(row).not.toHaveAttribute('data-fade');
+
+    // jsdom lays nothing out, so the row is given a phone's width and more tabs than fit.
+    Object.defineProperty(row, 'clientWidth', { configurable: true, value: 350 });
+    Object.defineProperty(row, 'scrollWidth', { configurable: true, value: 600 });
+    fireEvent.scroll(row);
+    expect(row).toHaveAttribute('data-fade', 'end');
+
+    row.scrollLeft = 100;
+    fireEvent.scroll(row);
+    expect(row).toHaveAttribute('data-fade', 'both');
+
+    row.scrollLeft = 250;
+    fireEvent.scroll(row);
+    expect(row).toHaveAttribute('data-fade', 'start');
   });
 
   it('confirms a new idea in a toast naming it, whose Open goes to the idea', async () => {
