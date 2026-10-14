@@ -687,6 +687,24 @@ textarea:focus-visible,
   font-weight: 600;
 }
 
+/* The workspace a notification belongs to, for people in more than one. */
+.workspace-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.workspace-tag .workspace-badge {
+  border-radius: 5px;
+}
+
+.mini-list .workspace-tag {
+  display: flex;
+  margin-top: 4px;
+  font-size: 0.8rem;
+}
+
 .badge.kind-tomorrow,
 .badge.kind-today {
   background: var(--warn-soft);

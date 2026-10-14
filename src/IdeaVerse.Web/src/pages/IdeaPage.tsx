@@ -55,17 +55,20 @@ function IdeaDetail({ idea }: { idea: Idea }) {
   const changeable = canChange(idea);
   const ideaWorkspaceId = idea.workspaceId;
   const matchedIdea = useRef<string | null>(null);
+  const toast = useToast();
 
-  // Opening an idea from another workspace switches the header to it, once; switching away afterwards is the user's choice.
+  // Opening an idea from another workspace switches the header to it, once, and says so; switching away afterwards is the user's choice.
   useEffect(() => {
-    if (matchedIdea.current === idea.id || !all.some((w) => w.id === ideaWorkspaceId)) {
+    const ideaWorkspace = all.find((w) => w.id === ideaWorkspaceId);
+    if (matchedIdea.current === idea.id || !ideaWorkspace) {
       return;
     }
     matchedIdea.current = idea.id;
     if (current?.id !== ideaWorkspaceId) {
       select(ideaWorkspaceId);
+      toast({ message: `Switched to ${ideaWorkspace.name}` });
     }
-  }, [idea.id, ideaWorkspaceId, all, current, select]);
+  }, [idea.id, ideaWorkspaceId, all, current, select, toast]);
 
   return (
     <div className="stack">

@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from '../api/queries';
+import { WorkspaceTag } from '../workspaces/WorkspaceTag';
 
 /** How many notifications the drop-down previews. */
 const previewSize = 6;
@@ -74,6 +75,7 @@ export function NotificationBell() {
                   <Link to={`/ideas/${n.ideaId}`} onClick={() => !n.readAt && markRead.mutate(n.id)}>
                     {n.message}
                   </Link>
+                  <WorkspaceTag workspaceId={n.workspaceId} name={n.workspaceName} />
                 </li>
               ))}
             </ul>

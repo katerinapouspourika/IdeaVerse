@@ -45,6 +45,8 @@ public sealed class NotificationService(IdeaVerseDbContext context, UserCalendar
         n.Id,
         n.IdeaId,
         n.Idea!.Title,
+        n.Idea.WorkspaceId,
+        WorkspaceName = n.Idea.Workspace!.Name,
         n.Kind,
         n.TargetDate,
         n.CreatedAt,
@@ -67,6 +69,8 @@ public sealed class NotificationService(IdeaVerseDbContext context, UserCalendar
         n.Id,
         n.IdeaId,
         n.Title,
+        n.WorkspaceId,
+        n.WorkspaceName,
         n.Kind,
         n.TargetDate,
         ReminderSchedule.Message(
