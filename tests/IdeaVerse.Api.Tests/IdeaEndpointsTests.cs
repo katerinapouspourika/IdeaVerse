@@ -389,6 +389,84 @@ public class IdeaEndpointsTests
   }
 
   [Test]
+  public async Task UndoPostpone_JustPostponed_RestoresDateAndStatusWithoutCountingIt()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    var idea = await (await client.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    (await client.PutAsJsonAsync($"/api/v1/ideas/{idea.Id}", new UpdateIdeaRequest("Launch", null, Today.AddDays(5), IdeaStatus.InProgress), Json.Options)).Dispose();
+    (await client.PostAsJsonAsync($"/api/v1/ideas/{idea.Id}/postpone", new PostponeIdeaRequest(Today.AddDays(10)), Json.Options)).Dispose();
+
+    using var response = await client.PostAsJsonAsync($"/api/v1/ideas/{idea.Id}/postpone/undo", new UndoPostponeRequest(Today.AddDays(5), IdeaStatus.InProgress), Json.Options);
+    var restored = await response.ReadIdeaAsync();
+    var activity = (await client.ActivityAsync(idea.Id)).Items;
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+    await Assert.That(restored.TargetDate).IsEqualTo(Today.AddDays(5));
+    await Assert.That(restored.Status).IsEqualTo(IdeaStatus.InProgress);
+    await Assert.That(restored.PostponeCount).IsEqualTo(0);
+    await Assert.That(activity.Select(a => a.Kind)).DoesNotContain(ActivityKind.Postponed);
+  }
+
+  [Test]
+  public async Task UndoPostpone_AfterTheWindow_ReturnsConflict()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    var idea = await (await client.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    (await client.PostAsJsonAsync($"/api/v1/ideas/{idea.Id}/postpone", new PostponeIdeaRequest(Today.AddDays(10)), Json.Options)).Dispose();
+    factory.Time.Advance(TimeSpan.FromMinutes(11));
+
+    using var response = await client.PostAsJsonAsync($"/api/v1/ideas/{idea.Id}/postpone/undo", new UndoPostponeRequest(Today.AddDays(5), IdeaStatus.Planned), Json.Options);
+    var unchanged = await client.GetFromJsonAsync<IdeaResponse>($"/api/v1/ideas/{idea.Id}", Json.Options);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+    await Assert.That(unchanged!.PostponeCount).IsEqualTo(1);
+  }
+
+  [Test]
+  public async Task UndoPostpone_NeverPostponed_ReturnsConflict()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    var idea = await (await client.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+
+    using var response = await client.PostAsJsonAsync($"/api/v1/ideas/{idea.Id}/postpone/undo", new UndoPostponeRequest(Today.AddDays(2), IdeaStatus.Planned), Json.Options);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+  }
+
+  [Test]
+  public async Task UndoPostpone_SomeoneElsesPostponement_ReturnsConflict()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var member = await factory.CreateSignedInClientAsync("mia@example.com");
+    await factory.JoinAsync(owner, member, "mia@example.com");
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    (await owner.AddMemberAsync(idea.Id, "mia@example.com")).Dispose();
+    (await owner.PostAsJsonAsync($"/api/v1/ideas/{idea.Id}/postpone", new PostponeIdeaRequest(Today.AddDays(10)), Json.Options)).Dispose();
+
+    using var response = await member.PostAsJsonAsync($"/api/v1/ideas/{idea.Id}/postpone/undo", new UndoPostponeRequest(Today.AddDays(5), IdeaStatus.Planned), Json.Options);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+  }
+
+  [Test]
+  public async Task UndoPostpone_DateNotEarlier_ReturnsValidationProblem()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    var idea = await (await client.CreateIdeaAsync("Launch", Today.AddDays(5))).ReadIdeaAsync();
+    (await client.PostAsJsonAsync($"/api/v1/ideas/{idea.Id}/postpone", new PostponeIdeaRequest(Today.AddDays(10)), Json.Options)).Dispose();
+
+    using var response = await client.PostAsJsonAsync($"/api/v1/ideas/{idea.Id}/postpone/undo", new UndoPostponeRequest(Today.AddDays(12), IdeaStatus.Planned), Json.Options);
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+    await Assert.That((await response.ReadValidationErrorsAsync()).Keys).Contains("targetDate");
+  }
+
+  [Test]
   public async Task Delete_OwnIdea_RemovesIt()
   {
     await using var factory = new IdeaVerseApiFactory();

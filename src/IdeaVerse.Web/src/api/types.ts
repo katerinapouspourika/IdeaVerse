@@ -145,6 +145,12 @@ export interface IdeaUpdate extends IdeaInput {
   status: IdeaStatus;
 }
 
+/** Takes back the caller's latest postponement, restoring the date and status it had before. */
+export interface UndoPostpone {
+  targetDate: string;
+  status: IdeaStatus;
+}
+
 export interface Component {
   id: string;
   title: string;

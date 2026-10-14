@@ -28,6 +28,11 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
   private const string NotOnTeamMessage = "Only the idea's team and the workspace's admins can change this idea.";
 
   /// <summary>
+  /// How long after postponing an idea the postponement can be taken back.
+  /// </summary>
+  private static readonly TimeSpan PostponeUndoWindow = TimeSpan.FromMinutes(10);
+
+  /// <summary>
   /// Lists a workspace's ideas, filtered and ordered as <paramref name="filter"/> asks.
   /// </summary>
   /// <param name="userId">The signed-in user's identifier.</param>
@@ -306,6 +311,57 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
     idea.Status = IdeaStatus.Postponed;
     idea.PostponeCount++;
     context.Record(idea.Id, userId, ActivityKind.Postponed, timeProvider.GetUtcNow(), request.TargetDate.ToString("O", CultureInfo.InvariantCulture));
+    return await SaveAsync(userId, idea, cancellationToken).ConfigureAwait(false);
+  }
+
+  /// <summary>
+  /// Takes back the user's latest postponement of an idea within <see cref="PostponeUndoWindow"/>: restores the earlier target date and
+  /// status, uncounts the postponement, and drops it from the idea's history, as if it had not happened.
+  /// </summary>
+  /// <param name="userId">The signed-in user's identifier.</param>
+  /// <param name="id">The idea identifier.</param>
+  /// <param name="request">The validated request.</param>
+  /// <param name="cancellationToken">Token to cancel the operation.</param>
+  /// <returns>The outcome, or a conflict when there is no recent postponement by the user to take back.</returns>
+  public async Task<IdeaChangeResult> UndoPostponeAsync(string userId, Guid id, UndoPostponeRequest request, CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(request);
+
+    var idea = await context.EditableIdeas(userId).FirstOrDefaultAsync(i => i.Id == id, cancellationToken).ConfigureAwait(false);
+    if (idea is null)
+    {
+      return IdeaChangeResult.Denied(await context.DenialAsync(userId, id, cancellationToken).ConfigureAwait(false), NotOnTeamMessage);
+    }
+
+    var since = timeProvider.GetUtcNow() - PostponeUndoWindow;
+    var date = idea.TargetDate.ToString("O", CultureInfo.InvariantCulture);
+    var postponement = idea.Status == IdeaStatus.Postponed && idea.PostponeCount > 0
+      ? (await context.Activity
+          .Where(a => a.IdeaId == idea.Id && a.ActorId == userId && a.Kind == ActivityKind.Postponed && a.Detail == date)
+          .ToListAsync(cancellationToken)
+          .ConfigureAwait(false))
+        .Where(a => a.CreatedAt >= since)
+        .MaxBy(a => a.CreatedAt)
+      : null;
+    if (postponement is null)
+    {
+      return IdeaChangeResult.Conflict("There is no recent postponement of yours to undo.");
+    }
+
+    if (request.TargetDate >= idea.TargetDate)
+    {
+      return IdeaChangeResult.Invalid(TargetDateRules.MemberName, "The restored target date must be earlier than the current one.");
+    }
+
+    if (request.TargetDate < idea.StartDate)
+    {
+      return IdeaChangeResult.Invalid(TargetDateRules.MemberName, TargetDateRules.NotBeforeStartMessage);
+    }
+
+    idea.TargetDate = request.TargetDate;
+    idea.Status = request.Status;
+    idea.PostponeCount--;
+    context.Activity.Remove(postponement);
     return await SaveAsync(userId, idea, cancellationToken).ConfigureAwait(false);
   }
 

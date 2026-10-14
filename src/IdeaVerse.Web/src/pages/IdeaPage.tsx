@@ -5,7 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { ImproveIdea } from '../ai/ImproveIdea';
 import { ApiError } from '../api/client';
 import { addDays, describeDue, formatDate, formatStart, todayIso } from '../api/dates';
-import { useArchiveIdea, useDeleteIdea, useIdea, useMoveIdea, usePostponeIdea, useSetStart, useUpdateIdea } from '../api/queries';
+import { useArchiveIdea, useDeleteIdea, useIdea, useMoveIdea, usePostponeIdea, useSetStart, useUndoPostpone, useUpdateIdea } from '../api/queries';
 import { canChange, personLabel, statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
 import { useConfirm, useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
@@ -142,11 +142,13 @@ function QuickStatus({ idea }: { idea: Idea }) {
   const toast = useToast();
   const status = move.isPending ? move.variables.status : idea.status;
 
-  const change = (next: IdeaStatus) =>
+  /** `from` is passed by Undo, whose closure would otherwise see the idea as it was; the Undo itself offers no Undo. */
+  const change = (next: IdeaStatus, { from = idea.status, undoable = true } = {}) =>
     move.mutate(
       { idea, status: next },
       {
-        onSuccess: () => toast({ message: `Status set to ${statusLabels[next]}` }),
+        onSuccess: () =>
+          toast({ message: `Status set to ${statusLabels[next]}`, undo: undoable ? () => change(from, { from: next, undoable: false }) : undefined }),
         onError: () => toast({ message: 'Couldn’t change the status. Try again.', tone: 'error' }),
       },
     );
@@ -395,6 +397,7 @@ function StartForm({ idea }: { idea: Idea }) {
 
 function PostponeForm({ idea }: { idea: Idea }) {
   const postpone = usePostponeIdea(idea.id);
+  const undo = useUndoPostpone(idea.id);
   const toast = useToast();
   const today = todayIso();
   const earliest = idea.targetDate >= today ? addDays(idea.targetDate, 1) : today;
@@ -402,7 +405,18 @@ function PostponeForm({ idea }: { idea: Idea }) {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    postpone.mutate(targetDate, { onSuccess: () => toast({ message: `Postponed to ${formatDate(targetDate)}` }) });
+    const previous = { targetDate: idea.targetDate, status: idea.status };
+    postpone.mutate(targetDate, {
+      onSuccess: () =>
+        toast({
+          message: `Postponed to ${formatDate(targetDate)}`,
+          undo: () =>
+            undo.mutate(previous, {
+              onSuccess: () => toast({ message: `Back to ${formatDate(previous.targetDate)}` }),
+              onError: (error) => toast({ message: error.message, tone: 'error' }),
+            }),
+        }),
+    });
   };
 
   return (
