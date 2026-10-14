@@ -185,7 +185,7 @@ describe('IdeasPage', () => {
   });
 
   it('opens the new idea form only once when asked from the dashboard', async () => {
-    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [anIdea()] } });
     const router = renderApp('/');
 
     await userEvent.click(await screen.findByRole('link', { name: 'New idea' }));
