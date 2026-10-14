@@ -66,7 +66,7 @@ It needs an ffmpeg with libx264, libvpx-vp9 and libwebp (set `FFMPEG` when it is
 
 ### Interface building blocks
 
-- `components/Feedback.tsx`: `useConfirm()` opens a styled confirmation dialog (focus trapped, Escape cancels) and resolves to the answer; `useToast()` shows a short message at the bottom, optionally with Undo or another action (such as Open after adding an idea). Use them instead of `window.confirm` and inline success text; reversible actions (archive, removing a component) offer Undo rather than asking first.
+- `components/Feedback.tsx`: `useConfirm()` opens a styled confirmation dialog (focus trapped, Escape cancels) and resolves to the answer; `useToast()` shows a short message at the bottom (at the top on a phone), optionally with Undo or another action (such as Open after adding an idea). Two show at most; plain ones go after 5 seconds or when the user moves to another page, ones with a button after 8 seconds, and any can be dismissed. Use them instead of `window.confirm` and inline success text; reversible actions (archive, removing a component) offer Undo rather than asking first.
 - `components/Menu.tsx`: a "⋯"-style menu of actions, keyboard friendly; used for the idea's less frequent actions and the account menu.
 - `components/Skeleton.tsx`: loading placeholders in the shape of the content.
 - `components/ErrorMessage.tsx`: `ErrorMessage` shows why a form submission failed; `LoadError` shows that something on the page couldn't load, in plain words, with Try again to load it again (a refusal the API explains, such as a 403, shows its own message instead). Use `LoadError` for query failures.

@@ -1,5 +1,6 @@
 import { CircleAlert, CircleCheck, X } from 'lucide-react';
 import { createContext, use, useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useLocation } from 'react-router';
 
 export interface ConfirmOptions {
   title: string;
@@ -21,12 +22,14 @@ export interface ToastOptions {
 
 interface Toast extends ToastOptions {
   id: number;
+  /** When it appeared, in `Date.now()` milliseconds. */
+  shownAt: number;
 }
 
 interface Feedback {
   /** Asks the user to confirm in a dialog; resolves to whether they did. */
   confirm: (options: ConfirmOptions) => Promise<boolean>;
-  /** Shows a short message at the bottom of the screen. */
+  /** Shows a short message at the bottom of the screen, or the top on a phone. */
   toast: (options: ToastOptions) => void;
 }
 
@@ -36,20 +39,42 @@ const FeedbackContext = createContext<Feedback | null>(null);
 const toastMs = 5000;
 const undoToastMs = 8000;
 
+/** The most toasts on screen at once; a new one pushes out the oldest. */
+const maxToasts = 2;
+
+/**
+ * How old a toast without a button must be to go when the user moves to another page. Younger ones stay, as they
+ * report what just led there, such as "Invitation sent" before the next step opens.
+ */
+const pageChangeGraceMs = 1000;
+
 /** Provides confirmation dialogs and toasts to the pages inside it. */
 export function FeedbackProvider({ children }: { children: ReactNode }) {
   const [request, setRequest] = useState<{ options: ConfirmOptions; resolve: (ok: boolean) => void } | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(0);
+  const { pathname } = useLocation();
 
   const dismiss = useCallback((id: number) => setToasts((all) => all.filter((t) => t.id !== id)), []);
+
+  // A message about the page left behind is done with once the user moves on; one with Undo or another button stays
+  // until it times out, so it can still be acted on.
+  const [page, setPage] = useState(pathname);
+  if (page !== pathname) {
+    setPage(pathname);
+    setToasts((all) => {
+      const now = Date.now();
+      const kept = all.filter((t) => t.undo || t.action || now - t.shownAt < pageChangeGraceMs);
+      return kept.length === all.length ? all : kept;
+    });
+  }
 
   const feedback = useMemo<Feedback>(
     () => ({
       confirm: (options) => new Promise<boolean>((resolve) => setRequest({ options, resolve })),
       toast: (options) => {
         const id = ++nextId.current;
-        setToasts((all) => [...all.slice(-2), { ...options, id }]);
+        setToasts((all) => [...all.slice(1 - maxToasts), { ...options, id, shownAt: Date.now() }]);
         setTimeout(() => dismiss(id), options.undo || options.action ? undoToastMs : toastMs);
       },
     }),

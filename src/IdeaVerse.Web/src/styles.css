@@ -2186,7 +2186,7 @@ a:focus-visible {
 .toasts {
   position: fixed;
   left: 50%;
-  bottom: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   z-index: 90;
   transform: translateX(-50%);
   display: flex;
@@ -2244,6 +2244,25 @@ a:focus-visible {
   from {
     opacity: 0;
     transform: translateY(8px);
+  }
+}
+
+@keyframes toast-in-top {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* On a phone, toasts drop in from the top, clear of the form fields, buttons, and keyboard at the bottom of the screen. */
+@media (max-width: 700px) {
+  .toasts {
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    bottom: auto;
+  }
+
+  .toast {
+    animation-name: toast-in-top;
   }
 }
 
