@@ -1,10 +1,10 @@
-import { useMemo, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router';
 
 import { request } from '../api/client';
 import { browserTimeZone } from '../api/dates';
 import { currentZoneName, matchesZone, timeZoneOption, timeZoneOptions } from '../api/timeZones';
-import type { Account, ReminderKind, Workspace } from '../api/types';
+import type { Account, ReminderKind, ReminderSettings, Workspace } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { readAccountProblems } from '../auth/identityErrors';
 import { meetsPasswordRules, weakPasswordMessage } from '../auth/passwordRules';
@@ -31,17 +31,41 @@ export function SettingsPage() {
   usePageMeta('Settings', { index: false });
   const { account } = useAuth();
   const { current } = useWorkspace();
+  const showWorkspace = current !== null && canManageWorkspace(current);
+  const sections = [
+    { id: 'profile', label: 'Profile' },
+    { id: 'email', label: 'Email' },
+    { id: 'password', label: 'Password' },
+    { id: 'time-zone', label: 'Time zone' },
+    { id: 'reminders', label: 'Reminders' },
+    ...(showWorkspace ? [{ id: 'workspace', label: 'Workspace' }] : []),
+    { id: 'delete-account', label: 'Delete account' },
+  ];
 
   return (
     <div className="stack">
       <h1>Settings</h1>
-      {account && <ProfileForm account={account} />}
-      <TimeZoneForm account={account} />
-      {account && <RemindersForm account={account} />}
-      {account && <EmailForm account={account} />}
-      <PasswordForm />
-      {current && canManageWorkspace(current) && <WorkspaceSettings key={current.id} workspace={current} />}
-      <DeleteAccountForm />
+      <div className="settings-layout">
+        {/* A sticky side menu on wide screens, and a list of jump links above the cards on phones. */}
+        <nav className="settings-nav" aria-label="Settings sections">
+          <ul>
+            {sections.map((section) => (
+              <li key={section.id}>
+                <Link to={{ hash: section.id }}>{section.label}</Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <div className="stack settings-sections">
+          {account && <ProfileForm account={account} />}
+          {account && <EmailForm account={account} />}
+          <PasswordForm />
+          <TimeZoneForm account={account} />
+          {account && <RemindersForm account={account} />}
+          {showWorkspace && <WorkspaceSettings key={current.id} workspace={current} />}
+          <DeleteAccountForm />
+        </div>
+      </div>
     </div>
   );
 }
@@ -59,14 +83,64 @@ function WorkspaceSettings({ workspace }: { workspace: Workspace }) {
   );
 }
 
+
+/**
+ * Saves a setting as soon as it changes, one save at a time in the order they were made. A save that fails puts back the
+ * last value the API accepted and keeps its error to show; a later change clears it.
+ */
+function useInstantSave<T>(initial: T, save: (value: T) => Promise<void>) {
+  const [value, setValue] = useState(initial);
+  const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [error, setError] = useState<unknown>(null);
+  const accepted = useRef(initial);
+  const queue = useRef(Promise.resolve());
+  const latest = useRef(0);
+
+  const change = (next: T) => {
+    const id = ++latest.current;
+    setValue(next);
+    setError(null);
+    setState('saving');
+    queue.current = queue.current.then(async () => {
+      try {
+        await save(next);
+        accepted.current = next;
+        if (id === latest.current) {
+          setState('saved');
+        }
+      } catch (caught) {
+        // Only the newest change reports back; an older failure is overtaken by the change made after it.
+        if (id === latest.current) {
+          setValue(accepted.current);
+          setError(caught);
+          setState('idle');
+        }
+      }
+    });
+  };
+
+  return { value, state, error, change };
+}
+
+/** Says, beside a card's heading, whether its last change is being saved or has been. */
+function SaveState({ state }: { state: 'idle' | 'saving' | 'saved' }) {
+  return (
+    <span role="status" className={state === 'saved' ? 'save-state success' : 'save-state muted'}>
+      {state === 'saving' ? 'Saving…' : state === 'saved' ? 'Saved' : ''}
+    </span>
+  );
+}
+
+/** The time zone, saved as soon as one is picked; a search saves its first match once typing pauses. */
 function TimeZoneForm({ account }: { account: Account | null }) {
   const { updateTimeZone } = useAuth();
   const saved = account?.timeZone ?? 'UTC';
-  const [timeZone, setTimeZone] = useState(saved);
-  const [error, setError] = useState<unknown>(null);
-  const [pending, setPending] = useState(false);
-  const [done, setDone] = useState(false);
+  const zone = useInstantSave(saved, updateTimeZone);
+  // A search shows its first match straight away, but saves it only once typing pauses.
+  const [searched, setSearched] = useState<string | null>(null);
+  const timeZone = searched ?? zone.value;
   const [search, setSearch] = useState('');
+  const pause = useRef<ReturnType<typeof setTimeout>>(undefined);
   const detected = browserTimeZone();
   const options = useMemo(() => timeZoneOptions([saved]), [saved]);
   const matching = options.filter((option) => matchesZone(option, search));
@@ -74,33 +148,33 @@ function TimeZoneForm({ account }: { account: Account | null }) {
   const shown = matching.some((option) => option.id === timeZone) ? matching : [selected, ...matching];
   const isDetected = currentZoneName(detected) === currentZoneName(timeZone);
 
+  useEffect(() => () => clearTimeout(pause.current), []);
+
+  const choose = (id: string) => {
+    clearTimeout(pause.current);
+    setSearched(null);
+    if (id !== zone.value) {
+      zone.change(id);
+    }
+  };
+
   const filter = (text: string) => {
     setSearch(text);
     const found = options.filter((option) => matchesZone(option, text));
     const first = found[0];
     if (first && !found.some((option) => option.id === timeZone)) {
-      setTimeZone(first.id);
-    }
-  };
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    setPending(true);
-    setError(null);
-    setDone(false);
-    try {
-      await updateTimeZone(timeZone);
-      setDone(true);
-    } catch (caught) {
-      setError(caught);
-    } finally {
-      setPending(false);
+      clearTimeout(pause.current);
+      setSearched(first.id);
+      pause.current = setTimeout(() => choose(first.id), searchPause);
     }
   };
 
   return (
-    <form className="card stack" onSubmit={(event) => void submit(event)} aria-label="Time zone">
-      <h2>Time zone</h2>
+    <form id="time-zone" className="card stack" onSubmit={(event) => event.preventDefault()} aria-label="Time zone">
+      <div className="row spread">
+        <h2>Time zone</h2>
+        <SaveState state={zone.state} />
+      </div>
       <Field label="Search time zones" hint="Type a city, region, or offset such as +02. The first match is chosen; pick another below.">
         {(props) => (
           <input {...props} type="search" autoComplete="off" value={search} onChange={(e) => filter(e.target.value)} placeholder="Athens" />
@@ -108,11 +182,11 @@ function TimeZoneForm({ account }: { account: Account | null }) {
       </Field>
       <Field
         label="Your time zone"
-        hint="Decides when an idea reaches its target date or is overdue for you. Reminders arrive at 8:00 in this time zone."
-        error={fieldError(error, 'timeZone')}
+        hint="Decides when an idea reaches its target date or is overdue for you. Reminders arrive at 8:00 in this time zone. Saved as soon as you pick one."
+        error={fieldError(zone.error, 'timeZone')}
       >
         {(props) => (
-          <select {...props} value={timeZone} onChange={(e) => setTimeZone(e.target.value)}>
+          <select {...props} value={timeZone} onChange={(e) => choose(e.target.value)}>
             {shown.map((option) => (
               <option key={option.id} value={option.id}>
                 {option.label}
@@ -133,57 +207,40 @@ function TimeZoneForm({ account }: { account: Account | null }) {
       {!isDetected && (
         <p className="small">
           This browser is set to {timeZoneOption(currentZoneName(detected)).label}.{' '}
-          <button type="button" className="link-button" onClick={() => setTimeZone(currentZoneName(detected))}>
+          <button type="button" className="link-button" onClick={() => choose(currentZoneName(detected))}>
             Use it
           </button>
         </p>
       )}
-      <ErrorMessage error={error} />
-      {done && (
-        <p role="status" className="success">
-          Saved.
-        </p>
-      )}
-      <div className="row">
-        <button type="submit" className="button primary" disabled={pending || timeZone === saved}>
-          {pending ? 'Saving…' : 'Save'}
-        </button>
-      </div>
+      <ErrorMessage error={zone.error} />
     </form>
   );
 }
 
+/** How long a time zone search waits after the last keystroke before saving its first match. */
+const searchPause = 800;
+
+/** Which reminders to get and what is emailed; each switch saves as soon as it is flipped. */
 function RemindersForm({ account }: { account: Account }) {
   const { updateReminders } = useAuth();
-  const [email, setEmail] = useState(account.emailReminders);
-  const [kinds, setKinds] = useState<ReminderKind[]>(account.reminderKinds);
-  const [comments, setComments] = useState(account.emailComments);
-  const [error, setError] = useState<unknown>(null);
-  const [pending, setPending] = useState(false);
-  const [done, setDone] = useState(false);
+  const settings = useInstantSave<ReminderSettings>(
+    { emailReminders: account.emailReminders, reminderKinds: account.reminderKinds, emailComments: account.emailComments },
+    updateReminders,
+  );
+  const { emailReminders: email, reminderKinds: kinds, emailComments: comments } = settings.value;
 
   const toggle = (kind: ReminderKind, on: boolean) =>
-    setKinds((current) => reminderChoices.map((c) => c.kind).filter((k) => (k === kind ? on : current.includes(k))));
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    setPending(true);
-    setError(null);
-    setDone(false);
-    try {
-      await updateReminders({ emailReminders: email, reminderKinds: kinds, emailComments: email && comments });
-      setDone(true);
-    } catch (caught) {
-      setError(caught);
-    } finally {
-      setPending(false);
-    }
-  };
+    settings.change({ ...settings.value, reminderKinds: reminderChoices.map((c) => c.kind).filter((k) => (k === kind ? on : kinds.includes(k))) });
 
   return (
-    <form id="reminders" className="card stack" onSubmit={(event) => void submit(event)} aria-label="Reminders">
-      <h2>Reminders</h2>
-      <p className="muted small">Reminders are for ideas you own or are on the team of. They always appear under the bell; choose which ones you get.</p>
+    <form id="reminders" className="card stack" onSubmit={(event) => event.preventDefault()} aria-label="Reminders">
+      <div className="row spread">
+        <h2>Reminders</h2>
+        <SaveState state={settings.state} />
+      </div>
+      <p className="muted small">
+        Reminders are for ideas you own or are on the team of. They always appear under the bell; choose which ones you get. Changes are saved straight away.
+      </p>
       <fieldset className="choices">
         <legend>Remind me when an idea is…</legend>
         {reminderChoices.map((choice) => (
@@ -197,11 +254,20 @@ function RemindersForm({ account }: { account: Account }) {
         ))}
       </fieldset>
       <label className="check">
-        <input type="checkbox" checked={email} onChange={(e) => setEmail(e.target.checked)} />
+        <input
+          type="checkbox"
+          checked={email}
+          onChange={(e) => settings.change({ ...settings.value, emailReminders: e.target.checked, emailComments: e.target.checked && comments })}
+        />
         <span>Also email me these reminders</span>
       </label>
       <label className="check">
-        <input type="checkbox" checked={email && comments} disabled={!email} onChange={(e) => setComments(e.target.checked)} />
+        <input
+          type="checkbox"
+          checked={email && comments}
+          disabled={!email}
+          onChange={(e) => settings.change({ ...settings.value, emailComments: e.target.checked })}
+        />
         <span>
           Email me about new comments too
           <span className="muted small block">Comments on ideas you own or are on the team of. Mentions are always emailed.</span>
@@ -212,17 +278,7 @@ function RemindersForm({ account }: { account: Account }) {
           With nothing ticked you won’t get any reminders.
         </p>
       )}
-      <ErrorMessage error={error} />
-      {done && (
-        <p role="status" className="success">
-          Saved.
-        </p>
-      )}
-      <div className="row">
-        <button type="submit" className="button primary" disabled={pending}>
-          {pending ? 'Saving…' : 'Save'}
-        </button>
-      </div>
+      <ErrorMessage error={settings.error} />
     </form>
   );
 }
@@ -261,7 +317,7 @@ function ProfileForm({ account }: { account: Account }) {
   };
 
   return (
-    <form className="card stack" onSubmit={submit} aria-label="Profile">
+    <form id="profile" className="card stack" onSubmit={submit} aria-label="Profile">
       <h2>Profile</h2>
       <Field label="Your name" hint="Shown to your teams instead of your email address." error={fieldError(save.error, 'displayName')}>
         {(props) => <input {...props} maxLength={100} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Alex Morgan" />}
@@ -297,7 +353,7 @@ function EmailForm({ account }: { account: Account }) {
   };
 
   return (
-    <form className="card stack" onSubmit={submit} aria-label="Email">
+    <form id="email" className="card stack" onSubmit={submit} aria-label="Email">
       <h2>Email</h2>
       <p className="muted small">
         You sign in with <strong>{account.email}</strong>. To change it, enter the new address; it changes once you open the link we send there.
@@ -346,7 +402,7 @@ function PasswordForm() {
   };
 
   return (
-    <form className="card stack" onSubmit={submit} aria-label="Password" noValidate>
+    <form id="password" className="card stack" onSubmit={submit} aria-label="Password" noValidate>
       <h2>Password</h2>
       <Field label="Current password" error={validation.errors.oldPassword ?? problems?.currentPassword}>
         {(props) => (
@@ -424,7 +480,7 @@ function DeleteAccountForm() {
   };
 
   return (
-    <form className="card danger stack" onSubmit={(event) => void submit(event)} aria-label="Delete account" noValidate>
+    <form id="delete-account" className="card danger stack" onSubmit={(event) => void submit(event)} aria-label="Delete account" noValidate>
       <h2>Delete account</h2>
       <p className="muted small">
         Workspaces only you are in are deleted with everything in them. Ideas you own in other workspaces pass to each workspace’s owner.

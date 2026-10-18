@@ -2,8 +2,11 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
+import { useMoveIdea } from '../api/queries';
+import { statusLabels, type Idea, type IdeaStatus } from '../api/types';
+import { useToast } from '../components/Feedback';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
-import { CommandPalette } from './CommandPalette';
+import { CommandPalette, type IdeaCommands } from './CommandPalette';
 import { Dialog } from './Dialog';
 import { isTyping, letterOf, paletteShortcut, shortcuts, usesCommandKey } from './keys';
 
@@ -22,6 +25,7 @@ export function Commands() {
   const navigate = useNavigate();
   const { current } = useWorkspace();
   const pendingG = useRef(0);
+  const ideaCommands = useIdeaCommands();
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -82,10 +86,41 @@ export function Commands() {
           {paletteShortcut}
         </kbd>
       </button>
-      {open === 'palette' && <CommandPalette onClose={() => setOpen(null)} />}
+      {open === 'palette' && <CommandPalette ideaCommands={ideaCommands} onClose={() => setOpen(null)} />}
       {open === 'help' && <ShortcutsHelp onClose={() => setOpen(null)} />}
     </>
   );
+}
+
+/**
+ * What the palette's idea actions do once it has closed: they live here, with the header, so their toasts and Undo
+ * outlast the palette.
+ */
+function useIdeaCommands(): IdeaCommands {
+  const move = useMoveIdea();
+  const toast = useToast();
+
+  /** `from` is passed by Undo, whose closure would otherwise see the idea as it was; the Undo itself offers no Undo. */
+  const changeStatus = (idea: Idea, next: IdeaStatus, { from = idea.status, undoable = true } = {}) =>
+    move.mutateAsync({ idea, status: next }).then(
+      (saved) =>
+        toast({
+          message: `“${idea.title}” set to ${statusLabels[next]}`,
+          undo: undoable ? () => void changeStatus(saved, from, { from: next, undoable: false }) : undefined,
+        }),
+      () => toast({ message: 'Couldn’t change the status. Try again.', tone: 'error' }),
+    );
+
+  const copyLink = (idea: { id: string; title: string }) =>
+    // Started inside the promise, so a browser without clipboard access lands in the error toast too.
+    Promise.resolve()
+      .then(() => navigator.clipboard.writeText(`${window.location.origin}/ideas/${idea.id}`))
+      .then(
+        () => toast({ message: `Copied the link to “${idea.title}”` }),
+        () => toast({ message: 'Couldn’t copy the link.', tone: 'error' }),
+      );
+
+  return { changeStatus: (idea, status) => void changeStatus(idea, status), copyLink: (idea) => void copyLink(idea) };
 }
 
 /** Lists the keyboard shortcuts. */

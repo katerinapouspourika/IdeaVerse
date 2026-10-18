@@ -173,7 +173,7 @@ describe('Notifications', () => {
     await userEvent.click(await screen.findByRole('link', { name: 'Open idea' }));
 
     expect(await screen.findByText('Switched to Globex')).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveValue('ws-2');
+    expect(screen.getByRole('button', { name: 'Workspace: Globex' })).toBeInTheDocument();
   });
 
   it('links the reminder settings', async () => {
