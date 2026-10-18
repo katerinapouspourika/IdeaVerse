@@ -23,6 +23,8 @@ internal sealed class FakeMailSender : IMailSender
   public static Uri LinkIn(MailMessage message, string prefix)
     => new(message.Body.Split('\n').Select(l => l.Trim()).First(l => l.StartsWith(prefix, StringComparison.Ordinal)));
 
+  public static string IdeaLinkIn(MailMessage message) => LinkIn(message, $"{IdeaVerseApiFactory.AppUrl}/ideas/").AbsoluteUri;
+
   public Task SendAsync(MailMessage message, CancellationToken cancellationToken)
   {
     if (Fail)

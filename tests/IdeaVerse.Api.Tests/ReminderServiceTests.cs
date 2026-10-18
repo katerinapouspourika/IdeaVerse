@@ -169,7 +169,8 @@ public class ReminderServiceTests
 
     var mail = factory.Mail.Sent.Single();
     await Assert.That(mail.Subject).IsEqualTo("Due tomorrow: Launch");
-    await Assert.That(mail.Body).Contains($"https://app.example.com/ideas/{idea.Id}");
+    await Assert.That(FakeMailSender.IdeaLinkIn(mail)).IsEqualTo($"https://app.example.com/ideas/{idea.Id}");
+    await Assert.That(mail.Html).Contains($"href=\"https://app.example.com/ideas/{idea.Id}\"");
   }
 
   [Test]

@@ -65,6 +65,20 @@ public sealed partial class ReminderService(
   }
 
   /// <summary>
+  /// The web app address a notification opens, as the bell does (<c>notificationLink</c> in the web app): the comment or component it is about
+  /// as the page's fragment, or the idea itself.
+  /// </summary>
+  /// <param name="notification">The notification.</param>
+  /// <returns>The path and fragment, starting with <c>/ideas/</c>.</returns>
+  private static string PathTo(Notification notification)
+    => (notification.CommentId, notification.ComponentId) switch
+    {
+      ({ } commentId, _) => $"/ideas/{notification.IdeaId}#comment-{commentId}",
+      (null, { } componentId) => $"/ideas/{notification.IdeaId}#component-{componentId}",
+      _ => $"/ideas/{notification.IdeaId}",
+    };
+
+  /// <summary>
   /// Logs a reminder email that could not be sent.
   /// </summary>
   /// <param name="logger">Target logger.</param>
@@ -358,7 +372,7 @@ public sealed partial class ReminderService(
         notification.Detail,
         StartContent.For(notification.StartsAt, notification.CreatedAt, zone, item.StartDate, item.StartHasTime));
       var message = ReminderSchedule.Message(content, timeProvider.TodayIn(zone));
-      var link = app.Value.Link($"/ideas/{notification.IdeaId}");
+      var link = app.Value.Link(PathTo(notification));
       var reason = notification.Kind == ReminderKind.Mentioned
         ? "You get this because someone mentioned you in IdeaVerse."
         : notification.ComponentId is null

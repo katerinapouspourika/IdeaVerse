@@ -103,6 +103,9 @@ public class AssignmentTests
     await Assert.That(again.Raised).IsEqualTo(0);
     await Assert.That(factory.Mail.Sent.Where(m => m.To == "viewer@example.com").Select(m => m.Subject)).IsEquivalentTo(
       ["Assigned to you: Budget (Launch)", "Due tomorrow: Budget (Launch)"]);
+    var link = $"https://app.example.com/ideas/{ideaId}#component-{component.Id}";
+    await Assert.That(factory.Mail.Sent.Where(m => m.To == "viewer@example.com").Select(FakeMailSender.IdeaLinkIn)).IsEquivalentTo([link, link]);
+    await Assert.That(factory.Mail.Sent.Where(m => m.To == "viewer@example.com").All(m => m.Html!.Contains($"href=\"{link}\"", StringComparison.Ordinal))).IsTrue();
     await Assert.That(inbox.Items.Select(n => n.Message)).Contains(m => m.StartsWith("“Budget” for “Launch” is due tomorrow", StringComparison.Ordinal));
     await Assert.That(inbox.Items.Select(n => n.ComponentId)).IsEquivalentTo([(Guid?)component.Id, component.Id]);
   }
