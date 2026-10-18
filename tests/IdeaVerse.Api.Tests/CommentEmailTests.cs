@@ -37,7 +37,8 @@ public class CommentEmailTests
     (await member.PostAsJsonAsync($"/api/v1/ideas/{idea.Id}/comments", new CommentRequest("Before"), Json.Options)).Dispose();
 
     var account = await SetRemindersAsync(owner, emailComments: true);
-    (await member.PostAsJsonAsync($"/api/v1/ideas/{idea.Id}/comments", new CommentRequest("After"), Json.Options)).Dispose();
+    using var posted = await member.PostAsJsonAsync($"/api/v1/ideas/{idea.Id}/comments", new CommentRequest("After"), Json.Options);
+    var comment = await posted.Content.ReadFromJsonAsync<CommentResponse>(Json.Options);
     var result = await factory.RunRemindersAsync();
 
     await Assert.That(account.EmailComments).IsTrue();
@@ -45,6 +46,8 @@ public class CommentEmailTests
     var mail = factory.Mail.Sent.Single();
     await Assert.That(mail.Subject).IsEqualTo("New comment on Launch");
     await Assert.That(mail.Body).Contains("After");
+    await Assert.That(FakeMailSender.IdeaLinkIn(mail)).IsEqualTo($"https://app.example.com/ideas/{idea.Id}#comment-{comment!.Id}");
+    await Assert.That(mail.Html).Contains($"href=\"https://app.example.com/ideas/{idea.Id}#comment-{comment.Id}\"");
   }
 
   [Test]
@@ -58,10 +61,14 @@ public class CommentEmailTests
     var ownerId = (await owner.GetFromJsonAsync<WorkspaceMemberResponse[]>($"/api/v1/workspaces/{await owner.WorkspaceIdAsync()}/members", Json.Options))!
       .Single(m => m.Email != "member@example.com").UserId;
 
-    (await member.PostAsJsonAsync($"/api/v1/ideas/{idea.Id}/comments", new CommentRequest($"Over to you @[Owner]({ownerId})"), Json.Options)).Dispose();
+    using var posted = await member.PostAsJsonAsync($"/api/v1/ideas/{idea.Id}/comments", new CommentRequest($"Over to you @[Owner]({ownerId})"), Json.Options);
+    var comment = await posted.Content.ReadFromJsonAsync<CommentResponse>(Json.Options);
     await factory.RunRemindersAsync();
 
-    await Assert.That(factory.Mail.Sent.Select(m => m.Subject)).IsEquivalentTo(["You were mentioned on Launch"]);
+    var mail = factory.Mail.Sent.Single();
+    await Assert.That(mail.Subject).IsEqualTo("You were mentioned on Launch");
+    await Assert.That(FakeMailSender.IdeaLinkIn(mail)).IsEqualTo($"https://app.example.com/ideas/{idea.Id}#comment-{comment!.Id}");
+    await Assert.That(mail.Html).Contains($"href=\"https://app.example.com/ideas/{idea.Id}#comment-{comment.Id}\"");
   }
 
   private static async Task<AccountResponse> SetRemindersAsync(HttpClient client, bool emailComments)
