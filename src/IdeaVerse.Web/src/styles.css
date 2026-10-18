@@ -3316,15 +3316,24 @@ a:focus-visible {
   overflow-wrap: anywhere;
 }
 
-/* Board view: a column per status, scrolling sideways on narrow screens. */
+/* Board view: a column per status across the whole window, scrolling sideways when they don't fit. */
+.content.wide:has(> .stack > .board) {
+  max-width: none;
+}
+
 .board {
   /* Positioned, so the cards' visually hidden labels scroll with the board instead of widening the page. */
   position: relative;
   display: grid;
-  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, minmax(260px, 1fr));
   gap: 14px;
   overflow-x: auto;
   padding-bottom: 6px;
+}
+
+.board.is-dragging {
+  cursor: grabbing;
+  user-select: none;
 }
 
 .board-column {
@@ -3369,12 +3378,36 @@ a:focus-visible {
   padding: 14px;
 }
 
-.board-card[draggable='true'] {
+/* A card that can be dragged: a long press picks it up on a touch screen, without the browser's link callout. */
+.board-card.movable {
   cursor: grab;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .board-card.dragging {
-  opacity: 0.5;
+  opacity: 0.4;
+}
+
+/* The copy of the dragged card that follows the pointer. */
+.board-card.board-drag-preview {
+  position: fixed;
+  z-index: 40;
+  pointer-events: none;
+  border-color: var(--accent);
+  box-shadow: var(--shadow-lift);
+  transform: rotate(2deg);
+  cursor: grabbing;
+}
+
+/* Where the dragged card will land, in the column under the pointer. */
+.board-drop-slot {
+  padding: 14px;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-weight: 700;
+  text-align: center;
 }
 
 .board-card.is-overdue {
@@ -3391,8 +3424,9 @@ a:focus-visible {
   color: var(--accent);
 }
 
-.grip {
+.board-grip {
   flex: none;
+  margin: -6px -8px -6px 0;
   color: var(--muted);
 }
 
@@ -3440,10 +3474,15 @@ a:focus-visible {
   z-index: 2;
 }
 
-.board-move select {
-  width: 100%;
-  min-height: 34px;
-  padding: 4px 8px;
+/* An open menu sits above the card's tags and the cards below it. */
+.board-move:has(.menu-list) {
+  z-index: 3;
+}
+
+/* The last card of a longer column opens its menu upwards, so it stays inside the board's scrolling area. */
+.board-cards > li:last-child:not(:first-child) .menu-list {
+  top: auto;
+  bottom: calc(100% + 6px);
 }
 
 .board-empty {
@@ -3451,9 +3490,22 @@ a:focus-visible {
   text-align: center;
 }
 
-@media (max-width: 860px) {
+/* On a phone, a column fills most of the screen and a swipe settles on the next one, except while dragging. */
+@media (max-width: 600px) {
   .board {
-    grid-template-columns: repeat(4, minmax(240px, 80vw));
+    grid-template-columns: repeat(4, 84vw);
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 16px;
+    margin-inline: -16px;
+    padding-inline: 16px;
+  }
+
+  .board.is-dragging {
+    scroll-snap-type: none;
+  }
+
+  .board-column {
+    scroll-snap-align: start;
   }
 }
 
