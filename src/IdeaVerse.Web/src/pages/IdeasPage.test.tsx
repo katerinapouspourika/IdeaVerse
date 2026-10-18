@@ -1,4 +1,4 @@
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { ReceivedInvitation } from '../api/types';
@@ -103,6 +103,28 @@ describe('IdeasPage', () => {
     expect(calls.some((c) => c.path === '/api/v1/workspaces/ws-1/ideas?status=Done')).toBe(true);
   });
 
+  it('fades the edges of the status tabs that have more tabs beyond them', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [anIdea()] } });
+    renderApp('/ideas');
+    await screen.findByText('Black Friday teaser');
+    const row = screen.getByRole('navigation', { name: 'Filter by status' });
+    expect(row).not.toHaveAttribute('data-fade');
+
+    // jsdom lays nothing out, so the row is given a phone's width and more tabs than fit.
+    Object.defineProperty(row, 'clientWidth', { configurable: true, value: 350 });
+    Object.defineProperty(row, 'scrollWidth', { configurable: true, value: 600 });
+    fireEvent.scroll(row);
+    expect(row).toHaveAttribute('data-fade', 'end');
+
+    row.scrollLeft = 100;
+    fireEvent.scroll(row);
+    expect(row).toHaveAttribute('data-fade', 'both');
+
+    row.scrollLeft = 250;
+    fireEvent.scroll(row);
+    expect(row).toHaveAttribute('data-fade', 'start');
+  });
+
   it('confirms a new idea in a toast naming it, whose Open goes to the idea', async () => {
     fakeApi({
       ...signedIn,
@@ -185,7 +207,7 @@ describe('IdeasPage', () => {
   });
 
   it('opens the new idea form only once when asked from the dashboard', async () => {
-    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [anIdea()] } });
     const router = renderApp('/');
 
     await userEvent.click(await screen.findByRole('link', { name: 'New idea' }));
@@ -215,7 +237,7 @@ describe('IdeasPage', () => {
         },
         [ideasRoute]: { status: 200, body: [] },
       });
-      renderApp('/ideas');
+      const router = renderApp('/ideas');
 
       expect(await screen.findByRole('heading', { name: 'Welcome to IdeaVerse' })).toBeInTheDocument();
       expect(screen.getByRole('list', { name: 'Setting up your workspace' })).toHaveTextContent('1Name your workspace2Invite your team');
@@ -226,7 +248,8 @@ describe('IdeasPage', () => {
       expect(await screen.findByRole('heading', { name: 'Invite your team to Acme Marketing' })).toBeInTheDocument();
       await userEvent.click(screen.getByRole('button', { name: 'Skip for now' }));
 
-      expect(await screen.findByRole('heading', { name: 'Ideas' })).toBeInTheDocument();
+      expect(await screen.findByRole('region', { name: 'Get started' })).toBeInTheDocument();
+      expect(router.state.location.pathname).toBe('/');
       expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ name: 'Acme Marketing' });
     });
 
@@ -311,6 +334,12 @@ describe('IdeasPage', () => {
         { email: 'kat@example.com', role: 'Admin' },
       ]);
       expect(router.state.location.pathname).toBe('/workspaces/ws-1/invite');
+
+      await userEvent.clear(within(form).getByLabelText('Email 1'));
+      await userEvent.type(within(form).getByLabelText('Email 1'), 'leo@example.com');
+      await userEvent.click(within(form).getByRole('button', { name: 'Send invitations' }));
+
+      await waitFor(() => expect(router.state.location.pathname).toBe('/'));
     });
 
     it('does not offer to invite to a workspace the user cannot manage', async () => {
