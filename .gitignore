@@ -200,7 +200,8 @@ ClientBin/
 *.jfm
 *.pfx
 *.publishsettings
-node_modules/
+# Also a symbolic link named node_modules, as worktrees often use to share one install.
+node_modules
 orleans.codegen.cs
 
 # Since there are multiple workflows, uncomment next line to ignore bower_components
