@@ -211,7 +211,8 @@ describe('IdeasPage', () => {
     const router = renderApp('/ideas');
     await screen.findByText('Acme idea');
 
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Workspace' }), 'Globex');
+    await userEvent.click(screen.getByRole('button', { name: 'Workspace: Acme Marketing' }));
+    await userEvent.click(screen.getByRole('menuitemradio', { name: /Globex/ }));
 
     expect(await screen.findByText('Globex idea')).toBeInTheDocument();
     expect(screen.queryByText('Acme idea')).not.toBeInTheDocument();
@@ -236,7 +237,8 @@ describe('IdeasPage', () => {
     const router = renderApp('/ideas/idea-1');
     await screen.findByRole('heading', { name: 'Acme idea' });
 
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Workspace' }), 'Globex');
+    await userEvent.click(screen.getByRole('button', { name: 'Workspace: Acme Marketing' }));
+    await userEvent.click(screen.getByRole('menuitemradio', { name: /Globex/ }));
 
     expect(await screen.findByText('Globex idea')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/ideas');

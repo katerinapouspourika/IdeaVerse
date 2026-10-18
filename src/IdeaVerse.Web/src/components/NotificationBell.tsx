@@ -9,8 +9,11 @@ import { WorkspaceTag } from '../workspaces/WorkspaceTag';
 /** How many notifications the drop-down previews. */
 const previewSize = 6;
 
-/** The header bell: shows how many notifications are unread and previews the latest in a drop-down. */
-export function NotificationBell() {
+/**
+ * The header bell: shows how many notifications are unread and previews the latest in a drop-down. `hidden` leaves only
+ * the count on the installed app's icon, for phones, whose bottom bar links to the notifications instead.
+ */
+export function NotificationBell({ hidden = false }: { hidden?: boolean }) {
   const notifications = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
@@ -44,6 +47,9 @@ export function NotificationBell() {
   useAppBadge(notifications.data?.unreadCount);
 
   const items = notifications.data?.items.slice(0, previewSize) ?? [];
+  if (hidden) {
+    return null;
+  }
 
   return (
     <div className="bell-menu" ref={root}>

@@ -115,7 +115,7 @@ describe('Joining through an invite link', () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/ideas'));
     expect(await screen.findByText('Welcome to Globex!')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveValue('ws-2'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Workspace: Globex' })).toBeInTheDocument());
     expect(calls.some((c) => c.method === 'POST' && c.path === '/api/v1/join/abc123')).toBe(true);
   });
 
