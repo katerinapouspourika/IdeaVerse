@@ -28,6 +28,23 @@
   --warn-soft: #fff4d6;
   --ok: #17845a;
   --ok-soft: #e1f6ec;
+  /* One palette for an idea's status wherever it shows: badge background and text (each at least 4.5:1), and the solid
+     colour for timeline bars and board columns. Overdue is a red modifier on top of any of them. */
+  --status-planned-bg: #eceff4;
+  --status-planned-text: #45526a;
+  --status-planned-bar: #7a869c;
+  --status-inprogress-bg: #e2edfd;
+  --status-inprogress-text: #1d4fb8;
+  --status-inprogress-bar: #2f6fd6;
+  --status-postponed-bg: #fff1d6;
+  --status-postponed-text: #8a4b00;
+  --status-postponed-bar: #e09a00;
+  --status-done-bg: #dcf3e7;
+  --status-done-text: #0f6b45;
+  --status-done-bar: #1f9a63;
+  --status-overdue-bg: #fde8ea;
+  --status-overdue-text: #b0232c;
+  --status-overdue-bar: #c8323a;
   --radius: 16px;
   --radius-small: 10px;
   --shadow: 0 1px 2px rgb(74 52 20 / 0.07), 0 4px 16px rgb(74 52 20 / 0.07);
@@ -59,6 +76,21 @@
     --warn-soft: #3a3016;
     --ok: #6fe0ae;
     --ok-soft: #12352d;
+    --status-planned-bg: #283058;
+    --status-planned-text: #c9d1e6;
+    --status-planned-bar: #8c97bb;
+    --status-inprogress-bg: #16306a;
+    --status-inprogress-text: #9cc7ff;
+    --status-inprogress-bar: #5b9cf0;
+    --status-postponed-bg: #3a3016;
+    --status-postponed-text: #ffd27a;
+    --status-postponed-bar: #f0b43c;
+    --status-done-bg: #12352d;
+    --status-done-text: #6fe0ae;
+    --status-done-bar: #3fbf88;
+    --status-overdue-bg: #3d1d2b;
+    --status-overdue-text: #ff8a8f;
+    --status-overdue-bar: #ff6b73;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
     --shadow-lift: 0 8px 28px rgb(0 0 0 / 0.4);
     color-scheme: dark;
@@ -87,6 +119,21 @@
   --warn-soft: #3a3016;
   --ok: #6fe0ae;
   --ok-soft: #12352d;
+  --status-planned-bg: #283058;
+  --status-planned-text: #c9d1e6;
+  --status-planned-bar: #8c97bb;
+  --status-inprogress-bg: #16306a;
+  --status-inprogress-text: #9cc7ff;
+  --status-inprogress-bar: #5b9cf0;
+  --status-postponed-bg: #3a3016;
+  --status-postponed-text: #ffd27a;
+  --status-postponed-bar: #f0b43c;
+  --status-done-bg: #12352d;
+  --status-done-text: #6fe0ae;
+  --status-done-bar: #3fbf88;
+  --status-overdue-bg: #3d1d2b;
+  --status-overdue-text: #ff8a8f;
+  --status-overdue-bar: #ff6b73;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
   --shadow-lift: 0 8px 28px rgb(0 0 0 / 0.4);
   color-scheme: dark;
@@ -533,7 +580,7 @@ textarea:focus-visible,
 }
 
 .badge {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 999px;
@@ -541,19 +588,62 @@ textarea:focus-visible,
   color: var(--accent);
 }
 
-.badge.status-done {
-  background: var(--ok-soft);
-  color: var(--ok);
+/* Each status class points the shared --status-* names at its colours, for its badge, bar, chip, or column. */
+.status-planned {
+  --status-bg: var(--status-planned-bg);
+  --status-text: var(--status-planned-text);
+  --status-bar: var(--status-planned-bar);
 }
 
-.badge.status-postponed {
-  background: var(--warn-soft);
-  color: var(--warn);
+.status-inprogress {
+  --status-bg: var(--status-inprogress-bg);
+  --status-text: var(--status-inprogress-text);
+  --status-bar: var(--status-inprogress-bar);
 }
 
+.status-postponed {
+  --status-bg: var(--status-postponed-bg);
+  --status-text: var(--status-postponed-text);
+  --status-bar: var(--status-postponed-bar);
+}
+
+.status-done {
+  --status-bg: var(--status-done-bg);
+  --status-text: var(--status-done-text);
+  --status-bar: var(--status-done-bar);
+}
+
+.badge.overdue,
+.calendar-idea.is-overdue,
+.timeline-bar.is-overdue {
+  --status-bg: var(--status-overdue-bg);
+  --status-text: var(--status-overdue-text);
+  --status-bar: var(--status-overdue-bar);
+}
+
+.badge.status-planned,
+.badge.status-inprogress,
+.badge.status-postponed,
+.badge.status-done,
 .badge.overdue {
-  background: var(--danger-soft);
-  color: var(--danger);
+  background: var(--status-bg);
+  color: var(--status-text);
+}
+
+/* A dot before the label, so the status isn't told by colour alone. */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.status-badge::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .progress {
@@ -954,22 +1044,13 @@ h3 {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--status-bg);
+  color: var(--status-text);
+  border-left: 3px solid var(--status-bar);
   border-radius: 6px;
   padding: 1px 4px;
   margin-top: 2px;
   text-decoration: none;
-}
-
-.calendar-idea.is-overdue {
-  background: var(--danger-soft);
-  color: var(--danger);
-}
-
-.calendar-idea.is-done {
-  background: var(--ok-soft);
-  color: var(--ok);
 }
 
 /* On narrow screens the month buttons show only their arrows, so the month's name fits between them. */
@@ -2523,6 +2604,8 @@ a:focus-visible {
   border-radius: var(--radius);
   background: var(--bg-tint);
   border: 2px dashed transparent;
+  /* The column's status colour as a band along its top. */
+  box-shadow: inset 0 4px 0 var(--status-bar, transparent);
   transition: border-color 0.15s, background 0.15s;
 }
 
@@ -3166,27 +3249,7 @@ a:focus-visible {
   top: 16px;
   height: 20px;
   border-radius: 999px;
-  background: var(--sky);
-}
-
-.timeline-bar.status-planned {
-  background: color-mix(in srgb, var(--accent) 55%, var(--surface));
-}
-
-.timeline-bar.status-inprogress {
-  background: var(--sky);
-}
-
-.timeline-bar.status-postponed {
-  background: var(--sun);
-}
-
-.timeline-bar.status-done {
-  background: var(--ok);
-}
-
-.timeline-bar.is-overdue {
-  background: var(--danger);
+  background: var(--status-bar);
 }
 
 .timeline-bar.clipped {

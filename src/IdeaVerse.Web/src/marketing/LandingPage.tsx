@@ -117,7 +117,7 @@ function HeroPreview() {
       <div className="preview-card">
         <div className="row spread">
           <strong>Spring product launch</strong>
-          <span className="badge">In progress</span>
+          <span className="badge status-badge status-inprogress">In progress</span>
         </div>
         <div className="row spread small">
           <span className="muted">Target date in 6 days</span>
@@ -133,7 +133,7 @@ function HeroPreview() {
       <div className="preview-card offset">
         <div className="row spread">
           <strong>Team offsite</strong>
-          <span className="badge status-postponed">Postponed</span>
+          <span className="badge status-badge status-postponed">Postponed</span>
         </div>
         <div className="row spread small">
           <span className="muted">Target date in 3 weeks</span>
@@ -145,7 +145,7 @@ function HeroPreview() {
       <div className="preview-card">
         <div className="row spread">
           <strong>Customer newsletter</strong>
-          <span className="badge status-done">Done</span>
+          <span className="badge status-badge status-done">Done</span>
         </div>
         <div className="row spread small">
           <span className="muted">Finished on time</span>
