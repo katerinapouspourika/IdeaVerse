@@ -203,6 +203,9 @@ export interface Notification {
   id: string;
   ideaId: string;
   ideaTitle: string;
+  /** The workspace the idea belongs to. */
+  workspaceId: string;
+  workspaceName: string;
   kind: ReminderKind;
   targetDate: string;
   message: string;
