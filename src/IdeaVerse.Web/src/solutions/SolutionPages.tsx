@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router';
 
 import { useAuth } from '../auth/AuthContext';
 import { cardGridClass } from '../components/cardGrid';
+import { CtaBand } from '../components/CtaBand';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { publicPages } from '../seo/pages';
 import { usePageMeta } from '../seo/usePageMeta';
@@ -53,6 +54,7 @@ export function UseCasesPage() {
           ))}
         </ul>
       </section>
+      <CtaBand title="Ready to plan your team’s ideas?" text="Free to start. Invite your team whenever you’re ready." />
     </div>
   );
 }
@@ -145,6 +147,7 @@ export function ComparisonsPage() {
           ))}
         </ul>
       </section>
+      <CtaBand title="Ready to see if it fits?" text="Free to start, so the quickest way to know is to try it with one real idea." />
     </div>
   );
 }

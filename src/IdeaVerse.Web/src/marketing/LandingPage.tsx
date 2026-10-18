@@ -1,5 +1,7 @@
 import { AlarmClock, ArrowRight, CalendarDays, Lightbulb, Puzzle, Sparkles, Users } from 'lucide-react';
 import { Link } from 'react-router';
+
+import { CtaBand } from '../components/CtaBand';
 import { publicPages } from '../seo/pages';
 import { usePageMeta } from '../seo/usePageMeta';
 
@@ -90,22 +92,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="landing-section">
-        <div className="landing-inner">
-          <div className="cta-band">
-            <h2 className="section-title">Ready to make your next idea happen?</h2>
-            <p className="lead">Free to start. Invite your team whenever you’re ready.</p>
-            <div className="row wrap center-row">
-              <Link to="/register" className="button light large">
-                Get started free
-              </Link>
-              <Link to="/contact" className="button outline-light large">
-                Talk to us
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+      <CtaBand title="Ready to make your next idea happen?" text="Free to start. Invite your team whenever you’re ready." />
     </div>
   );
 }
