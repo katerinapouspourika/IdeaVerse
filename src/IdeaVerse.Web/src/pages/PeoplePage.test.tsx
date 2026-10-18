@@ -170,6 +170,18 @@ describe('PeoplePage', () => {
     await waitFor(() => expect(calls.some((c) => c.method === 'DELETE' && c.path === '/api/v1/workspaces/ws-1/members/u-me')).toBe(true));
   });
 
+  it('shows a name over its email, each on one line with the full text on hover', async () => {
+    const long = 'ux-collab-member-mv76zqhq@acme-ux.test';
+    fakeApi(peopleRoutes('Owner', [kat, { ...mia, name: 'Mia Member', email: long }]));
+    renderApp('/people');
+
+    const members = within(await screen.findByRole('region', { name: 'Members' }));
+    expect(await members.findByText('Mia Member')).toHaveClass('person-line');
+    expect(members.getByText(long)).toHaveAttribute('title', long);
+    expect(members.getByText('kat@example.com')).toHaveAttribute('title', 'kat@example.com');
+    expect(members.getByRole('button', { name: 'Remove Mia Member' })).toBeInTheDocument();
+  });
+
   it('names every owner and admin a member can ask to invite someone', async () => {
     const admin: WorkspaceMember = { userId: 'u-ada', email: 'ada@example.com', name: 'Ada Admin', role: 'Admin', joinedAt: '2026-10-02T09:00:00Z' };
     fakeApi(peopleRoutes('Member', [{ ...kat, name: 'Kat Owner' }, admin, mia]));

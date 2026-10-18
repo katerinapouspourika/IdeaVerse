@@ -735,6 +735,33 @@ textarea:focus-visible,
   text-overflow: ellipsis;
 }
 
+/*
+ * A person's name over their email, each on one line cut short with an ellipsis (the full text shows on hover). In a list
+ * row the person takes the room left by the controls, and on narrow screens the controls wrap below them.
+ */
+.person {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.person-line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team li:has(> .person) {
+  flex-wrap: wrap;
+}
+
+.team li > .person + .row {
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
 .bell {
   position: relative;
   display: inline-flex;
@@ -3345,6 +3372,9 @@ a:focus-visible {
 }
 
 .mention-option {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   padding: 6px 10px;
   border-radius: 8px;
   cursor: pointer;
