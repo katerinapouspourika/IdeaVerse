@@ -8,6 +8,7 @@ import type { WorkspaceRole } from '../api/types';
 import { useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
 import { usePageMeta } from '../seo/usePageMeta';
+import { pendingTemplate } from '../templates/pendingTemplate';
 import { SetupSteps } from '../workspaces/SetupSteps';
 import { canManageWorkspace, useWorkspace } from '../workspaces/WorkspaceContext';
 
@@ -59,7 +60,8 @@ export function InviteTeamPage() {
   const remove = (rowId: number) => setRows((all) => all.filter((r) => r.id !== rowId));
   const add = () => setRows((all) => [...all, { id: Math.max(-1, ...all.map((r) => r.id)) + 1, email: '' }]);
 
-  const finish = () => void navigate('/ideas');
+  // Home holds the Get started checklist; a template chosen before signing up opens its form on the ideas page instead.
+  const finish = () => void navigate(pendingTemplate() ? '/ideas' : '/');
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();

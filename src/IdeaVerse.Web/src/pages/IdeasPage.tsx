@@ -12,6 +12,7 @@ import { Progress } from '../components/Progress';
 import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
+import { useEdgeFade } from '../components/useEdgeFade';
 import { IdeaPanel } from '../panel/IdeaPanel';
 import { useIdeaPanel } from '../panel/useIdeaPanel';
 import { IdeaMatrix } from '../priority/IdeaMatrix';
@@ -112,6 +113,8 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const ai = useAiStatus(workspace.id);
   const filtered = status !== undefined || debouncedSearch.trim() !== '' || tag !== '';
   const panel = useIdeaPanel();
+  const statusTabs = useEdgeFade<HTMLElement>();
+  const viewTabs = useEdgeFade<HTMLDivElement>();
 
   return (
     <div className="stack">
@@ -148,7 +151,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
         />
       )}
 
-      <nav className="tabs" aria-label="Filter by status">
+      <nav ref={statusTabs} className="tabs" aria-label="Filter by status">
         <FilterTab label="All" active={tab === 'All' || (view === 'board' && !archived)} onClick={() => setTab('All')} />
         {view !== 'board' &&
           statuses.map((s) => <FilterTab key={s} label={statusLabels[s]} active={tab === s} onClick={() => setTab(s)} />)}
@@ -186,7 +189,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
             </select>
           )}
         </Field>
-        <div className="tabs" role="group" aria-label="View">
+        <div ref={viewTabs} className="tabs" role="group" aria-label="View">
           <FilterTab label="List" active={view === 'list'} onClick={() => setView('list')} />
           <FilterTab label="Board" active={view === 'board'} onClick={() => setView('board')} />
           <FilterTab label="Calendar" active={view === 'calendar'} onClick={() => setView('calendar')} />

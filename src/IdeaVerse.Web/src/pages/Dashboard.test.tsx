@@ -1,4 +1,5 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { addDays, todayIso } from '../api/dates';
 import type { Assignment } from '../api/types';
@@ -53,9 +54,9 @@ describe('Dashboard', () => {
     expect(await screen.findByRole('heading', { level: 1, name: /, Kat$/ })).toBeInTheDocument();
     await screen.findByText('Late launch');
     const stats = screen.getByRole('region', { name: 'At a glance' });
+    expect(within(stats).getByText('Active ideas').previousSibling).toHaveTextContent('3');
     expect(within(stats).getByText('Overdue').previousSibling).toHaveTextContent('1');
     expect(within(stats).getByText('Due this week').previousSibling).toHaveTextContent('1');
-    expect(within(stats).getByText('In progress').previousSibling).toHaveTextContent('1');
     expect(within(stats).getByText('Done').previousSibling).toHaveTextContent('1');
 
     const attention = screen.getByRole('region', { name: 'Needs attention' });
@@ -77,5 +78,31 @@ describe('Dashboard', () => {
 
     expect(await screen.findByText(/Nothing overdue or due this week/)).toBeInTheDocument();
     expect(screen.getByText('You’re all caught up. Time to capture a new idea?')).toBeInTheDocument();
+  });
+
+  it('offers a first idea, blank or from a template, instead of empty counts in a new workspace', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
+    renderApp('/');
+
+    const start = await screen.findByRole('region', { name: 'Add your first idea' });
+    expect(screen.getByText('Your workspace is ready. Add your first idea to get going.')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'At a glance' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Needs attention' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/all caught up|Nice work/)).not.toBeInTheDocument();
+    expect(within(start).getByRole('link', { name: 'Add a blank idea' })).toHaveAttribute('href', '/ideas');
+
+    await userEvent.click(within(start).getByRole('link', { name: 'Start from Product launch' }));
+
+    const form = await screen.findByRole('form', { name: 'New idea' });
+    expect(within(form).getByLabelText('Start from')).toHaveValue('product-launch');
+  });
+
+  it('counts a workspace’s first planned idea', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [anIdea({ status: 'Planned', targetDate: addDays(todayIso(), 30) })] } });
+    renderApp('/');
+
+    const stats = await screen.findByRole('region', { name: 'At a glance' });
+    await waitFor(() => expect(within(stats).getByText('Active ideas').previousSibling).toHaveTextContent('1'));
+    expect(screen.queryByRole('region', { name: 'Add your first idea' })).not.toBeInTheDocument();
   });
 });
