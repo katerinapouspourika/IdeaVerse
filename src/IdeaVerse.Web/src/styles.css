@@ -773,6 +773,40 @@ textarea:focus-visible,
   font-weight: 600;
 }
 
+/* An AI action greyed out while AI help isn't set up, with why beside it, or in a bubble under it when compact. */
+.ai-unavailable {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.ai-unavailable.compact {
+  position: relative;
+}
+
+.ai-unavailable.compact .ai-unavailable-note {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  width: max-content;
+  max-width: min(260px, calc(100vw - 32px));
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  box-shadow: var(--shadow-lift);
+  white-space: normal;
+}
+
+.ai-unavailable.compact:hover .ai-unavailable-note,
+.ai-unavailable.compact:focus-within .ai-unavailable-note,
+.ai-unavailable.compact[data-shown] .ai-unavailable-note {
+  display: block;
+}
+
 .ai-panel {
   padding: 12px;
   border: 1px dashed var(--accent);
