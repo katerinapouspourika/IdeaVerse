@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Archive, ArchiveRestore, ArrowLeft, CalendarClock, Ellipsis, Pencil, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowLeft, CalendarClock, CalendarDays, CircleAlert, Ellipsis, Pencil, Trash2, UserRound } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 
 import { ImproveIdea } from '../ai/ImproveIdea';
 import { useRecentIdea } from '../commands/recentIdeas';
 import { ApiError } from '../api/client';
-import { addDays, describeDue, formatDate, formatStart, todayIso } from '../api/dates';
+import { addDays, addMonths, describeDue, formatDate, formatStart, todayIso } from '../api/dates';
 import { useArchiveIdea, useDeleteIdea, useIdea, useMoveIdea, usePostponeIdea, useSetStart, useUndoPostpone, useUpdateIdea } from '../api/queries';
 import { canChange, personLabel, statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
 import { useConfirm, useToast } from '../components/Feedback';
@@ -13,7 +13,6 @@ import { Field } from '../components/Field';
 import { Menu } from '../components/Menu';
 import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
-import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
 import { TagInput } from '../components/TagInput';
 import { PriorityCard } from '../priority/PriorityCard';
@@ -90,7 +89,6 @@ function IdeaDetail({ idea }: { idea: Idea }) {
               <div className="row spread wrap idea-heading">
                 <div className="row wrap">
                   <h1>{idea.title}</h1>
-                  {changeable ? <QuickStatus idea={idea} /> : <StatusBadge idea={idea} />}
                   <VoteButton idea={idea} />
                 </div>
                 <div className="row">
@@ -103,16 +101,7 @@ function IdeaDetail({ idea }: { idea: Idea }) {
                   {idea.canManage && <IdeaActions idea={idea} />}
                 </div>
               </div>
-              <p className="small">
-                Target date <strong>{formatDate(idea.targetDate)}</strong>{' '}
-                <span className={idea.isOverdue ? 'overdue-text' : 'muted'}>({describeDue(idea.targetDate)})</span>
-              </p>
-              {idea.startDate && (
-                <p className="small">
-                  Starts <strong>{formatStart(idea)}</strong>
-                </p>
-              )}
-              <Tags tags={idea.tags} />
+              <IdeaChips idea={idea} />
               {idea.description ? <p className="description">{idea.description}</p> : <p className="muted">No description yet.</p>}
               {changeable ? (
                 <ImproveIdea idea={idea} />
@@ -163,19 +152,49 @@ function QuickStatus({ idea }: { idea: Idea }) {
     );
 
   return (
-    <span className="badges">
-      <label className="quick-status">
-        <span className="visually-hidden">Status</span>
-        <select className={`badge status-${status.toLowerCase()}`} value={status} onChange={(e) => change(e.target.value as IdeaStatus)}>
-          {statuses.map((s) => (
-            <option key={s} value={s}>
-              {statusLabels[s]}
-            </option>
-          ))}
-        </select>
-      </label>
-      {idea.isOverdue && <span className="badge status-badge overdue">Overdue</span>}
-    </span>
+    <label className="quick-status">
+      <span className="visually-hidden">Status</span>
+      <select className={`badge status-${status.toLowerCase()}`} value={status} onChange={(e) => change(e.target.value as IdeaStatus)}>
+        {statuses.map((s) => (
+          <option key={s} value={s}>
+            {statusLabels[s]}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/**
+ * The idea at a glance, in one row under its title: its status (a menu for its team), target date, start, owner, and tags. The
+ * target date says in words, as well as in red, when it has passed.
+ */
+function IdeaChips({ idea }: { idea: Idea }) {
+  const start = formatStart(idea);
+  return (
+    <div className="idea-chips">
+      {canChange(idea) ? (
+        <QuickStatus idea={idea} />
+      ) : (
+        <span className={`badge status-badge status-${idea.status.toLowerCase()}`}>{statusLabels[idea.status]}</span>
+      )}
+      <span className={idea.isOverdue ? 'fact-chip overdue' : 'fact-chip'}>
+        {idea.isOverdue ? <CircleAlert aria-hidden="true" size={14} /> : <CalendarDays aria-hidden="true" size={14} />}
+        {idea.isOverdue && 'Overdue · '}
+        <span className="fact-chip-label">Target</span> {formatDate(idea.targetDate)} ({describeDue(idea.targetDate)})
+      </span>
+      {start && (
+        <span className="fact-chip">
+          <CalendarClock aria-hidden="true" size={14} />
+          <span className="fact-chip-label">Starts</span> {start}
+        </span>
+      )}
+      <span className="fact-chip">
+        <UserRound aria-hidden="true" size={14} />
+        <span className="fact-chip-label">Owner</span> {personLabel(idea.ownerName, idea.ownerEmail)}
+      </span>
+      <Tags tags={idea.tags} />
+    </div>
   );
 }
 
@@ -212,7 +231,7 @@ function ScheduleCard({ idea }: { idea: Idea }) {
         <dd>{formatDate(idea.createdAt.slice(0, 10))}</dd>
       </dl>
       {canPostpone && <StartForm idea={idea} />}
-      {canPostpone && <PostponeForm idea={idea} />}
+      {canPostpone && <Postpone idea={idea} />}
     </section>
   );
 }
@@ -404,19 +423,36 @@ function StartForm({ idea }: { idea: Idea }) {
   );
 }
 
-function PostponeForm({ idea }: { idea: Idea }) {
+/**
+ * Postpones the idea from a menu: by a week or a month from its target date, or to a date picked in a small form. The new date
+ * must be later than the current one and not in the past, so a preset that would land in the past isn't offered.
+ */
+function Postpone({ idea }: { idea: Idea }) {
   const postpone = usePostponeIdea(idea.id);
   const undo = useUndoPostpone(idea.id);
   const toast = useToast();
+  const [picking, setPicking] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const wasPicking = useRef(false);
   const today = todayIso();
-  const earliest = idea.targetDate >= today ? addDays(idea.targetDate, 1) : today;
-  const [targetDate, setTargetDate] = useState(addDays(earliest, 6));
+  const presets = [
+    { label: '+1 week', date: addDays(idea.targetDate, 7) },
+    { label: '+1 month', date: addMonths(idea.targetDate, 1) },
+  ].filter((preset) => preset.date >= today);
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
+  // Returns focus to Postpone once a picked date is saved or cancelled.
+  useEffect(() => {
+    if (wasPicking.current && !picking) {
+      root.current?.querySelector<HTMLButtonElement>('.menu > button')?.focus();
+    }
+    wasPicking.current = picking;
+  }, [picking]);
+
+  const postponeTo = (targetDate: string, onDone?: () => void) => {
     const previous = { targetDate: idea.targetDate, status: idea.status };
     postpone.mutate(targetDate, {
-      onSuccess: () =>
+      onSuccess: () => {
+        onDone?.();
         toast({
           message: `Postponed to ${formatDate(targetDate)}`,
           undo: () =>
@@ -424,22 +460,76 @@ function PostponeForm({ idea }: { idea: Idea }) {
               onSuccess: () => toast({ message: `Back to ${formatDate(previous.targetDate)}` }),
               onError: (error) => toast({ message: error.message, tone: 'error' }),
             }),
-        }),
+        });
+      },
     });
   };
 
   return (
-    <form className="stack tight postpone-form" onSubmit={submit} aria-label="Postpone idea">
-      <Field label="Not the right time? Move it to" error={fieldError(postpone.error, 'targetDate')}>
+    <div className="stack tight postpone-form" ref={root}>
+      {picking ? (
+        <PostponeForm idea={idea} pending={postpone.isPending} error={postpone.error} onPostpone={(date) => postponeTo(date, () => setPicking(false))} onCancel={() => setPicking(false)} />
+      ) : (
+        <>
+          <Menu
+            label="Postpone"
+            triggerClassName="button small"
+            trigger={
+              <>
+                <CalendarClock aria-hidden="true" size={16} />
+                {postpone.isPending ? 'Postponing…' : 'Postpone'}
+              </>
+            }
+            items={[
+              ...presets.map((preset) => ({ label: `${preset.label} · ${formatDate(preset.date)}`, onSelect: () => postponeTo(preset.date) })),
+              { label: 'Pick a date…', icon: <CalendarDays aria-hidden="true" size={16} />, onSelect: () => setPicking(true) },
+            ]}
+          />
+          <ErrorMessage error={postpone.error} />
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Picks the date to postpone the idea to; Escape cancels. */
+function PostponeForm({ idea, pending, error, onPostpone, onCancel }: { idea: Idea; pending: boolean; error: Error | null; onPostpone: (targetDate: string) => void; onCancel: () => void }) {
+  const today = todayIso();
+  const earliest = idea.targetDate >= today ? addDays(idea.targetDate, 1) : today;
+  const [targetDate, setTargetDate] = useState(addDays(earliest, 6));
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    onPostpone(targetDate);
+  };
+
+  return (
+    <form
+      className="stack tight"
+      onSubmit={submit}
+      aria-label="Postpone idea"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onCancel();
+        }
+      }}
+    >
+      <Field label="Not the right time? Move it to" error={fieldError(error, 'targetDate')}>
         {(props) => (
-          <input {...props} type="date" required min={earliest} value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+          <input {...props} type="date" required autoFocus min={earliest} value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
         )}
       </Field>
-      <button type="submit" className="button small" disabled={postpone.isPending}>
-        <CalendarClock aria-hidden="true" size={16} />
-        {postpone.isPending ? 'Postponing…' : 'Postpone'}
-      </button>
-      <ErrorMessage error={postpone.error} />
+      <div className="row">
+        <button type="submit" className="button small" disabled={pending}>
+          <CalendarClock aria-hidden="true" size={16} />
+          {pending ? 'Postponing…' : 'Postpone'}
+        </button>
+        <button type="button" className="button ghost small" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+      <ErrorMessage error={error} />
     </form>
   );
 }

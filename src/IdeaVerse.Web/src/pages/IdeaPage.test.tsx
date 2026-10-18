@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { addDays, todayIso } from '../api/dates';
 import type { Component, Idea, Member, WorkspaceMember } from '../api/types';
 import { anIdea, aWorkspace, fakeApi, signedIn } from '../test/fakeApi';
 import { confirmDialog } from '../test/dialog';
@@ -120,7 +121,7 @@ describe('IdeaPage', () => {
     expect(await screen.findByText(/leo@example.com’s idea\. You can follow it here/)).toBeInTheDocument();
     expect(await screen.findByRole('checkbox', { name: /Budget sign-off/ })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Edit details' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('form', { name: 'Postpone idea' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Postpone' })).not.toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'Add component' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
@@ -206,21 +207,57 @@ describe('IdeaPage', () => {
     await waitFor(() => expect(checkbox).not.toBeChecked());
   });
 
-  it('postpones the idea to a later date', async () => {
+  it('postpones the idea to a picked date from the Postpone menu', async () => {
     const calls = fakeApi({
       ...ideaRoutes({}, [owner]),
       'POST /api/v1/ideas/idea-1/postpone': (body) => ({ status: 200, body: anIdea({ ...(body as object), status: 'Postponed', postponeCount: 1 }) }),
     });
     renderApp('/ideas/idea-1');
 
-    const form = await screen.findByRole('form', { name: 'Postpone idea' });
+    expect(screen.queryByRole('form', { name: 'Postpone idea' })).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: 'Postpone' }, { timeout: 5000 }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Pick a date…' }));
+    const form = screen.getByRole('form', { name: 'Postpone idea' });
     const date = within(form).getByLabelText('Not the right time? Move it to');
+    expect(date).toHaveFocus();
+    expect(date).toHaveAttribute('min', '2099-11-28');
     await userEvent.clear(date);
     await userEvent.type(date, '2099-12-31');
     await userEvent.click(within(form).getByRole('button', { name: 'Postpone' }));
 
     await waitFor(() => expect(calls.find((c) => c.path.endsWith('/postpone'))?.body).toEqual({ targetDate: '2099-12-31' }));
     expect(await screen.findByText(/^Postponed to /)).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('form', { name: 'Postpone idea' })).not.toBeInTheDocument());
+  });
+
+  it('postpones by a week or a month from the target date', async () => {
+    const calls = fakeApi({
+      ...ideaRoutes({ targetDate: '2099-01-31' }, [owner]),
+      'POST /api/v1/ideas/idea-1/postpone': (body) => ({ status: 200, body: anIdea({ ...(body as object), status: 'Postponed', postponeCount: 1 }) }),
+    });
+    renderApp('/ideas/idea-1');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Postpone' }, { timeout: 5000 }));
+    expect(screen.getByRole('menuitem', { name: /^\+1 week · / })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('menuitem', { name: /^\+1 month · / }));
+
+    await waitFor(() => expect(calls.find((c) => c.path.endsWith('/postpone'))?.body).toEqual({ targetDate: '2099-02-28' }));
+    expect(await screen.findByText(/^Postponed to /)).toBeInTheDocument();
+  });
+
+  it('offers no preset that would land in the past for an overdue idea', async () => {
+    fakeApi(ideaRoutes({ targetDate: addDays(todayIso(), -10), isOverdue: true }, [owner]));
+    renderApp('/ideas/idea-1');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Postpone' }, { timeout: 5000 }));
+
+    expect(screen.queryByRole('menuitem', { name: /^\+1 week/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /^\+1 month/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Pick a date…' }));
+    expect(screen.getByLabelText('Not the right time? Move it to')).toHaveAttribute('min', todayIso());
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('form', { name: 'Postpone idea' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Postpone' })).toHaveFocus();
   });
 
   it('takes the postponement back with Undo, restoring the earlier date and status', async () => {
@@ -232,13 +269,41 @@ describe('IdeaPage', () => {
     });
     renderApp('/ideas/idea-1');
 
-    const form = await screen.findByRole('form', { name: 'Postpone idea' });
-    await userEvent.click(within(form).getByRole('button', { name: 'Postpone' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Postpone' }, { timeout: 5000 }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /^\+1 week · / }));
     await screen.findByText(/^Postponed to /);
     await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
 
     await waitFor(() => expect(calls.find((c) => c.path.endsWith('/postpone/undo'))?.body).toEqual({ targetDate: idea.targetDate, status: 'InProgress' }));
     expect(await screen.findByText(/^Back to /)).toBeInTheDocument();
+  });
+
+  it('sums the idea up in one row of chips under its title, saying when it is overdue', async () => {
+    fakeApi(ideaRoutes({ targetDate: addDays(todayIso(), -2), isOverdue: true, startDate: addDays(todayIso(), -9), tags: ['launch'], ownerName: 'Kat' }, [owner]));
+    renderApp('/ideas/idea-1');
+
+    const heading = (await screen.findByRole('heading', { name: 'Black Friday teaser' })).closest('section')!;
+    const chips = [...heading.querySelectorAll('.fact-chip')];
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      expect.stringMatching(/^Overdue · Target .+ \(2 days ago\)$/),
+      expect.stringMatching(/^Starts /),
+      'Owner Kat',
+    ]);
+    expect(chips[0]).toHaveClass('overdue');
+    expect(within(heading).queryByText(/^Target date/)).not.toBeInTheDocument();
+    expect(within(heading).getByRole('combobox', { name: 'Status' })).toBeInTheDocument();
+    expect(within(heading).getByRole('link', { name: 'Ideas tagged launch' })).toBeInTheDocument();
+    expect(within(heading).queryByText('Overdue')).not.toBeInTheDocument();
+  });
+
+  it('shows the status as a plain chip to someone who cannot change it', async () => {
+    fakeApi(ideaRoutes(asViewer, [owner]));
+    renderApp('/ideas/idea-1');
+
+    const heading = (await screen.findByRole('heading', { name: 'Black Friday teaser' })).closest('section')!;
+    expect(within(heading).getByText('Planned')).toBeInTheDocument();
+    expect(within(heading).queryByRole('combobox', { name: 'Status' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Postpone' })).not.toBeInTheDocument();
   });
 
   it('explains when the idea is missing or in another workspace', async () => {
@@ -294,7 +359,7 @@ describe('Archived idea', () => {
     expect(screen.queryByRole('button', { name: 'Rename Budget sign-off' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'More actions for Budget sign-off' })).not.toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'Add component' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('form', { name: 'Postpone idea' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Postpone' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Impact')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Vote for Black Friday teaser/ })).not.toBeInTheDocument();
     expect(await screen.findByText('The team can’t change while the idea is archived.')).toBeInTheDocument();

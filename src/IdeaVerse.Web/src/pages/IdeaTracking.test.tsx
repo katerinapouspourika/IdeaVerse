@@ -240,7 +240,7 @@ describe('Archiving an idea', () => {
     await userEvent.click(screen.getByRole('button', { name: 'More actions' }));
     expect(screen.queryByRole('menuitem', { name: 'Archive idea' })).not.toBeInTheDocument();
     await userEvent.keyboard('{Escape}');
-    expect(screen.queryByRole('form', { name: 'Postpone idea' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Postpone' })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Restore' }));
 
     await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.path.endsWith('/restore'))).toBe(true));
