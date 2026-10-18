@@ -2264,6 +2264,23 @@ textarea:disabled {
   outline: none;
 }
 
+/* People's invite list: an address that won't be invited, with the reasons listed under the box. */
+.tag.flagged {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.tag.flagged .tag-remove:hover,
+.tag.flagged .tag-remove:focus-visible {
+  background: var(--danger);
+  color: var(--surface);
+}
+
+.invite-problems {
+  margin: 0;
+  padding-left: 20px;
+}
+
 .not-found {
   max-width: 560px;
   margin: 24px auto;
