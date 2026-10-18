@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router';
 import { request } from '../api/client';
 import { browserTimeZone } from '../api/dates';
 import { currentZoneName, matchesZone, timeZoneOption, timeZoneOptions } from '../api/timeZones';
-import type { Account, ReminderKind, ReminderSettings, Workspace } from '../api/types';
+import type { Account, ReminderKind, ReminderSettings } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { readAccountProblems } from '../auth/identityErrors';
 import { meetsPasswordRules, weakPasswordMessage } from '../auth/passwordRules';
@@ -15,8 +15,6 @@ import { PasswordInput } from '../components/PasswordInput';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { useConfirm } from '../components/Feedback';
 import { usePageMeta } from '../seo/usePageMeta';
-import { BrandingCard } from '../workspaces/BrandingCard';
-import { canManageWorkspace, useWorkspace } from '../workspaces/WorkspaceContext';
 
 const reminderChoices: { kind: ReminderKind; label: string; hint: string }[] = [
   { kind: 'StartingSoon', label: 'Starting soon', hint: 'Before an idea’s start: 10, 5 and 2 days ahead, or closer on short notice, plus a nudge to add its components' },
@@ -26,19 +24,16 @@ const reminderChoices: { kind: ReminderKind; label: string; hint: string }[] = [
   { kind: 'Overdue', label: 'Overdue', hint: 'Once, when the date passes and it isn’t done' },
 ];
 
-/** The signed-in user's settings, and, for owners and admins, the current workspace's. */
+/** The signed-in user's own settings. The workspace's settings have their own page, linked from People. */
 export function SettingsPage() {
   usePageMeta('Settings', { index: false });
   const { account } = useAuth();
-  const { current } = useWorkspace();
-  const showWorkspace = current !== null && canManageWorkspace(current);
   const sections = [
     { id: 'profile', label: 'Profile' },
     { id: 'email', label: 'Email' },
     { id: 'password', label: 'Password' },
     { id: 'time-zone', label: 'Time zone' },
     { id: 'reminders', label: 'Reminders' },
-    ...(showWorkspace ? [{ id: 'workspace', label: 'Workspace' }] : []),
     { id: 'delete-account', label: 'Delete account' },
   ];
 
@@ -62,27 +57,12 @@ export function SettingsPage() {
           <PasswordForm />
           <TimeZoneForm account={account} />
           {account && <RemindersForm account={account} />}
-          {showWorkspace && <WorkspaceSettings key={current.id} workspace={current} />}
           <DeleteAccountForm />
         </div>
       </div>
     </div>
   );
 }
-
-/** The current workspace's settings, which apply to everyone in it; for its owners and admins. People links here as `#workspace`. */
-function WorkspaceSettings({ workspace }: { workspace: Workspace }) {
-  return (
-    <section id="workspace" className="stack" aria-labelledby="workspace-settings-heading">
-      <div className="stack tight">
-        <h2 id="workspace-settings-heading">Workspace: {workspace.name}</h2>
-        <p className="muted small">These apply to everyone in the workspace. Only its owners and admins see them.</p>
-      </div>
-      <BrandingCard workspace={workspace} />
-    </section>
-  );
-}
-
 
 /**
  * Saves a setting as soon as it changes, one save at a time in the order they were made. A save that fails puts back the
@@ -484,7 +464,7 @@ function DeleteAccountForm() {
       <h2>Delete account</h2>
       <p className="muted small">
         Workspaces only you are in are deleted with everything in them. Ideas you own in other workspaces pass to each workspace’s owner.
-        If you own a workspace other people use, hand it over from its People page first.
+        If you own a workspace other people use, hand it over from its workspace settings first.
       </p>
       <Field label="Password" error={validation.errors.password ?? fieldError(save.error, 'password')}>
         {(props) => (

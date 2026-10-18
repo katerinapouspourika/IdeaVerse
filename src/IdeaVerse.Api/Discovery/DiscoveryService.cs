@@ -331,7 +331,7 @@ public sealed class DiscoveryService(IdeaVerseDbContext context, IMailSender mai
       $"{requester} asked to join {workspaceName}",
       [$"{requester} works at your company and found {workspaceName} on IdeaVerse. Approve to add them as a member, or decline."],
       new EmailAction("Review requests", new Uri(app.Value.Link($"/people?workspace={workspaceId}"))),
-      "You get this because you are an owner or admin of this workspace. You can hide it from your company on the People page.");
+      "You get this because you are an owner or admin of this workspace. You can hide it from your company in its workspace settings.");
     foreach (var manager in managers.OfType<string>())
     {
       await mailSender.SendAsync(EmailLayout.Compose(manager, RequestSubject(workspaceName), content, app.Value), cancellationToken).ConfigureAwait(false);

@@ -2,12 +2,28 @@ import { Bell } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 
+import { formatAgo, formatMoment } from '../api/dates';
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from '../api/queries';
-import { notificationLink } from '../api/types';
+import { notificationLink, type Notification, type ReminderKind } from '../api/types';
+import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { WorkspaceTag } from '../workspaces/WorkspaceTag';
 
 /** How many notifications the drop-down previews. */
 const previewSize = 6;
+
+/** The short line heading each notification in the drop-down; the full message shows on hover and on the notifications page. */
+const titles: Record<ReminderKind, string> = {
+  ComingUp: 'Coming up',
+  Tomorrow: 'Due tomorrow',
+  Today: 'Due today',
+  Overdue: 'Overdue',
+  Assigned: 'Assigned to you',
+  AddedToTeam: 'Added to the team',
+  Commented: 'New comment',
+  Mentioned: 'You were mentioned',
+  StartingSoon: 'Starting soon',
+  AddComponents: 'Add components',
+};
 
 /**
  * The header bell: shows how many notifications are unread and previews the latest in a drop-down. `hidden` leaves only
@@ -20,6 +36,7 @@ export function NotificationBell({ hidden = false }: { hidden?: boolean }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const root = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
   const { pathname } = useLocation();
   const [openedOn, setOpenedOn] = useState(pathname);
   const unread = notifications.data?.unreadCount ?? 0;
@@ -35,7 +52,16 @@ export function NotificationBell({ hidden = false }: { hidden?: boolean }) {
       return;
     }
     const closeOutside = (event: MouseEvent) => !root.current?.contains(event.target as Node) && setOpen(false);
-    const closeOnEscape = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false);
+    // Closing from inside the panel puts focus back on the bell, so keyboard users don't lose their place.
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') {
+        return;
+      }
+      if (root.current?.contains(document.activeElement)) {
+        button.current?.focus();
+      }
+      setOpen(false);
+    };
     document.addEventListener('mousedown', closeOutside);
     document.addEventListener('keydown', closeOnEscape);
     return () => {
@@ -46,6 +72,7 @@ export function NotificationBell({ hidden = false }: { hidden?: boolean }) {
 
   useAppBadge(notifications.data?.unreadCount);
 
+  const total = notifications.data?.items.length ?? 0;
   const items = notifications.data?.items.slice(0, previewSize) ?? [];
   if (hidden) {
     return null;
@@ -54,6 +81,7 @@ export function NotificationBell({ hidden = false }: { hidden?: boolean }) {
   return (
     <div className="bell-menu" ref={root}>
       <button
+        ref={button}
         type="button"
         className="bell icon-button"
         aria-label={label}
@@ -67,34 +95,55 @@ export function NotificationBell({ hidden = false }: { hidden?: boolean }) {
       </button>
       {open && (
         <div id={panelId} className="popover notification-popover" role="region" aria-label="Latest notifications">
-          <div className="row spread">
+          <div className="notification-popover-head">
             <strong>Notifications</strong>
             {unread > 0 && (
               <button type="button" className="link-button small" onClick={() => markAll.mutate()} disabled={markAll.isPending}>
-                Mark all as read
+                Mark all read
               </button>
             )}
           </div>
           {items.length === 0 ? (
             <p className="muted small">Nothing yet. Reminders and updates about your ideas appear here.</p>
           ) : (
-            <ul className="mini-list">
+            <ul className="notification-menu">
               {items.map((n) => (
-                <li key={n.id} className={n.readAt ? undefined : 'unread'}>
-                  <Link to={notificationLink(n)} onClick={() => !n.readAt && markRead.mutate(n.id)}>
-                    {n.message}
-                  </Link>
-                  <WorkspaceTag workspaceId={n.workspaceId} name={n.workspaceName} />
-                </li>
+                <NotificationMenuItem key={n.id} notification={n} onOpen={() => !n.readAt && markRead.mutate(n.id)} />
               ))}
             </ul>
           )}
-          <Link to="/notifications" className="small">
-            See all notifications
+          <Link to="/notifications" className="notification-popover-foot small" aria-label={total > 0 ? `See all ${total} notifications` : undefined}>
+            {total > 0 ? `See all ${total}` : 'See all notifications'}
           </Link>
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * One notification in the drop-down: what happened, to which idea, how long ago, and a dot while it is unread. Its parts
+ * are laid out apart, so the link names them in a sentence for screen readers.
+ */
+function NotificationMenuItem({ notification, onOpen }: { notification: Notification; onOpen: () => void }) {
+  const { all } = useWorkspace();
+  const unread = notification.readAt === null;
+  const ago = formatAgo(notification.createdAt);
+  const workspace = all.length > 1 ? `, ${all.find((w) => w.id === notification.workspaceId)?.name ?? notification.workspaceName}` : '';
+  const label = `${titles[notification.kind]}${unread ? ', unread' : ''}: ${notification.ideaTitle}, ${ago}${workspace}`;
+
+  return (
+    <li className={unread ? 'unread' : undefined}>
+      <Link to={notificationLink(notification)} className="notification-menu-item" aria-label={label} title={notification.message} onClick={onOpen}>
+        <span className="unread-dot" aria-hidden="true" />
+        <span className="notification-menu-title">{titles[notification.kind]}</span>
+        <span className="notification-menu-idea">{notification.ideaTitle}</span>
+        <time className="notification-menu-time" dateTime={notification.createdAt} title={formatMoment(notification.createdAt)}>
+          {ago}
+        </time>
+        <WorkspaceTag workspaceId={notification.workspaceId} name={notification.workspaceName} />
+      </Link>
+    </li>
   );
 }
 

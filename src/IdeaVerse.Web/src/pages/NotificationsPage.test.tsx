@@ -78,8 +78,49 @@ describe('Notifications', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }));
     const preview = screen.getByRole('region', { name: 'Latest notifications' });
-    expect(within(preview).getAllByRole('link')[0]).toHaveTextContent('is tomorrow');
-    expect(within(preview).getByRole('link', { name: 'See all notifications' })).toHaveAttribute('href', '/notifications');
+    expect(within(preview).getAllByRole('link')[0]).toHaveTextContent('Due tomorrow');
+    expect(within(preview).getByRole('link', { name: 'See all 2 notifications' })).toHaveAttribute('href', '/notifications');
+  });
+
+  it('previews each notification with a short title, its idea, how long ago, and whether it is unread', async () => {
+    const recent = { ...tomorrow, kind: 'Mentioned' as const, createdAt: new Date(Date.now() - 5 * 60_000).toISOString() };
+    fakeApi({ ...routes([recent, comingUp], 1), [ideasRoute]: { status: 200, body: [] } });
+
+    renderApp('/');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }));
+    const [unread, read] = within(screen.getByRole('region', { name: 'Latest notifications' })).getAllByRole('link');
+    const link = unread!;
+    expect(link).toHaveAccessibleName('You were mentioned, unread: Black Friday teaser, 5 min ago');
+    expect(link).toHaveAttribute('title', recent.message);
+    expect(read).toHaveAccessibleName(/^Coming up: Black Friday teaser, /);
+  });
+
+  it('marks all read from the drop-down', async () => {
+    const calls = fakeApi({ ...routes([tomorrow], 1), [ideasRoute]: { status: 200, body: [] }, 'POST /api/v1/notifications/read-all': { status: 204 } });
+    renderApp('/');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }));
+    await userEvent.click(within(screen.getByRole('region', { name: 'Latest notifications' })).getByRole('button', { name: 'Mark all read' }));
+
+    await waitFor(() => expect(calls.some((c) => c.path === '/api/v1/notifications/read-all')).toBe(true));
+  });
+
+  it('moves through the drop-down with the keyboard and closes it with Escape, back on the bell', async () => {
+    fakeApi({ ...routes([tomorrow, comingUp], 1), [ideasRoute]: { status: 200, body: [] } });
+    renderApp('/');
+    const bell = await screen.findByRole('button', { name: 'Notifications, 1 unread' });
+
+    bell.focus();
+    await userEvent.keyboard('{Enter}');
+    await userEvent.tab();
+    expect(screen.getByRole('button', { name: 'Mark all read' })).toHaveFocus();
+    await userEvent.tab();
+    expect(screen.getAllByRole('link', { name: /Due tomorrow/ })[0]).toHaveFocus();
+    await userEvent.keyboard('{Escape}');
+
+    expect(screen.queryByRole('region', { name: 'Latest notifications' })).not.toBeInTheDocument();
+    expect(bell).toHaveFocus();
   });
 
   it('lists reminders newest first with their stage', async () => {

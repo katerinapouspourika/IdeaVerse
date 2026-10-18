@@ -1,12 +1,12 @@
 import { useEffect, useId, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { ArrowRightLeft, Bell, CircleDot, ExternalLink, History, Home, Lightbulb, Link, PanelRight, Plus, Settings, Users } from 'lucide-react';
+import { ArrowRightLeft, Bell, Building2, CircleDot, ExternalLink, History, Home, Lightbulb, Link, PanelRight, Plus, Settings, Users } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router';
 
 import { formatDate } from '../api/dates';
 import { useIdea, useIdeas } from '../api/queries';
 import { canChange, statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
 import { StatusBadge } from '../components/StatusBadge';
-import { useWorkspace } from '../workspaces/WorkspaceContext';
+import { canManageWorkspace, useWorkspace } from '../workspaces/WorkspaceContext';
 import { Dialog } from './Dialog';
 import { readRecentIdeas } from './recentIdeas';
 
@@ -137,6 +137,9 @@ export function CommandPalette({ ideaCommands, onClose }: { ideaCommands: IdeaCo
           { id: 'ideas', group: 'Actions' as const, label: 'Go to Ideas', icon: <Lightbulb size={16} />, run: go('/ideas') },
           { id: 'people', group: 'Actions' as const, label: 'Go to People', icon: <Users size={16} />, run: go('/people') },
         ]
+      : []),
+    ...(current && canManageWorkspace(current)
+      ? [{ id: 'workspace-settings', group: 'Actions' as const, label: 'Go to Workspace settings', icon: <Building2 size={16} />, run: go('/workspace/settings') }]
       : []),
     { id: 'home', group: 'Actions', label: 'Go to Home', icon: <Home size={16} />, run: go('/') },
     { id: 'notifications', group: 'Actions', label: 'Go to Notifications', icon: <Bell size={16} />, run: go('/notifications') },
