@@ -356,7 +356,8 @@ describe('Archived idea', () => {
     expect(screen.queryByRole('button', { name: 'Edit details' })).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Status' })).not.toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Budget sign-off' })).toBeDisabled();
-    expect(screen.queryByRole('button', { name: 'Edit Budget sign-off' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Rename Budget sign-off' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More actions for Budget sign-off' })).not.toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'Add component' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Postpone' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Impact')).not.toBeInTheDocument();

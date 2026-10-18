@@ -123,7 +123,8 @@ describe('Removing a component', () => {
     });
     renderApp('/ideas/idea-1');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Remove Budget sign-off' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'More actions for Budget sign-off' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Remove' }));
     expect(await screen.findByText('Removed “Budget sign-off”')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
 
@@ -163,7 +164,8 @@ describe('Removing a component', () => {
     });
     renderApp('/ideas/idea-1');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Remove Venue' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'More actions for Venue' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Remove' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Undo' }));
 
     await waitFor(() => expect(calls.find((c) => c.path.endsWith('/components/order'))?.body).toEqual({ componentIds: ['c-1', 'c-4', 'c-3'] }));
