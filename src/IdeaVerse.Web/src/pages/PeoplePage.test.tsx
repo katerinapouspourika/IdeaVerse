@@ -49,7 +49,7 @@ describe('PeoplePage', () => {
     renderApp('/people');
 
     const form = await screen.findByRole('form', { name: 'Invite people' });
-    await userEvent.type(within(form).getByLabelText('Email'), 'leo@example.com');
+    await userEvent.type(within(form).getByLabelText('Email addresses'), 'leo@example.com');
     await userEvent.selectOptions(within(form).getByLabelText('Role'), 'Admin');
     await userEvent.click(within(form).getByRole('button', { name: 'Send invitation' }));
 
@@ -57,36 +57,96 @@ describe('PeoplePage', () => {
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ email: 'leo@example.com', role: 'Admin' });
   });
 
-  it('shows why an invitation was refused', async () => {
-    fakeApi({
+  it('turns a pasted list into chips, flags the ones it can’t invite, and sends the rest with one role', async () => {
+    const calls = fakeApi({
       ...peopleRoutes('Owner', [kat, mia]),
-      'POST /api/v1/workspaces/ws-1/invitations': { status: 400, body: { errors: { email: ['This person is already in the workspace.'] } } },
+      'POST /api/v1/workspaces/ws-1/invitations': (body) => ({ status: 201, body: { ...pending, ...(body as object) } }),
     });
     renderApp('/people');
 
     const form = await screen.findByRole('form', { name: 'Invite people' });
-    await userEvent.type(within(form).getByLabelText('Email'), 'mia@example.com');
-    await userEvent.click(within(form).getByRole('button', { name: 'Send invitation' }));
+    const box = within(form).getByLabelText('Email addresses');
+    await userEvent.click(box);
+    await userEvent.paste('leo@example.com, Ada <ada@example.com>; not-an-email\nMIA@example.com new@example.com leo@example.com');
 
-    expect(await within(form).findByText('This person is already in the workspace.')).toBeInTheDocument();
+    const chips = within(within(form).getByRole('list', { name: 'Addresses to invite' }));
+    expect(chips.getAllByRole('listitem').map((chip) => chip.firstChild?.textContent)).toEqual([
+      'leo@example.com',
+      'ada@example.com',
+      'not-an-email',
+      'MIA@example.com',
+      'new@example.com',
+    ]);
+    expect(within(form).getByRole('note')).toHaveTextContent('Already in the list, so left out: leo@example.com.');
+    const problems = within(within(form).getByRole('list', { name: 'Addresses not invited' }));
+    expect(problems.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'not-an-email — Not a valid email address.',
+      'MIA@example.com — Already in the workspace.',
+      'new@example.com — Already invited. Resend it from Pending invitations.',
+    ]);
+
+    await userEvent.selectOptions(within(form).getByLabelText('Role'), 'Admin');
+    await userEvent.click(within(form).getByRole('button', { name: 'Send 2 invitations' }));
+
+    expect(await within(form).findByRole('status')).toHaveTextContent('2 invitations sent: leo@example.com, ada@example.com.');
+    expect(calls.filter((c) => c.method === 'POST').map((c) => c.body)).toEqual([
+      { email: 'leo@example.com', role: 'Admin' },
+      { email: 'ada@example.com', role: 'Admin' },
+    ]);
+    expect(chips.queryByText('leo@example.com')).not.toBeInTheDocument();
+    expect(chips.getByText('not-an-email')).toBeInTheDocument();
   });
 
-  it('explains that an address already has an open invitation', async () => {
+  it('adds an address as a chip after a comma, and removes a chip', async () => {
+    fakeApi(peopleRoutes('Owner', [kat]));
+    renderApp('/people');
+
+    const form = await screen.findByRole('form', { name: 'Invite people' });
+    const box = within(form).getByLabelText('Email addresses');
+    await userEvent.type(box, 'leo@example.com,ada@exa');
+
+    expect(within(form).getByRole('list', { name: 'Addresses to invite' })).toHaveTextContent('leo@example.com');
+    expect(box).toHaveValue('ada@exa');
+    await userEvent.click(within(form).getByRole('button', { name: 'Remove leo@example.com' }));
+
+    // Leaving the box turns what was typed into a chip too, marked until it is a whole address.
+    const chips = within(form).getByRole('list', { name: 'Addresses to invite' });
+    expect(chips).not.toHaveTextContent('leo@example.com');
+    expect(within(form).getByRole('list', { name: 'Addresses not invited' })).toHaveTextContent('ada@exa — Not a valid email address.');
+  });
+
+  it('reports which addresses the API refused, and keeps them', async () => {
     fakeApi({
       ...peopleRoutes('Owner', [kat]),
-      'POST /api/v1/workspaces/ws-1/invitations': {
-        status: 409,
-        body: { detail: 'new@example.com already has an open invitation. Resend it from Pending invitations on the People page.' },
-      },
+      'POST /api/v1/workspaces/ws-1/invitations': (body) =>
+        (body as { email: string }).email === 'old@example.com'
+          ? { status: 409, body: { detail: 'old@example.com already has an open invitation. Resend it from Pending invitations on the People page.' } }
+          : { status: 201, body: { ...pending, ...(body as object) } },
     });
     renderApp('/people');
 
     const form = await screen.findByRole('form', { name: 'Invite people' });
-    await userEvent.type(within(form).getByLabelText('Email'), 'new@example.com');
+    await userEvent.click(within(form).getByLabelText('Email addresses'));
+    await userEvent.paste('old@example.com leo@example.com');
+    await userEvent.click(within(form).getByRole('button', { name: 'Send 2 invitations' }));
+
+    expect(await within(form).findByRole('status')).toHaveTextContent('Invitation sent to leo@example.com.');
+    const problems = within(within(form).getByRole('list', { name: 'Addresses not invited' }));
+    expect(problems.getByRole('listitem')).toHaveTextContent(/^old@example.com — old@example.com already has an open invitation/);
+    expect(within(form).getByRole('list', { name: 'Addresses to invite' })).toHaveTextContent('old@example.com');
+  });
+
+  it('sends nothing when every address has a problem', async () => {
+    const calls = fakeApi(peopleRoutes('Owner', [kat, mia]));
+    renderApp('/people');
+
+    const form = await screen.findByRole('form', { name: 'Invite people' });
+    await userEvent.type(within(form).getByLabelText('Email addresses'), 'mia@example.com');
     await userEvent.click(within(form).getByRole('button', { name: 'Send invitation' }));
 
-    expect(await within(form).findByText(/new@example.com already has an open invitation/)).toBeInTheDocument();
-    expect(within(form).queryByRole('status')).not.toBeInTheDocument();
+    expect(within(form).getByLabelText('Email addresses')).toHaveAccessibleDescription(expect.stringContaining('None of these addresses can be invited yet'));
+    expect(within(form).getByText('Already in the workspace.', { exact: false })).toBeInTheDocument();
+    expect(calls.some((c) => c.method === 'POST')).toBe(false);
   });
 
   it('resends an open invitation with its own role', async () => {
