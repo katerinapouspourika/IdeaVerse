@@ -22,7 +22,7 @@ describe('Template gallery', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/templates/product-launch'));
     expect(await screen.findByRole('heading', { level: 1, name: 'Product launch' })).toBeInTheDocument();
     await waitFor(() => expect(document.title).toBe('Product launch template · IdeaVerse'));
-    const items = within(within(screen.getByRole('main')).getByRole('list')).getAllByRole('listitem');
+    const items = within(screen.getByRole('list', { name: 'What’s included' })).getAllByRole('listitem');
     expect(items).toHaveLength(launch.components.length);
   });
 
@@ -31,6 +31,48 @@ describe('Template gallery', () => {
     renderApp('/templates/product-launch');
 
     expect(await within(screen.getByRole('main')).findByRole('link', { name: 'Get started free' })).toHaveAttribute('href', '/register?template=product-launch');
+  });
+
+  it('shows who it is for, a preview of the idea it creates, and the way in again under the list', async () => {
+    fakeApi(signedOut);
+    renderApp('/templates/product-launch');
+
+    expect(await screen.findByRole('heading', { name: 'What’s included' })).toBeInTheDocument();
+    expect(screen.getByText('Best for:').parentElement).toHaveTextContent(`Best for: ${launch.forWho}`);
+    const preview = screen.getByRole('figure', { name: 'How a product launch idea looks once created' });
+    expect(within(preview).getByText(launch.title)).toBeInTheDocument();
+    expect(within(preview).getByText(`0/${launch.components.length} ready`)).toBeInTheDocument();
+    expect(within(within(preview).getByRole('list', { name: 'Tags' })).getAllByRole('listitem').map((t) => t.textContent)).toEqual(launch.tags);
+    const checklist = within(within(preview).getByRole('list', { name: 'Checklist' })).getAllByRole('listitem');
+    expect(checklist[0]).toHaveTextContent(`${launch.components[0]!.title} (not done yet)`);
+    expect(checklist.at(-1)).toHaveTextContent(`and ${launch.components.length - 3} more`);
+    const again = screen.getByRole('link', { name: 'Use this template — free' });
+    expect(again).toHaveAttribute('href', '/register?template=product-launch');
+    await userEvent.click(again);
+
+    expect(localStorage.getItem('ideaverse.pendingTemplate')).toBe('product-launch');
+    localStorage.clear();
+  });
+
+  it('opens the New idea form with the template from the button under the list when signed in', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
+    renderApp('/templates/product-launch');
+
+    const buttons = await screen.findAllByRole('button', { name: 'Use this template' });
+    expect(buttons).toHaveLength(2);
+    await userEvent.click(buttons[1]!);
+
+    const form = await screen.findByRole('form', { name: 'New idea' });
+    expect(within(form).getByLabelText('Start from')).toHaveValue('product-launch');
+    localStorage.clear();
+  });
+
+  it('closes the gallery with a way in', async () => {
+    fakeApi(signedOut);
+    renderApp('/templates');
+
+    expect(await screen.findByRole('heading', { name: 'Ready to start from a plan?' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', '/contact');
   });
 
   it('shows the not found page for an unknown template', async () => {
@@ -114,7 +156,7 @@ describe('Starting an idea from a template', () => {
     });
     const router = renderApp('/templates/product-launch');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Use this template' }));
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Use this template' }))[0]!);
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/ideas'));
     const form = await screen.findByRole('form', { name: 'New idea' });

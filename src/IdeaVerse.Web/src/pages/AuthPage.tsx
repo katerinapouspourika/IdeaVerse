@@ -11,6 +11,7 @@ import { PasswordRules } from '../auth/PasswordRules';
 import { Field } from '../components/Field';
 import { PasswordInput } from '../components/PasswordInput';
 import { ResendConfirmation } from '../components/ResendConfirmation';
+import { emailProblem, useInlineValidation } from '../components/useInlineValidation';
 import { usePageMeta } from '../seo/usePageMeta';
 import { rememberTemplate } from '../templates/pendingTemplate';
 import { findTemplate } from '../templates/templates';
@@ -75,16 +76,24 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const [pending, setPending] = useState(false);
   const text = copy[mode];
   const state = location.state as { from?: string; signedOut?: boolean; email?: string } | null;
-  // Filled in when they came from "Sign in instead" after finding their email already has an account.
-  const [email, setEmail] = useState(state?.email ?? '');
-  // A template chosen before signing up: kept for when they reach their ideas, and carried between sign-up and sign-in.
   const [params] = useSearchParams();
+  // Filled in when they came from "Sign in instead" after finding their email already has an account, or from an
+  // invitation email, which links to `/register?email=…` so they sign up with the invited address.
+  const [email, setEmail] = useState(state?.email ?? params.get('email') ?? '');
+  // A template chosen before signing up: kept for when they reach their ideas, and carried between sign-up and sign-in.
   const chosen = findTemplate(params.get('template') ?? undefined);
   useEffect(() => {
     if (chosen) {
       rememberTemplate(chosen.slug);
     }
   }, [chosen]);
+  const validation = useInlineValidation({
+    email: () => emailProblem(email),
+    password: () =>
+      mode === 'login'
+        ? (password ? undefined : 'Enter your password.')
+        : ((password ? undefined : 'Choose a password.') ?? (meetsPasswordRules(password) ? undefined : weakPasswordMessage)),
+  });
   const switchTo = chosen ? `${text.switchTo}?template=${chosen.slug}` : text.switchTo;
 
   // Someone who chose a template before signing up goes straight to their ideas, where it opens.
@@ -129,8 +138,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (mode === 'register' && !meetsPasswordRules(password)) {
-      setProblems({ duplicateEmail: false, expiredLink: false, password: weakPasswordMessage });
+    if (!validation.validate(event)) {
       return;
     }
     setPending(true);
@@ -171,10 +179,18 @@ export function AuthPage({ mode }: { mode: Mode }) {
           You’ll start with the <strong>{chosen.name}</strong> template once you’re in.
         </p>
       )}
-      <form onSubmit={(event) => void submit(event)} className="stack">
-        <Field label="Email" error={problems?.email}>
+      <form onSubmit={(event) => void submit(event)} className="stack" noValidate>
+        <Field label="Email" error={validation.errors.email ?? problems?.email}>
           {(props) => (
-            <input {...props} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input
+              {...props}
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={validation.blur('email')}
+            />
           )}
         </Field>
         {problems?.duplicateEmail && (
@@ -187,7 +203,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
             </Link>
           </p>
         )}
-        <Field label="Password" hint={mode === 'register' ? <PasswordRules password={password} /> : undefined} error={problems?.password}>
+        <Field label="Password" hint={mode === 'register' ? <PasswordRules password={password} /> : undefined} error={validation.errors.password ?? problems?.password}>
           {(props) => (
             <PasswordInput
               {...props}
@@ -195,6 +211,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onBlur={validation.blur('password')}
             />
           )}
         </Field>

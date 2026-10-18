@@ -5,6 +5,7 @@ import { personLabel, type Idea, type Member } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { useConfirm, useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
+import { Person } from '../components/Person';
 import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
 
@@ -41,11 +42,7 @@ export function TeamSection({ idea }: { idea: Idea }) {
             const canRemove = !archived && member.role === 'Member' && (idea.canManage || isMe);
             return (
               <li key={member.userId}>
-                <span>
-                  {personLabel(member.name, member.email)}
-                  {isMe && <span className="muted"> (you)</span>}
-                  {member.name && <span className="muted small block">{member.email}</span>}
-                </span>
+                <Person name={member.name} email={member.email} after={isMe && <span className="muted"> (you)</span>} />
                 <span className="row">
                   <span className="badge">{member.role}</span>
                   {canRemove && (

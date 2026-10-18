@@ -36,6 +36,23 @@ describe('Use case pages', () => {
   });
 });
 
+describe('Closing bands', () => {
+  it('ends the use case and comparison lists with a way in', async () => {
+    fakeApi(signedOut);
+    renderApp('/use-cases');
+    expect(await screen.findByRole('heading', { name: 'Ready to plan your team’s ideas?' })).toBeInTheDocument();
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Get started free' })).toHaveAttribute('href', '/register');
+  });
+
+  it('offers signed-in people their ideas in the band', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
+    renderApp('/compare');
+
+    expect(await screen.findByRole('heading', { name: 'Ready to see if it fits?' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Go to your ideas' })).toHaveAttribute('href', '/ideas');
+  });
+});
+
 describe('Comparison pages', () => {
   it('lists every comparison and shows one as a table, with when the alternative is better', async () => {
     fakeApi(signedOut);

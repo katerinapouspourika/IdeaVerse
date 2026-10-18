@@ -145,6 +145,12 @@ export interface IdeaUpdate extends IdeaInput {
   status: IdeaStatus;
 }
 
+/** Takes back the caller's latest postponement, restoring the date and status it had before. */
+export interface UndoPostpone {
+  targetDate: string;
+  status: IdeaStatus;
+}
+
 export interface Component {
   id: string;
   title: string;
@@ -203,6 +209,9 @@ export interface Notification {
   id: string;
   ideaId: string;
   ideaTitle: string;
+  /** The workspace the idea belongs to. */
+  workspaceId: string;
+  workspaceName: string;
   kind: ReminderKind;
   targetDate: string;
   message: string;

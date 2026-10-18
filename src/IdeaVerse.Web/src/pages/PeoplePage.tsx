@@ -1,6 +1,6 @@
 import { Palette } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router';
+import { Fragment, useEffect, useState, type FormEvent } from 'react';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
 
 import { formatDate } from '../api/dates';
 import {
@@ -18,9 +18,11 @@ import {
 import { personLabel, type Invitation, type Workspace, type WorkspaceMember, type WorkspaceRole } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
+import { Person } from '../components/Person';
 import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 import { useConfirm, useToast } from '../components/Feedback';
 import { Skeleton } from '../components/Skeleton';
+import { emailProblem, useInlineValidation } from '../components/useInlineValidation';
 import { usePageMeta } from '../seo/usePageMeta';
 import { canManageWorkspace, useWorkspace } from '../workspaces/WorkspaceContext';
 import { CompanyDomainCard } from '../workspaces/CompanyDomainCard';
@@ -30,9 +32,23 @@ import { JoinRequestsCard } from '../workspaces/JoinRequestsCard';
 /** The current workspace's people and invitations; owners and admins manage them here. */
 export function PeoplePage() {
   usePageMeta('People', { index: false });
-  const { current, isLoading } = useWorkspace();
+  const { all, current, isLoading, select } = useWorkspace();
+  const [params, setParams] = useSearchParams();
+  // Emails about a workspace's people link here as `?workspace={id}`, so they open on that workspace whichever was last chosen.
+  const linked = params.get('workspace');
+  const linkedWorkspace = all.find((w) => w.id === linked);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (linked === null || isLoading) {
+      return;
+    }
+    if (linkedWorkspace && current?.id !== linkedWorkspace.id) {
+      select(linkedWorkspace.id);
+    }
+    setParams({}, { replace: true });
+  }, [linked, linkedWorkspace, current, isLoading, select, setParams]);
+
+  if (isLoading || (linkedWorkspace && current?.id !== linkedWorkspace.id)) {
     return <Skeleton variant="page" lines={4} />;
   }
 
@@ -49,20 +65,75 @@ function People({ workspace }: { workspace: Workspace }) {
   return (
     <div className="stack">
       <WorkspaceName workspace={workspace} canManage={canManage} />
+      {canManage && <JoinRequestsCard workspaceId={workspace.id} />}
       <MemberList workspace={workspace} canManage={canManage} />
       {canManage ? (
         <>
           <InviteForm workspaceId={workspace.id} />
-          <JoinRequestsCard workspaceId={workspace.id} />
           <InviteLinkCard workspaceId={workspace.id} />
           <CompanyDomainCard workspaceId={workspace.id} />
           <OpenInvitations workspaceId={workspace.id} />
         </>
       ) : (
-        <p className="muted small">Only the workspace’s owner and admins can invite people.</p>
+        <AskToInvite workspaceId={workspace.id} />
       )}
       {workspace.role === 'Owner' && <DangerZone workspace={workspace} />}
     </div>
+  );
+}
+
+/** Tells a member who can invite people, by name, with their addresses to write to. */
+function AskToInvite({ workspaceId }: { workspaceId: string }) {
+  const members = useWorkspaceMembers(workspaceId);
+  const managers = (members.data ?? []).filter((m) => m.role === 'Owner' || m.role === 'Admin');
+
+  if (managers.length === 0) {
+    return <p className="muted small">Only the workspace’s owner and admins can invite people.</p>;
+  }
+
+  return (
+    <p className="muted small">
+      To invite someone, ask{' '}
+      {managers.map((m, i) => (
+        <Fragment key={m.userId}>
+          {i > 0 && (i === managers.length - 1 ? ' or ' : ', ')}
+          <a href={`mailto:${m.email}`}>{personLabel(m.name, m.email)}</a>
+        </Fragment>
+      ))}
+      .
+    </p>
+  );
+}
+
+/** What each workspace role may do, as the API enforces it. */
+const roleAbilities: { role: WorkspaceRole; can: string }[] = [
+  {
+    role: 'Owner',
+    can: 'Everything an admin can, plus hand the workspace to someone else or delete it. There is one owner, who can’t leave until they hand it over.',
+  },
+  {
+    role: 'Admin',
+    can: 'Invite people, answer join requests, remove people and change their roles, rename and brand the workspace, and edit, archive or delete any idea in it.',
+  },
+  {
+    role: 'Member',
+    can: 'See and discuss every idea, create their own, and edit the ones they own or are on the team of; they archive or delete only their own.',
+  },
+];
+
+function RoleGuide() {
+  return (
+    <details className="role-guide small">
+      <summary>What can each role do?</summary>
+      <dl>
+        {roleAbilities.map(({ role, can }) => (
+          <Fragment key={role}>
+            <dt>{role}</dt>
+            <dd className="muted">{can}</dd>
+          </Fragment>
+        ))}
+      </dl>
+    </details>
   );
 }
 
@@ -253,11 +324,7 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
             const isOwner = member.role === 'Owner';
             return (
               <li key={member.userId}>
-                <span>
-                  {personLabel(member.name, member.email)}
-                  {isMe && <span className="muted"> (you)</span>}
-                  {member.name && <span className="muted small block">{member.email}</span>}
-                </span>
+                <Person name={member.name} email={member.email} after={isMe && <span className="muted"> (you)</span>} />
                 <span className="row">
                   {canManage && !isOwner && !isMe ? (
                     <select
@@ -288,6 +355,7 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
           })}
         </ul>
       )}
+      <RoleGuide />
       <LoadError queries={members} />
       <ErrorMessage error={changeRole.error ?? remove.error} />
     </section>
@@ -299,29 +367,42 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<WorkspaceRole>('Member');
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const validation = useInlineValidation({ email: () => emailProblem(email, 'Enter the email address to invite.') });
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     setSentTo(null);
+    if (!validation.validate(event)) {
+      return;
+    }
     invite.mutate(
       { email, role },
       {
         onSuccess: (invitation) => {
           setSentTo(invitation.email);
           setEmail('');
+          validation.reset();
         },
       },
     );
   };
 
   return (
-    <form className="card stack" onSubmit={submit} aria-label="Invite people">
+    <form className="card stack" onSubmit={submit} aria-label="Invite people" noValidate>
       <h2>Invite people</h2>
       <p className="muted small">They get an email with a link. People without an account sign up with that address and find the invitation waiting.</p>
       <div className="row wrap end">
-        <Field label="Email" error={fieldError(invite.error, 'email')} className="grow">
+        <Field label="Email" error={validation.errors.email ?? fieldError(invite.error, 'email')} className="grow">
           {(props) => (
-            <input {...props} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" />
+            <input
+              {...props}
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={validation.blur('email')}
+              placeholder="name@company.com"
+            />
           )}
         </Field>
         <Field label="Role" error={fieldError(invite.error, 'role')}>
@@ -374,7 +455,7 @@ function OpenInvitations({ workspaceId }: { workspaceId: string }) {
 
   return (
     <section className="card stack" aria-labelledby="open-invitations-heading">
-      <h2 id="open-invitations-heading">Waiting to join</h2>
+      <h2 id="open-invitations-heading">Pending invitations</h2>
       <ul className="team">
         {invitations.data.map((invitation) => (
           <li key={invitation.id}>

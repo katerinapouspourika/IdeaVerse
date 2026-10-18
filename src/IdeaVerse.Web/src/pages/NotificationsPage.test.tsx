@@ -2,13 +2,15 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { Notification } from '../api/types';
-import { anIdea, fakeApi, ideasRoute, signedIn, signedInAccount } from '../test/fakeApi';
+import { aWorkspace, anIdea, fakeApi, ideasRoute, signedIn, signedInAccount } from '../test/fakeApi';
 import { renderApp } from '../test/render';
 
 const tomorrow: Notification = {
   id: 'n-2',
   ideaId: 'idea-1',
   ideaTitle: 'Black Friday teaser',
+  workspaceId: 'ws-1',
+  workspaceName: 'Acme Marketing',
   kind: 'Tomorrow',
   targetDate: '2026-11-27',
   message: 'The target date for “Black Friday teaser” is tomorrow, Fri 27 Nov 2026.',
@@ -85,6 +87,60 @@ describe('Notifications', () => {
     expect(await screen.findByRole('heading', { name: 'Black Friday teaser' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/ideas/idea-1');
     expect(calls.some((c) => c.path === '/api/v1/notifications/n-2/read')).toBe(true);
+  });
+
+  it('names each notification’s workspace for someone in several', async () => {
+    const globex = { ...tomorrow, id: 'n-3', workspaceId: 'ws-2', workspaceName: 'Globex', message: 'Globex launch is tomorrow.' };
+    fakeApi({
+      ...routes([globex, tomorrow], 2),
+      'GET /api/v1/workspaces': { status: 200, body: [aWorkspace(), aWorkspace({ id: 'ws-2', name: 'Globex', role: 'Member' })] },
+      [ideasRoute]: { status: 200, body: [] },
+    });
+
+    renderApp('/notifications');
+
+    const items = await within(screen.getByRole('main')).findAllByRole('listitem');
+    expect(items[0]).toHaveTextContent('Globex');
+    expect(items[1]).toHaveTextContent('Acme Marketing');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Notifications, 2 unread' }));
+    const preview = screen.getByRole('region', { name: 'Latest notifications' });
+    expect(within(preview).getAllByRole('listitem')[0]).toHaveTextContent('Globex');
+  });
+
+  it('leaves the workspace out for someone in one', async () => {
+    fakeApi(routes([tomorrow], 1));
+
+    renderApp('/notifications');
+
+    const items = await within(screen.getByRole('main')).findAllByRole('listitem');
+    expect(items[0]).not.toHaveTextContent('Acme Marketing');
+  });
+
+  it('says so when opening a notification switches the workspace', async () => {
+    const globex = aWorkspace({ id: 'ws-2', name: 'Globex', role: 'Member' });
+    fakeApi({
+      ...routes([{ ...tomorrow, ideaId: 'idea-2', workspaceId: 'ws-2', workspaceName: 'Globex' }], 1),
+      'GET /api/v1/workspaces': { status: 200, body: [aWorkspace(), globex] },
+      'POST /api/v1/notifications/n-2/read': { status: 204 },
+      'GET /api/v1/ideas/idea-2': { status: 200, body: anIdea({ id: 'idea-2', workspaceId: 'ws-2' }) },
+      'GET /api/v1/ideas/idea-2/components': { status: 200, body: [] },
+      'GET /api/v1/ideas/idea-2/members': { status: 200, body: [] },
+    });
+    renderApp('/notifications');
+
+    await userEvent.click(await screen.findByRole('link', { name: 'Open idea' }));
+
+    expect(await screen.findByText('Switched to Globex')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveValue('ws-2');
+  });
+
+  it('links the reminder settings', async () => {
+    fakeApi(routes([], 0));
+
+    renderApp('/notifications');
+
+    expect(await screen.findByRole('link', { name: 'Settings → Reminders' })).toHaveAttribute('href', '/settings#reminders');
   });
 
   it('shows when each arrived in the account’s time zone', async () => {

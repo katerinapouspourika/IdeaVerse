@@ -6,6 +6,7 @@ import { readAccountProblems, type AccountProblems } from '../auth/identityError
 import { meetsPasswordRules, weakPasswordMessage } from '../auth/passwordRules';
 import { PasswordRules } from '../auth/PasswordRules';
 import { Field } from '../components/Field';
+import { useInlineValidation } from '../components/useInlineValidation';
 import { PasswordInput } from '../components/PasswordInput';
 import { usePageMeta } from '../seo/usePageMeta';
 
@@ -20,7 +21,10 @@ export function ResetPasswordPage() {
   const [done, setDone] = useState(false);
   const [pending, setPending] = useState(false);
   const [problems, setProblems] = useState<AccountProblems | null>(null);
-  const [mismatch, setMismatch] = useState(false);
+  const validation = useInlineValidation({
+    password: () => (password ? undefined : 'Choose a new password.') ?? (meetsPasswordRules(password) ? undefined : weakPasswordMessage),
+    confirmation: () => (confirmation ? undefined : 'Repeat your new password.') ?? (password === confirmation ? undefined : 'The two passwords don’t match.'),
+  });
 
   if (!email || !code) {
     return (
@@ -46,9 +50,8 @@ export function ResetPasswordPage() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    setProblems(meetsPasswordRules(password) ? null : { duplicateEmail: false, expiredLink: false, password: weakPasswordMessage });
-    setMismatch(password !== confirmation);
-    if (password !== confirmation || !meetsPasswordRules(password)) {
+    setProblems(null);
+    if (!validation.validate(event)) {
       return;
     }
     setPending(true);
@@ -68,15 +71,29 @@ export function ResetPasswordPage() {
       <p className="muted">
         For <strong>{email}</strong>
       </p>
-      <form onSubmit={(event) => void submit(event)} className="stack">
-        <Field label="New password" hint={<PasswordRules password={password} />} error={problems?.password}>
+      <form onSubmit={(event) => void submit(event)} className="stack" noValidate>
+        <Field label="New password" hint={<PasswordRules password={password} />} error={validation.errors.password ?? problems?.password}>
           {(props) => (
-            <PasswordInput {...props} autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            <PasswordInput
+              {...props}
+              autoComplete="new-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onBlur={validation.blur('password')}
+            />
           )}
         </Field>
-        <Field label="Repeat new password" error={mismatch ? 'The two passwords don’t match.' : undefined}>
+        <Field label="Repeat new password" error={validation.errors.confirmation}>
           {(props) => (
-            <PasswordInput {...props} autoComplete="new-password" required value={confirmation} onChange={(e) => setConfirmation(e.target.value)} />
+            <PasswordInput
+              {...props}
+              autoComplete="new-password"
+              required
+              value={confirmation}
+              onChange={(e) => setConfirmation(e.target.value)}
+              onBlur={validation.blur('confirmation')}
+            />
           )}
         </Field>
         {problems?.expiredLink && (

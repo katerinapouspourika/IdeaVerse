@@ -14,7 +14,7 @@ public class InvitationEndpointsTests
   private const string InviteeEmail = "invitee@example.com";
 
   [Test]
-  public async Task Invite_NewEmail_ReturnsCreatedAndEmailsLinkToInvitations()
+  public async Task Invite_NewEmail_ReturnsCreatedAndEmailsLinkToSignUpWithTheAddress()
   {
     await using var factory = new IdeaVerseApiFactory();
     using var owner = await factory.CreateSignedInClientAsync();
@@ -29,8 +29,27 @@ public class InvitationEndpointsTests
     await Assert.That(invitation.Role).IsEqualTo(WorkspaceRole.Admin);
     await Assert.That(invitation.InvitedByEmail).IsEqualTo("owner@example.com");
     await Assert.That(invitation.ExpiresAt).IsEqualTo(factory.Time.GetUtcNow() + Invitation.Lifetime);
-    await Assert.That(FakeMailSender.LinkIn(mail, IdeaVerseApiFactory.AppUrl).ToString()).IsEqualTo($"{IdeaVerseApiFactory.AppUrl}/invitations");
-    await Assert.That(mail.Body).Contains("owner@example.com invited you");
+    await Assert.That(FakeMailSender.LinkIn(mail, IdeaVerseApiFactory.AppUrl).AbsoluteUri).IsEqualTo($"{IdeaVerseApiFactory.AppUrl}/register?email=Invitee%40Example.com");
+    await Assert.That(mail.Body).Contains("owner@example.com invited you to join");
+    await Assert.That(mail.Body).Contains($"{workspace.Name} as an Admin");
+    await Assert.That(mail.Body).Contains("Accept invitation");
+    await Assert.That(mail.Body).Contains("create your account with this email address");
+  }
+
+  [Test]
+  public async Task Invite_EmailWithAccount_EmailsLinkToInvitations()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var invitee = await factory.CreateSignedInClientAsync(InviteeEmail, withWorkspace: false);
+    var workspace = await owner.WorkspaceAsync();
+
+    (await InviteAsync(owner, workspace.Id, InviteeEmail, WorkspaceRole.Member)).Dispose();
+    var mail = factory.Mail.Take(InviteeEmail, InvitationService.Subject(workspace.Name));
+
+    await Assert.That(FakeMailSender.LinkIn(mail, IdeaVerseApiFactory.AppUrl).AbsoluteUri).IsEqualTo($"{IdeaVerseApiFactory.AppUrl}/invitations");
+    await Assert.That(mail.Body).Contains($"{workspace.Name} as a Member");
+    await Assert.That(mail.Body).Contains("Sign in with this email address");
   }
 
   [Test]

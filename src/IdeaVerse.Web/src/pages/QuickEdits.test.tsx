@@ -211,6 +211,22 @@ describe('Changing the status from the heading', () => {
     expect(await screen.findByText('Status set to Done')).toBeInTheDocument();
   });
 
+  it('puts the previous status back with Undo', async () => {
+    const idea = anIdea({ status: 'InProgress' });
+    const calls = fakeApi({
+      ...ideaRoutes(idea),
+      'PUT /api/v1/ideas/idea-1': (body: unknown) => ({ status: 200, body: { ...idea, ...(body as object) } }),
+    });
+    renderApp('/ideas/idea-1');
+
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Status' }), 'Done');
+    await screen.findByText('Status set to Done');
+    await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
+
+    await waitFor(() => expect(calls.filter((c) => c.method === 'PUT').map((c) => (c.body as { status: string }).status)).toEqual(['Done', 'InProgress']));
+    expect(await screen.findByText('Status set to In progress')).toBeInTheDocument();
+  });
+
   it('says so when the status cannot be changed', async () => {
     fakeApi({ ...ideaRoutes(), 'PUT /api/v1/ideas/idea-1': { status: 500 } });
     renderApp('/ideas/idea-1');

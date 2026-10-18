@@ -63,6 +63,20 @@ export function formatMoment(isoInstant: string, timeZone: string = currentTimeZ
   });
 }
 
+/** When something happened, relative to now in the account's time zone: "just now", "5 min ago", "2 h ago", "yesterday", "3 days ago", or the date after a week. */
+export function formatAgo(isoInstant: string, now: Date = new Date(), timeZone: string = currentTimeZone): string {
+  const then = new Date(isoInstant);
+  const minutes = Math.floor((now.getTime() - then.getTime()) / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  const day = todayIso(then, timeZone);
+  const days = -daysUntil(day, now, timeZone);
+  if (days === 0) return `${Math.floor(minutes / 60)} h ago`;
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days} days ago`;
+  return formatDate(day);
+}
+
 /** Formats when an idea starts: its date, with the time in the account's time zone when one was given. */
 export function formatStart(idea: { startDate: string | null; startTime: string | null; startsAt: string | null }): string | null {
   if (!idea.startDate) return null;

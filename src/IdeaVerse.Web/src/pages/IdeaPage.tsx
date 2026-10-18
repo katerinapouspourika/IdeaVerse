@@ -6,7 +6,7 @@ import { ImproveIdea } from '../ai/ImproveIdea';
 import { useRecentIdea } from '../commands/recentIdeas';
 import { ApiError } from '../api/client';
 import { addDays, describeDue, formatDate, formatStart, todayIso } from '../api/dates';
-import { useArchiveIdea, useDeleteIdea, useIdea, useMoveIdea, usePostponeIdea, useSetStart, useUpdateIdea } from '../api/queries';
+import { useArchiveIdea, useDeleteIdea, useIdea, useMoveIdea, usePostponeIdea, useSetStart, useUndoPostpone, useUpdateIdea } from '../api/queries';
 import { canChange, personLabel, statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
 import { useConfirm, useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
@@ -57,17 +57,20 @@ function IdeaDetail({ idea }: { idea: Idea }) {
   const changeable = canChange(idea);
   const ideaWorkspaceId = idea.workspaceId;
   const matchedIdea = useRef<string | null>(null);
+  const toast = useToast();
 
-  // Opening an idea from another workspace switches the header to it, once; switching away afterwards is the user's choice.
+  // Opening an idea from another workspace switches the header to it, once, and says so; switching away afterwards is the user's choice.
   useEffect(() => {
-    if (matchedIdea.current === idea.id || !all.some((w) => w.id === ideaWorkspaceId)) {
+    const ideaWorkspace = all.find((w) => w.id === ideaWorkspaceId);
+    if (matchedIdea.current === idea.id || !ideaWorkspace) {
       return;
     }
     matchedIdea.current = idea.id;
     if (current?.id !== ideaWorkspaceId) {
       select(ideaWorkspaceId);
+      toast({ message: `Switched to ${ideaWorkspace.name}` });
     }
-  }, [idea.id, ideaWorkspaceId, all, current, select]);
+  }, [idea.id, ideaWorkspaceId, all, current, select, toast]);
 
   return (
     <div className="stack">
@@ -148,11 +151,13 @@ function QuickStatus({ idea }: { idea: Idea }) {
   const toast = useToast();
   const status = move.isPending ? move.variables.status : idea.status;
 
-  const change = (next: IdeaStatus) =>
+  /** `from` is passed by Undo, whose closure would otherwise see the idea as it was; the Undo itself offers no Undo. */
+  const change = (next: IdeaStatus, { from = idea.status, undoable = true } = {}) =>
     move.mutate(
       { idea, status: next },
       {
-        onSuccess: () => toast({ message: `Status set to ${statusLabels[next]}` }),
+        onSuccess: () =>
+          toast({ message: `Status set to ${statusLabels[next]}`, undo: undoable ? () => change(from, { from: next, undoable: false }) : undefined }),
         onError: () => toast({ message: 'Couldn’t change the status. Try again.', tone: 'error' }),
       },
     );
@@ -401,6 +406,7 @@ function StartForm({ idea }: { idea: Idea }) {
 
 function PostponeForm({ idea }: { idea: Idea }) {
   const postpone = usePostponeIdea(idea.id);
+  const undo = useUndoPostpone(idea.id);
   const toast = useToast();
   const today = todayIso();
   const earliest = idea.targetDate >= today ? addDays(idea.targetDate, 1) : today;
@@ -408,7 +414,18 @@ function PostponeForm({ idea }: { idea: Idea }) {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    postpone.mutate(targetDate, { onSuccess: () => toast({ message: `Postponed to ${formatDate(targetDate)}` }) });
+    const previous = { targetDate: idea.targetDate, status: idea.status };
+    postpone.mutate(targetDate, {
+      onSuccess: () =>
+        toast({
+          message: `Postponed to ${formatDate(targetDate)}`,
+          undo: () =>
+            undo.mutate(previous, {
+              onSuccess: () => toast({ message: `Back to ${formatDate(previous.targetDate)}` }),
+              onError: (error) => toast({ message: error.message, tone: 'error' }),
+            }),
+        }),
+    });
   };
 
   return (

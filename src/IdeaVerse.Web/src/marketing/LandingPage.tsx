@@ -1,21 +1,26 @@
-import { AlarmClock, ArrowRight, CalendarDays, Lightbulb, Puzzle, Sparkles, Users } from 'lucide-react';
+import { AlarmClock, ArrowRight, Lightbulb, Puzzle, Sparkles, Target, Users } from 'lucide-react';
 import { Link } from 'react-router';
+
+import { CtaBand } from '../components/CtaBand';
 import { publicPages } from '../seo/pages';
 import { usePageMeta } from '../seo/usePageMeta';
+import { walkthroughs } from './walkthroughs';
 
 const features = [
   { icon: <Lightbulb size={24} />, title: 'Capture every idea', text: 'Give each idea a title, a description, tags, and a date to make it real by.' },
   { icon: <Puzzle size={24} />, title: 'Plan what it needs', text: 'Break ideas into components and tick them off. Progress shows at a glance.' },
   { icon: <Users size={24} />, title: 'Work as a team', text: 'Shared workspaces, idea teams, comments, and tasks with owners and due dates.' },
-  { icon: <AlarmClock size={24} />, title: 'Never miss a date', text: 'Reminders a week before, the day before, and on the day — in your own time zone.' },
-  { icon: <CalendarDays size={24} />, title: 'See the big picture', text: 'Search, filter by tag, and switch to a month calendar of everything that’s coming.' },
+  {
+    icon: <Target size={24} />,
+    title: 'Decide what’s worth doing',
+    text: 'Vote for the ideas you back, score impact and effort, and spot the quick wins on the priority matrix.',
+  },
+  {
+    icon: <AlarmClock size={24} />,
+    title: 'Never miss a date',
+    text: 'A calendar of everything coming, and reminders a week before, the day before, and on the day — in your own time zone.',
+  },
   { icon: <Sparkles size={24} />, title: 'AI help when you want it', text: 'Brainstorm new ideas, suggest what an idea needs, and sharpen how it’s written.' },
-];
-
-const steps = [
-  { title: 'Create a workspace', text: 'For your company, your team, or just you.' },
-  { title: 'Add ideas with dates', text: 'Capture them the moment they strike.' },
-  { title: 'Plan, share, and finish', text: 'Line up what they need and bring them to life — on time.' },
 ];
 
 /** The public home page for visitors who are not signed in. */
@@ -69,16 +74,16 @@ export function LandingPage() {
       <section className="landing-section tinted">
         <div className="landing-inner stack">
           <div className="section-heading">
-            <h2 className="section-title">Up and running in minutes</h2>
+            <h2 className="section-title">Four steps from spark to done</h2>
           </div>
           <ol className="steps">
-            {steps.map((s, i) => (
-              <li key={s.title} className="step">
+            {walkthroughs.map((w, i) => (
+              <li key={w.slug} className="step">
                 <span className="step-number" aria-hidden="true">
                   {i + 1}
                 </span>
-                <h3>{s.title}</h3>
-                <p className="muted">{s.text}</p>
+                <h3>{w.title}</h3>
+                <p className="muted">{w.summary}</p>
               </li>
             ))}
           </ol>
@@ -90,22 +95,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="landing-section">
-        <div className="landing-inner">
-          <div className="cta-band">
-            <h2 className="section-title">Ready to make your next idea happen?</h2>
-            <p className="lead">Free to start. Invite your team whenever you’re ready.</p>
-            <div className="row wrap center-row">
-              <Link to="/register" className="button light large">
-                Get started free
-              </Link>
-              <Link to="/contact" className="button outline-light large">
-                Talk to us
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+      <CtaBand title="Ready to make your next idea happen?" text="Free to start. Invite your team whenever you’re ready." />
     </div>
   );
 }
