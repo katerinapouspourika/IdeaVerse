@@ -53,6 +53,29 @@ public class AuthTests
   }
 
   [Test]
+  public async Task Register_ElevenCharacterPassword_ReturnsPasswordTooShort()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    var client = factory.CreateClient();
+
+    using var response = await client.PostAsJsonAsync("/api/v1/auth/register", new { email = "owner@example.com", password = "Abcdef1234!" });
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+    await Assert.That((await response.ReadValidationErrorsAsync()).Keys).IsEquivalentTo(["PasswordTooShort"]);
+  }
+
+  [Test]
+  public async Task Register_TwelveLowercaseLetters_Succeeds()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    var client = factory.CreateClient();
+
+    using var response = await client.PostAsJsonAsync("/api/v1/auth/register", new { email = "owner@example.com", password = "abcdefghijkl" });
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+  }
+
+  [Test]
   public async Task Logout_SignedIn_RevokesAccess()
   {
     await using var factory = new IdeaVerseApiFactory();

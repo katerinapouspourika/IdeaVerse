@@ -21,14 +21,14 @@ export function WelcomePage({ onCreated }: { onCreated?: () => void }) {
           <p className="muted">You’ve been invited to a workspace. Join it to see your team’s ideas, or start one of your own.</p>
           <ReceivedInvitations />
           <CompanyWorkspaces />
-          <CreateWorkspaceForm heading="Or start your own workspace" onCreated={onCreated} />
+          <CreateWorkspaceForm heading="Or start your own workspace" onCreated={onCreated} askName />
         </>
       ) : (
         <>
           <p className="muted">Ideas live in a workspace you share with your company or team. Let’s set yours up; it takes a minute.</p>
           <CompanyWorkspaces />
           <SetupSteps current={1} />
-          <CreateWorkspaceForm heading="Name your workspace" onCreated={onCreated} />
+          <CreateWorkspaceForm heading="Name your workspace" onCreated={onCreated} askName />
           <p className="muted small">Expecting an invitation instead? Ask a teammate to invite this email address; it will appear here.</p>
         </>
       )}

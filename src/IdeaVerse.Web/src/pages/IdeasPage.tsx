@@ -3,6 +3,7 @@ import { Archive, Lightbulb, Plus, SearchX } from 'lucide-react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 
 import { daysUntil, describeDue, formatDate } from '../api/dates';
+import { UnavailableAiButton } from '../ai/AiAllowance';
 import { BrainstormPanel, describeBrainstormed } from '../ai/BrainstormPanel';
 import { useAiStatus, useIdeas, useTags } from '../api/queries';
 import { personLabel, sortLabels, statuses, statusLabels, type Idea, type IdeaSort, type IdeaStatus, type Workspace } from '../api/types';
@@ -12,12 +13,14 @@ import { Progress } from '../components/Progress';
 import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
+import { useEdgeFade } from '../components/useEdgeFade';
 import { IdeaPanel } from '../panel/IdeaPanel';
 import { useIdeaPanel } from '../panel/useIdeaPanel';
 import { IdeaMatrix } from '../priority/IdeaMatrix';
 import { VoteButton } from '../priority/VoteButton';
 import { usePageMeta } from '../seo/usePageMeta';
 import { forgetPendingTemplate, pendingTemplate } from '../templates/pendingTemplate';
+import { StarterTemplates } from '../templates/StarterTemplates';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { IdeaBoard } from './IdeaBoard';
 import { IdeaCalendar } from './IdeaCalendar';
@@ -95,7 +98,14 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const tags = useTags(workspace.id);
   const ai = useAiStatus(workspace.id);
   const filtered = status !== undefined || debouncedSearch.trim() !== '' || tag !== '';
+  // A workspace with no ideas yet has nothing to filter, sort, or lay out, so it shows only the way to add one. One
+  // whose ideas are all archived keeps the controls, so the Archived tab can still be reached.
+  const nothingActive = ideas.data?.length === 0 && !filtered && !archived;
+  const archive = useIdeas(workspace.id, { archived: true }, nothingActive);
+  const noIdeas = nothingActive && !archive.data?.length;
   const panel = useIdeaPanel();
+  const statusTabs = useEdgeFade<HTMLElement>();
+  const viewTabs = useEdgeFade<HTMLDivElement>();
 
   return (
     <div className="stack">
@@ -108,6 +118,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
                 Brainstorm with AI
               </button>
             )}
+            {ai.data?.enabled === false && <UnavailableAiButton label="Brainstorm with AI" compact />}
             <button type="button" className="button primary" onClick={() => setAdding({ title: '', description: '' })}>
               New idea
             </button>
@@ -132,57 +143,63 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
         />
       )}
 
-      <nav className="tabs" aria-label="Filter by status">
-        <FilterTab label="All" active={tab === 'All' || (view === 'board' && !archived)} onClick={() => setTab('All')} />
-        {view !== 'board' &&
-          statuses.map((s) => <FilterTab key={s} label={statusLabels[s]} active={tab === s} onClick={() => setTab(s)} />)}
-        <FilterTab label="Archived" active={archived} onClick={() => setTab('Archived')} />
-      </nav>
+      {!noIdeas && (
+        <>
+          <nav ref={statusTabs} className="tabs" aria-label="Filter by status">
+            <FilterTab label="All" active={tab === 'All' || (view === 'board' && !archived)} onClick={() => setTab('All')} />
+            {view !== 'board' &&
+              statuses.map((s) => <FilterTab key={s} label={statusLabels[s]} active={tab === s} onClick={() => setTab(s)} />)}
+            <FilterTab label="Archived" active={archived} onClick={() => setTab('Archived')} />
+          </nav>
 
-      <div className="row wrap end toolbar">
-        <Field label="Search">
-          {(props) => (
-            <input {...props} type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Title or description" />
-          )}
-        </Field>
-        {tags.data && tags.data.length > 0 && (
-          <Field label="Tag">
-            {(props) => (
-              <select {...props} value={tag} onChange={(e) => setTag(e.target.value)}>
-                <option value="">All tags</option>
-                {tags.data.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+          <div className="row wrap end toolbar">
+            <Field label="Search">
+              {(props) => (
+                <input {...props} type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Title or description" />
+              )}
+            </Field>
+            {tags.data && tags.data.length > 0 && (
+              <Field label="Tag">
+                {(props) => (
+                  <select {...props} value={tag} onChange={(e) => setTag(e.target.value)}>
+                    <option value="">All tags</option>
+                    {tags.data.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </Field>
             )}
-          </Field>
-        )}
-        <Field label="Sort by">
-          {(props) => (
-            <select {...props} value={sort} onChange={(e) => setSort(e.target.value as IdeaSort)}>
-              {(Object.keys(sortLabels) as IdeaSort[]).map((s) => (
-                <option key={s} value={s}>
-                  {sortLabels[s]}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-        <div className="tabs" role="group" aria-label="View">
-          <FilterTab label="List" active={view === 'list'} onClick={() => setView('list')} />
-          <FilterTab label="Board" active={view === 'board'} onClick={() => setView('board')} />
-          <FilterTab label="Calendar" active={view === 'calendar'} onClick={() => setView('calendar')} />
-          <FilterTab label="Timeline" active={view === 'timeline'} onClick={() => setView('timeline')} />
-          <FilterTab label="Matrix" active={view === 'matrix'} onClick={() => setView('matrix')} />
-        </div>
-      </div>
+            <Field label="Sort by">
+              {(props) => (
+                <select {...props} value={sort} onChange={(e) => setSort(e.target.value as IdeaSort)}>
+                  {(Object.keys(sortLabels) as IdeaSort[]).map((s) => (
+                    <option key={s} value={s}>
+                      {sortLabels[s]}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
+            <div ref={viewTabs} className="tabs" role="group" aria-label="View">
+              <FilterTab label="List" active={view === 'list'} onClick={() => setView('list')} />
+              <FilterTab label="Board" active={view === 'board'} onClick={() => setView('board')} />
+              <FilterTab label="Calendar" active={view === 'calendar'} onClick={() => setView('calendar')} />
+              <FilterTab label="Timeline" active={view === 'timeline'} onClick={() => setView('timeline')} />
+              <FilterTab label="Matrix" active={view === 'matrix'} onClick={() => setView('matrix')} />
+            </div>
+          </div>
+        </>
+      )}
 
       {ideas.isLoading && <Skeleton variant="cards" />}
       <LoadError queries={ideas} />
       {ideas.data &&
-        (view === 'calendar' ? (
+        (noIdeas ? (
+          !adding && <FirstIdea onAdd={() => setAdding({ title: '', description: '' })} />
+        ) : view === 'calendar' ? (
           <IdeaCalendar ideas={ideas.data} />
         ) : view === 'board' ? (
           <IdeaBoard ideas={ideas.data} />
@@ -195,7 +212,6 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
             ideas={ideas.data}
             filtered={filtered}
             archived={archived}
-            onAdd={() => setAdding({ title: '', description: '' })}
             onClearFilters={() => {
               setTab('All');
               setSearch('');
@@ -226,15 +242,33 @@ function FilterTab({ label, active, onClick }: { label: string; active: boolean;
   );
 }
 
+/** The ideas page of a workspace with no ideas yet: a blank idea, or a start from a template. */
+function FirstIdea({ onAdd }: { onAdd: () => void }) {
+  return (
+    <div className="card empty stack center">
+      <span className="feature-icon big" aria-hidden="true">
+        <Lightbulb size={32} />
+      </span>
+      <p>No ideas yet. Add your first one and give it a date to make it real by, or start from a template with its checklist ready.</p>
+      <div className="row wrap center-row">
+        {/* A plain button: "New idea" above stays the page's one primary action. */}
+        <button type="button" className="button" onClick={onAdd}>
+          <Plus aria-hidden="true" size={18} /> Add a blank idea
+        </button>
+        <StarterTemplates />
+      </div>
+    </div>
+  );
+}
+
 interface IdeaListProps {
   ideas: Idea[];
   filtered: boolean;
   archived: boolean;
-  onAdd: () => void;
   onClearFilters: () => void;
 }
 
-function IdeaList({ ideas, filtered, archived, onAdd, onClearFilters }: IdeaListProps) {
+function IdeaList({ ideas, filtered, archived, onClearFilters }: IdeaListProps) {
   const { linkProps } = useIdeaPanel();
   if (ideas.length === 0) {
     return (
@@ -247,18 +281,12 @@ function IdeaList({ ideas, filtered, archived, onAdd, onClearFilters }: IdeaList
             ? 'No ideas match these filters.'
             : archived
               ? 'Nothing archived. Archive an idea you’ve set aside to keep it out of the list without deleting it.'
-              : 'No ideas yet. Add your first one and give it a date to make it real by.'}
+              : 'No active ideas. Add one with New idea, or find earlier ones under Archived.'}
         </p>
-        {filtered ? (
+        {filtered && (
           <button type="button" className="button" onClick={onClearFilters}>
             Clear filters
           </button>
-        ) : (
-          !archived && (
-            <button type="button" className="button primary" onClick={onAdd}>
-              <Plus aria-hidden="true" size={18} /> Add your first idea
-            </button>
-          )
         )}
       </div>
     );

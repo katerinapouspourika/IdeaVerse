@@ -6,6 +6,7 @@ import { ApiError } from '../api/client';
 import { describeDue, formatDate } from '../api/dates';
 import { useIdea } from '../api/queries';
 import { canChange } from '../api/types';
+import { useRecentIdea } from '../commands/recentIdeas';
 import { LoadError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
@@ -22,6 +23,7 @@ const focusable = 'a[href], button:not([disabled]), input:not([disabled]), selec
  */
 export function IdeaPanel({ id, onClose }: { id: string; onClose: () => void }) {
   const idea = useIdea(id);
+  useRecentIdea(id, idea.data, idea.error instanceof ApiError && idea.error.status === 404);
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
