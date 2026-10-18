@@ -3639,6 +3639,33 @@ a:focus-visible {
   color: var(--ok);
 }
 
+/* A password input with its show/hide button inside, on the right. */
+.password-input {
+  position: relative;
+  display: flex;
+}
+
+.password-input input {
+  flex: 1;
+  padding-right: 48px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 36px;
+  border-radius: var(--radius-small);
+  color: var(--muted);
+}
+
+.password-toggle:hover {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
 /* What to do when an email already has an account. */
 .account-exists {
   display: flex;

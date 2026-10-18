@@ -3,9 +3,10 @@ import { Link, useSearchParams } from 'react-router';
 
 import { resetPassword } from '../api/account';
 import { readAccountProblems, type AccountProblems } from '../auth/identityErrors';
-import { meetsPasswordRules } from '../auth/passwordRules';
+import { meetsPasswordRules, weakPasswordMessage } from '../auth/passwordRules';
 import { PasswordRules } from '../auth/PasswordRules';
 import { Field } from '../components/Field';
+import { PasswordInput } from '../components/PasswordInput';
 import { usePageMeta } from '../seo/usePageMeta';
 
 /** Opened from the password reset email; sets a new password with the link's code. */
@@ -45,7 +46,7 @@ export function ResetPasswordPage() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    setProblems(meetsPasswordRules(password) ? null : { duplicateEmail: false, expiredLink: false, password: 'Your password doesn’t meet every rule yet.' });
+    setProblems(meetsPasswordRules(password) ? null : { duplicateEmail: false, expiredLink: false, password: weakPasswordMessage });
     setMismatch(password !== confirmation);
     if (password !== confirmation || !meetsPasswordRules(password)) {
       return;
@@ -70,12 +71,12 @@ export function ResetPasswordPage() {
       <form onSubmit={(event) => void submit(event)} className="stack">
         <Field label="New password" hint={<PasswordRules password={password} />} error={problems?.password}>
           {(props) => (
-            <input {...props} type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            <PasswordInput {...props} autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           )}
         </Field>
         <Field label="Repeat new password" error={mismatch ? 'The two passwords don’t match.' : undefined}>
           {(props) => (
-            <input {...props} type="password" autoComplete="new-password" required value={confirmation} onChange={(e) => setConfirmation(e.target.value)} />
+            <PasswordInput {...props} autoComplete="new-password" required value={confirmation} onChange={(e) => setConfirmation(e.target.value)} />
           )}
         </Field>
         {problems?.expiredLink && (

@@ -10,7 +10,7 @@ describe('Registration and confirmation', () => {
     renderApp('/register');
 
     await userEvent.type(await screen.findByLabelText('Email'), 'new@example.com');
-    await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!');
+    await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!-long');
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
     expect(await screen.findByRole('heading', { name: 'Check your inbox' })).toBeInTheDocument();

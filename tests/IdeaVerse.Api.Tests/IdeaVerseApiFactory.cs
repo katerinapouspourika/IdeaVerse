@@ -28,7 +28,7 @@ using Pouspourika.IdeaVerse.Api.Workspaces;
 /// <param name="settings">Optional configuration overrides, such as AI help settings.</param>
 internal sealed class IdeaVerseApiFactory(string? webRoot = null, IReadOnlyDictionary<string, string?>? settings = null) : WebApplicationFactory<Program>
 {
-  public const string Password = "Passw0rd!";
+  public const string Password = "Passw0rd!-long";
 
   public const string AppUrl = "https://app.example.com";
 
