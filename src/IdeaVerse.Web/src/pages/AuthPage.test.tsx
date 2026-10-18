@@ -161,4 +161,32 @@ describe('AuthPage', () => {
     expect(screen.getByLabelText('Password')).toHaveValue('');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
+
+  it('welcomes back on sign-in, with no sign-up button in the header', async () => {
+    fakeApi(signedOut);
+    renderApp('/login');
+
+    expect(await screen.findByText('Welcome back. Sign in to pick up your ideas where you left them.')).toBeInTheDocument();
+    expect(screen.queryByText(/never lose track of a date/)).not.toBeInTheDocument();
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).queryByRole('link', { name: 'Get started free' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('link', { name: 'Sign in' })).toBeInTheDocument();
+  });
+
+  it('links the Terms and Privacy Policy under Create account, with no sign-up button in the header', async () => {
+    fakeApi(signedOut);
+    renderApp('/register');
+
+    expect(await screen.findByText(/By creating an account you agree to the/)).toBeInTheDocument();
+    const main = within(screen.getByRole('main'));
+    expect(main.getByRole('link', { name: 'Terms' })).toHaveAttribute('href', '/terms');
+    expect(main.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy');
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).queryByRole('link', { name: 'Get started free' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the header’s sign-up button on other public pages', async () => {
+    fakeApi(signedOut);
+    renderApp('/pricing');
+
+    expect(await within(screen.getByRole('navigation', { name: 'Main' })).findByRole('link', { name: 'Get started free' })).toHaveAttribute('href', '/register');
+  });
 });
