@@ -312,7 +312,7 @@ describe('PeoplePage', () => {
     const router = renderApp('/people?workspace=ws-2');
 
     expect(await screen.findByRole('heading', { name: 'People in Globex' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveValue('ws-2');
+    expect(screen.getByRole('button', { name: 'Workspace: Globex' })).toBeInTheDocument();
     await waitFor(() => expect(router.state.location.search).toBe(''));
   });
 

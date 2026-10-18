@@ -23,8 +23,10 @@ describe('Timeline view', () => {
     expect(within(rows[1]!).getByText(/^Planned · /)).toBeInTheDocument();
   });
 
-  it('draws bars from when an idea was added to its target date, clipping ones that started before the scale', async () => {
-    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [soon, late] } });
+  it('draws bars from an idea\'s start date to its target date, clipping ones that started before the scale', async () => {
+    const started = { ...soon, startDate: addDays(today, -2) };
+    const longAgo = { ...late, startDate: addDays(today, -90) };
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [started, longAgo] } });
     renderApp('/ideas');
     await userEvent.click(await screen.findByRole('button', { name: 'Timeline' }));
 
@@ -33,7 +35,23 @@ describe('Timeline view', () => {
     expect(bars).toHaveLength(2);
     expect(bars[0]).toHaveClass('is-overdue', 'clipped');
     expect(bars[1]).toHaveClass('status-planned');
+    expect(bars[1]).not.toHaveClass('timeline-marker');
     expect(parseFloat(bars[1]!.style.width)).toBeGreaterThan(0);
+    expect(parseFloat(bars[1]!.style.left)).toBeLessThan(parseFloat(document.querySelector<HTMLElement>('.timeline-today')!.style.left));
+    expect(screen.getByText(/^Planned · starts .* · due .*\(in 5 days\)$/)).toBeInTheDocument();
+  });
+
+  it('marks an idea with no start date by a dot on its target date, and says so', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [soon] } });
+    renderApp('/ideas');
+    await userEvent.click(await screen.findByRole('button', { name: 'Timeline' }));
+
+    const marker = document.querySelector<HTMLElement>('.timeline-bar')!;
+    expect(marker).toHaveClass('timeline-marker', 'status-planned');
+    expect(marker.style.width).toBe('');
+    // Added ten days ago, but drawn from nowhere but its target date, after today.
+    expect(parseFloat(marker.style.left)).toBeGreaterThan(parseFloat(document.querySelector<HTMLElement>('.timeline-today')!.style.left));
+    expect(screen.getByText(/^Planned · no start date · due .*\(in 5 days\)$/)).toBeInTheDocument();
   });
 
   it('opens an idea in the side panel from its row', async () => {

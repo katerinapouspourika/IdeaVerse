@@ -1,10 +1,10 @@
 import { useEffect, useId, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { ArrowRightLeft, Bell, History, Home, Lightbulb, Plus, Settings, Users } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { ArrowRightLeft, Bell, CircleDot, ExternalLink, History, Home, Lightbulb, Link, PanelRight, Plus, Settings, Users } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router';
 
 import { formatDate } from '../api/dates';
-import { useIdeas } from '../api/queries';
-import type { Idea } from '../api/types';
+import { useIdea, useIdeas } from '../api/queries';
+import { canChange, statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
 import { StatusBadge } from '../components/StatusBadge';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { Dialog } from './Dialog';
@@ -17,9 +17,22 @@ interface Entry {
   icon: ReactNode;
   detail?: ReactNode;
   run: () => void;
+  /** The idea an entry stands for, whose own actions Tab lists. */
+  idea?: IdeaRef;
 }
 
-const groups = ['Recent ideas', 'Ideas', 'Actions'] as const;
+interface IdeaRef {
+  id: string;
+  title: string;
+}
+
+/** What the palette's idea actions do after it closes, provided by the header so their toasts and Undo outlast it. */
+export interface IdeaCommands {
+  changeStatus: (idea: Idea, status: IdeaStatus) => void;
+  copyLink: (idea: IdeaRef) => void;
+}
+
+const groups = ['Recent ideas', 'Ideas', 'Actions', 'Idea actions'] as const;
 
 /** How many matching ideas the palette lists. */
 const maxIdeas = 6;
@@ -53,10 +66,15 @@ function rank(idea: Idea, needle: string) {
 
 /**
  * Finds ideas in the current workspace by title or description and runs common actions, all from the keyboard: type to
- * filter, ↑ and ↓ to choose, Enter to go.
+ * filter, ↑ and ↓ to choose, Enter to go. Tab on an idea lists what can be done with it (open it, open it in the side
+ * panel, change its status when the user may, copy its link); Shift+Tab or Escape goes back to the search.
  */
-export function CommandPalette({ onClose }: { onClose: () => void }) {
+export function CommandPalette({ ideaCommands, onClose }: { ideaCommands: IdeaCommands; onClose: () => void }) {
   const [query, setQuery] = useState('');
+  // The idea whose actions are listed, with the search and choice to go back to.
+  const [target, setTarget] = useState<{ idea: IdeaRef; query: string; active: number } | null>(null);
+  const targetIdea = useIdea(target?.idea.id ?? '', target !== null);
+  const location = useLocation();
   // Read when the palette closes: whether focus goes back where it was, or stays with the page an action opened.
   const [focus] = useState(() => ({ restore: true }));
   const [active, setActive] = useState(0);
@@ -67,12 +85,49 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   // Read once, on opening: the ideas opened lately in this workspace.
   const [recent] = useState(() => readRecentIdeas());
   const search = useDebounced(query.trim(), 150);
-  const ideas = useIdeas(current?.id ?? '', { search: search || undefined }, current !== null && search !== '');
+  const ideas = useIdeas(current?.id ?? '', { search: search || undefined }, current !== null && search !== '' && target === null);
 
   const go = (to: string, state?: unknown) => () => {
     focus.restore = false;
     onClose();
     void navigate(to, { state });
+  };
+
+  /** Runs an action that leaves the page as it is, so focus goes back where it was. */
+  const stay = (action: () => void) => () => {
+    onClose();
+    action();
+  };
+
+  /** Opens the idea in the ideas page's side panel, keeping that page's filters when it is already open. */
+  const openInPanel = (idea: IdeaRef) => {
+    const params = new URLSearchParams(location.pathname === '/ideas' ? location.search : '');
+    params.set('idea', idea.id);
+    go(`/ideas?${params.toString()}`, { panelOpened: true })();
+  };
+
+  /**
+   * What can be done with the idea. Changing the status waits for the idea to load, to know whether the user may; it
+   * comes last, so the entries above don't move under the arrow keys when it appears.
+   */
+  const ideaActions = (idea: IdeaRef): Entry[] => {
+    const loaded = targetIdea.data;
+    return [
+      { id: 'open', group: 'Idea actions', label: 'Open', icon: <ExternalLink size={16} />, run: go(`/ideas/${idea.id}`) },
+      { id: 'panel', group: 'Idea actions', label: 'Open in side panel', icon: <PanelRight size={16} />, run: () => openInPanel(idea) },
+      { id: 'copy-link', group: 'Idea actions', label: 'Copy link', icon: <Link size={16} />, run: stay(() => ideaCommands.copyLink(idea)) },
+      ...(loaded && canChange(loaded)
+        ? statuses
+            .filter((status) => status !== loaded.status)
+            .map((status) => ({
+              id: `status-${status}`,
+              group: 'Idea actions' as const,
+              label: `Set status to ${statusLabels[status]}`,
+              icon: <CircleDot size={16} />,
+              run: stay(() => ideaCommands.changeStatus(loaded, status)),
+            }))
+        : []),
+    ];
   };
 
   const actions: Entry[] = [
@@ -115,6 +170,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
             label: r.title,
             icon: <History size={16} />,
             run: go(`/ideas/${r.id}`),
+            idea: r,
           }))
       : []),
     ...(ideasCurrent
@@ -134,28 +190,48 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
               </>
             ),
             run: go(`/ideas/${idea.id}`),
+            idea,
           }))
       : []),
     ...actions.filter((a) => a.label.toLowerCase().includes(needle)),
   ];
-  const selected = Math.min(active, Math.max(entries.length - 1, 0));
+  const listed = target ? ideaActions(target.idea).filter((a) => a.label.toLowerCase().includes(needle)) : entries;
+  const selected = Math.min(active, Math.max(listed.length - 1, 0));
   const optionId = (entry: Entry) => `${listId}-${entry.id}`;
 
+  const back = () => {
+    if (target) {
+      setQuery(target.query);
+      setActive(target.active);
+      setTarget(null);
+    }
+  };
+
   const onKeyDown = (event: KeyboardEvent) => {
+    const idea = target ? undefined : listed[selected]?.idea;
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
-      if (entries.length > 0) {
+      if (listed.length > 0) {
         const step = event.key === 'ArrowDown' ? 1 : -1;
-        setActive((selected + step + entries.length) % entries.length);
+        setActive((selected + step + listed.length) % listed.length);
       }
     } else if (event.key === 'Enter') {
       event.preventDefault();
-      entries[selected]?.run();
+      listed[selected]?.run();
+    } else if (event.key === 'Tab' && !event.shiftKey && idea) {
+      event.preventDefault();
+      setTarget({ idea, query, active: selected });
+      setQuery('');
+      setActive(0);
+    } else if (target && ((event.key === 'Tab' && event.shiftKey) || event.key === 'Escape' || (event.key === 'Backspace' && query === ''))) {
+      // Back to the search rather than closing the palette.
+      event.preventDefault();
+      back();
     }
   };
 
   // Keeps the chosen entry in view as the arrow keys move through a long list.
-  const activeId = entries[selected] ? optionId(entries[selected]) : undefined;
+  const activeId = listed[selected] ? optionId(listed[selected]) : undefined;
   useEffect(() => {
     if (activeId) {
       document.getElementById(activeId)?.scrollIntoView?.({ block: 'nearest' });
@@ -171,12 +247,12 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
         data-autofocus
         className="palette-input"
         role="combobox"
-        aria-expanded={entries.length > 0}
+        aria-expanded={listed.length > 0}
         aria-controls={listId}
         aria-activedescendant={activeId}
         aria-autocomplete="list"
         aria-label="Search ideas or type a command"
-        placeholder={current ? `Search ideas in ${current.name}, or type a command…` : 'Type a command…'}
+        placeholder={target ? `Actions for ${target.idea.title}…` : current ? `Search ideas in ${current.name}, or type a command…` : 'Type a command…'}
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
@@ -186,15 +262,16 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       />
       <div id={listId} className="palette-list" role="listbox" aria-label="Results">
         {groups.map((group) => {
-          const members = entries.filter((e) => e.group === group);
+          const members = listed.filter((e) => e.group === group);
+          const name = group === 'Idea actions' && target ? `Actions for ${target.idea.title}` : group;
           return (
             members.length > 0 && (
-              <div key={group} role="group" aria-label={group}>
+              <div key={group} role="group" aria-label={name}>
                 <p className="palette-group muted small" aria-hidden="true">
-                  {group}
+                  {name}
                 </p>
                 {members.map((entry) => {
-                  const index = entries.indexOf(entry);
+                  const index = listed.indexOf(entry);
                   return (
                     <div
                       key={entry.id}
@@ -219,10 +296,24 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
         })}
       </div>
       <p className="muted small palette-empty" role="status">
-        {searching ? 'Searching…' : entries.length === 0 ? 'Nothing matches.' : query.trim() ? `${entries.length} ${entries.length === 1 ? 'result' : 'results'}` : ''}
+        {target
+          ? listed.length === 0
+            ? 'Nothing matches.'
+            : `${listed.length} ${listed.length === 1 ? 'action' : 'actions'}`
+          : searching
+            ? 'Searching…'
+            : listed.length === 0
+              ? 'Nothing matches.'
+              : query.trim()
+                ? `${listed.length} ${listed.length === 1 ? 'result' : 'results'}`
+                : ''}
       </p>
       <p className="muted small palette-hint" aria-hidden="true">
-        ↑↓ to choose · Enter to open · Esc to close
+        {target
+          ? '↑↓ to choose · Enter to run · Shift+Tab or Esc to go back'
+          : listed[selected]?.idea
+            ? '↑↓ to choose · Enter to open · Tab for actions · Esc to close'
+            : '↑↓ to choose · Enter to open · Esc to close'}
       </p>
     </Dialog>
   );
