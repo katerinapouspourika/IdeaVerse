@@ -628,6 +628,8 @@ textarea:focus-visible,
 
 .badge.overdue,
 .calendar-idea.is-overdue,
+.agenda-idea.is-overdue,
+.calendar-span.is-overdue,
 .timeline-bar.is-overdue {
   --status-bg: var(--status-overdue-bg);
   --status-text: var(--status-overdue-text);
@@ -1195,6 +1197,108 @@ a.tag:focus-visible {
   padding: 1px 4px;
   margin-top: 2px;
   text-decoration: none;
+}
+
+/* On a phone, the calendar and the timeline are lists grouped by day or month (`useNarrowScreen`). */
+.agenda,
+.agenda-ideas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.agenda,
+.timeline-list {
+  gap: 16px;
+}
+
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.agenda-ideas {
+  gap: 6px;
+}
+
+.agenda-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+.agenda-today {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--coral);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.agenda-idea {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--status-bar);
+  border-radius: var(--radius-small);
+}
+
+.agenda-idea:hover {
+  background: var(--accent-soft);
+}
+
+.agenda-title {
+  font-weight: 800;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.agenda-idea:hover .agenda-title {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* The start day of a planned span: outlined in the status colour, where the target date is filled. */
+.calendar-idea.calendar-start {
+  background: transparent;
+  border: 1px dashed var(--status-bar);
+  border-left: 3px solid var(--status-bar);
+}
+
+/* The days in between: a thin line per idea under way, so a busy month stays readable. */
+.calendar-spans {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.calendar-span {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--status-bar);
+  opacity: 0.7;
+}
+
+.calendar-more {
+  font-size: 0.7rem;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.calendar-legend .calendar-idea {
+  display: inline;
+  margin: 0;
+  color: var(--status-text);
 }
 
 /* On narrow screens the month buttons show only their arrows, so the month's name fits between them. */
@@ -3097,18 +3201,18 @@ a:focus-visible {
   color: var(--muted);
 }
 
-/* A component's row: its handle, its checkbox and title, then its actions, which move under the title on narrow screens. */
+/* A component's row: its handle, its checkbox, its title over its notes and chips, then its "⋯" menu. */
 .component-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: 'check actions';
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'check body actions';
   align-items: start;
   gap: 4px 8px;
 }
 
 .component-row.reorderable {
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas: 'handle check actions';
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  grid-template-areas: 'handle check body actions';
 }
 
 /* The handle, the checkbox, and the title's first line share a centre line. */
@@ -3117,46 +3221,121 @@ a:focus-visible {
   margin-top: -6px;
 }
 
-.component-row .check {
+/* The checkbox, padded into a comfortable target without moving the row. */
+.component-check {
   grid-area: check;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  /* The whole label toggles the box, so it is padded into a comfortable target without moving the row. */
-  min-height: 36px;
-  padding: 6px 8px;
-  margin: -6px -8px;
+  display: flex;
+  padding: 7px;
+  margin: -7px;
   border-radius: var(--radius-small);
+  cursor: pointer;
 }
 
-.component-row .check:has(input:enabled):hover {
+.component-check:has(input:enabled):hover {
   background: var(--accent-soft);
 }
 
-.component-row .check input {
-  margin-top: 1px;
-  /* The label is the touch target, so the box keeps its size beside phone-sized inputs. */
+.component-check input {
+  width: 18px;
+  height: 18px;
   min-height: 0;
+  margin: 1px 0 0;
+  accent-color: var(--ok);
 }
 
-.component-actions {
+.component-body {
+  grid-area: body;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The title renames the component when clicked; it reads as text until hovered or focused. */
+.title-button {
+  padding: 0 4px;
+  margin: 0 -4px;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: text;
+}
+
+.title-button:hover {
+  background: var(--accent-soft);
+}
+
+.title-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.rename-form {
+  align-self: stretch;
+}
+
+.rename-form input {
+  min-height: 36px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* An assignee or due date; overdue and due-soon dates are tinted and say so in words too. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  /* Rounded rather than a pill, so a chip that wraps on a phone still looks like one. */
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: left;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+button.chip {
+  cursor: pointer;
+}
+
+button.chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+button.chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.chip.overdue {
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.chip.soon {
+  border-color: color-mix(in srgb, var(--warn) 35%, transparent);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.component-row > .menu {
   grid-area: actions;
-  margin-top: -6px;
-}
-
-@media (max-width: 600px) {
-  .component-row {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'check' 'actions';
-  }
-
-  .component-row.reorderable {
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas: 'handle check' '. actions';
-  }
-
-  .component-actions {
-    margin-top: 0;
-  }
+  margin-top: -8px;
 }
 
 .checklist li.dragging {
@@ -3294,7 +3473,7 @@ a:focus-visible {
   }
 }
 
-/* Timeline: each idea as a bar from when it was added to its target date */
+/* Timeline: each idea as a bar from its start date to its target date, or a dot on its target date without a start */
 
 .timeline {
   padding: 12px 0;
@@ -3416,6 +3595,15 @@ a:focus-visible {
 .timeline-bar.clipped {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
+}
+
+/* No start date: a dot centred on the target date, ringed in the surface colour so it reads as a point, not a bar. */
+.timeline-marker {
+  top: 19px;
+  width: 14px;
+  height: 14px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 0 2px var(--surface);
 }
 
 @media (max-width: 600px) {

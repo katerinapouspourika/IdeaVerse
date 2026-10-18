@@ -126,6 +126,27 @@ describe('Idea tracking', () => {
     expect(within(screen.getByRole('table')).getByRole('link', { name: 'Spring launch' })).toBeInTheDocument();
   });
 
+  it('shows a planned span in the calendar from its start day to its target date', async () => {
+    const month = todayIso().slice(0, 7);
+    const span = (id: string, title: string) => anIdea({ id, title, startDate: `${month}-01`, targetDate: `${month}-28` });
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: ['a', 'b', 'c', 'd'].map((id) => span(id, `Plan ${id}`)) } });
+    renderApp('/ideas');
+    await screen.findByText('Plan a');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Calendar' }));
+
+    const table = screen.getByRole('table');
+    const dayOf = (name: string) => within(table).getByRole('link', { name }).closest('td')!.querySelector('.day')!.textContent;
+    expect(dayOf('Starts: Plan a')).toBe('1');
+    expect(dayOf('Plan a')).toBe('28');
+    // The 26 days in between each show a line per idea, up to three, and a count of the rest.
+    const between = [...table.querySelectorAll('td')].filter((td) => td.querySelector('.calendar-spans'));
+    expect(between).toHaveLength(26);
+    expect(between[0]!.querySelectorAll('.calendar-span')).toHaveLength(3);
+    expect(between[0]).toHaveTextContent('+1');
+    expect(screen.getByText(/on the start day, filled on the target date/)).toBeInTheDocument();
+  });
+
   it('adds tags to a new idea', async () => {
     const calls = fakeApi({
       ...signedIn,

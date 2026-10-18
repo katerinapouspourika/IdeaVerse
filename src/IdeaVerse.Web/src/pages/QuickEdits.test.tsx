@@ -129,62 +129,67 @@ describe('Reordering components', () => {
 
     expect(await screen.findByText('Venue')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Move Venue' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Edit Venue' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Rename Venue' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More actions for Venue' })).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Status' })).not.toBeInTheDocument();
   });
 });
 
-describe('Editing a component in place', () => {
-  it('renames it and keeps its other details', async () => {
+describe('Renaming a component in place', () => {
+  it('renames it from its title with Enter and keeps its other details', async () => {
     const calls = fakeApi(ideaRoutes());
     renderApp('/ideas/idea-1');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Edit Budget' }));
-    const form = screen.getByRole('form', { name: 'Edit Budget' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Rename Budget' }));
+    const form = screen.getByRole('form', { name: 'Rename Budget' });
     const title = within(form).getByLabelText('Title');
     expect(title).toHaveFocus();
     await userEvent.clear(title);
-    await userEvent.type(title, 'Budget sign-off');
-    await userEvent.type(within(form).getByLabelText(/Notes/), 'From finance');
-    await userEvent.click(within(form).getByRole('button', { name: 'Save' }));
+    await userEvent.type(title, 'Budget sign-off{Enter}');
 
     expect(await screen.findByText('Budget sign-off')).toBeInTheDocument();
-    expect(calls.find((c) => c.method === 'PUT' && c.path.endsWith('/c-1'))?.body).toEqual({
-      title: 'Budget sign-off',
-      notes: 'From finance',
-      isDone: false,
-      assigneeId: null,
-      dueDate: null,
-    });
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Edit Budget sign-off' })).toHaveFocus());
+    expect(calls.filter((c) => c.method === 'PUT' && c.path.endsWith('/c-1')).map((c) => c.body)).toEqual([
+      { title: 'Budget sign-off', notes: null, isDone: false, assigneeId: null, dueDate: null },
+    ]);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Rename Budget sign-off' })).toHaveFocus());
   });
 
-  it('keeps the form open when the title is refused', async () => {
+  it('keeps the field open when the title is refused', async () => {
     fakeApi({
       ...ideaRoutes(),
       'PUT /api/v1/ideas/idea-1/components/c-1': { status: 400, body: { errors: { title: ['The title is too long.'] } } },
     });
     renderApp('/ideas/idea-1');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Edit Budget' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Rename Budget' }));
+    await userEvent.type(screen.getByLabelText('Title'), ' and more{Enter}');
 
     expect(await screen.findByText('The title is too long.')).toBeInTheDocument();
-    expect(screen.getByRole('form', { name: 'Edit Budget' })).toBeInTheDocument();
+    expect(screen.getByRole('form', { name: 'Rename Budget' })).toBeInTheDocument();
   });
 
   it('cancels with Escape', async () => {
     const calls = fakeApi(ideaRoutes());
     renderApp('/ideas/idea-1');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Edit Budget' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Rename Budget' }));
     await userEvent.type(screen.getByLabelText('Title'), ' changed');
     await userEvent.keyboard('{Escape}');
 
-    expect(screen.queryByRole('form', { name: 'Edit Budget' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'Rename Budget' })).not.toBeInTheDocument();
     expect(screen.getByText('Budget')).toBeInTheDocument();
     expect(calls.some((c) => c.method === 'PUT')).toBe(false);
-    expect(screen.getByRole('button', { name: 'Edit Budget' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Rename Budget' })).toHaveFocus();
+  });
+
+  it('keeps ticking the box separate from renaming', async () => {
+    const calls = fakeApi(ideaRoutes());
+    renderApp('/ideas/idea-1');
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Budget' }));
+
+    await waitFor(() => expect(calls.find((c) => c.method === 'PUT' && c.path.endsWith('/c-1'))?.body).toMatchObject({ isDone: true, title: 'Budget' }));
+    expect(screen.queryByRole('form', { name: 'Rename Budget' })).not.toBeInTheDocument();
   });
 });
 
