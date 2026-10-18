@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Archive, Lightbulb, Plus, SearchX } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Archive, CalendarDays, ChartGantt, Grid2x2, Lightbulb, List, Plus, SearchX, SlidersHorizontal, SquareKanban } from 'lucide-react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router';
 
 import { daysUntil, describeDue, formatDate } from '../api/dates';
@@ -14,6 +14,7 @@ import { Skeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
 import { Tags } from '../components/Tags';
 import { useEdgeFade } from '../components/useEdgeFade';
+import { useNarrowScreen } from '../components/useNarrowScreen';
 import { IdeaPanel } from '../panel/IdeaPanel';
 import { useIdeaPanel } from '../panel/useIdeaPanel';
 import { IdeaMatrix } from '../priority/IdeaMatrix';
@@ -59,6 +60,14 @@ type Tab = IdeaStatus | 'All' | 'Archived';
 
 const views = ['list', 'board', 'calendar', 'timeline', 'matrix'] as const;
 type View = (typeof views)[number];
+const viewLabels: Record<View, string> = { list: 'List', board: 'Board', calendar: 'Calendar', timeline: 'Timeline', matrix: 'Matrix' };
+const viewIcons: Record<View, ReactNode> = {
+  list: <List aria-hidden="true" size={18} />,
+  board: <SquareKanban aria-hidden="true" size={18} />,
+  calendar: <CalendarDays aria-hidden="true" size={18} />,
+  timeline: <ChartGantt aria-hidden="true" size={18} />,
+  matrix: <Grid2x2 aria-hidden="true" size={18} />,
+};
 const tabs: readonly Tab[] = ['All', ...statuses, 'Archived'];
 
 function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
@@ -122,6 +131,60 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const panel = useIdeaPanel();
   const statusTabs = useEdgeFade<HTMLElement>();
   const viewTabs = useEdgeFade<HTMLDivElement>();
+  const narrow = useNarrowScreen();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersToggle = useRef<HTMLButtonElement>(null);
+  const closeFilters = () => {
+    setFiltersOpen(false);
+    filtersToggle.current?.focus();
+  };
+  // What the Filters button counts on a phone: the status tab and the tag; the search box stays beside it, in view.
+  const activeFilters = (tab === 'All' || (view === 'board' && !archived) ? 0 : 1) + (tag === '' ? 0 : 1);
+
+  const statusFilter = (
+    <>
+      <FilterTab label="All" active={tab === 'All' || (view === 'board' && !archived)} onClick={() => setTab('All')} />
+      {view !== 'board' && statuses.map((s) => <FilterTab key={s} label={statusLabels[s]} active={tab === s} onClick={() => setTab(s)} />)}
+      <FilterTab label="Archived" active={archived} onClick={() => setTab('Archived')} />
+    </>
+  );
+  const searchField = (
+    <Field label="Search">
+      {(props) => <input {...props} type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Title or description" />}
+    </Field>
+  );
+  const tagField = tags.data && tags.data.length > 0 && (
+    <Field label="Tag">
+      {(props) => (
+        <select {...props} value={tag} onChange={(e) => setTag(e.target.value)}>
+          <option value="">All tags</option>
+          {tags.data.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+      )}
+    </Field>
+  );
+  const sortField = (
+    <Field label="Sort by">
+      {(props) => (
+        <select {...props} value={sort} onChange={(e) => setSort(e.target.value as IdeaSort)}>
+          {(Object.keys(sortLabels) as IdeaSort[]).map((s) => (
+            <option key={s} value={s}>
+              {sortLabels[s]}
+            </option>
+          ))}
+        </select>
+      )}
+    </Field>
+  );
+  // On a phone the views are icons, named for screen readers and in a tooltip, so all five fit on one row.
+  const viewChoice = (icons = false) =>
+    views.map((v) => (
+      <FilterTab key={v} label={viewLabels[v]} icon={icons ? viewIcons[v] : undefined} active={view === v} onClick={() => setView(v)} />
+    ));
 
   return (
     <div className="stack">
@@ -159,53 +222,65 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
         />
       )}
 
-      {!noIdeas && (
+      {!noIdeas && !narrow && (
         <>
           <nav ref={statusTabs} className="tabs" aria-label="Filter by status">
-            <FilterTab label="All" active={tab === 'All' || (view === 'board' && !archived)} onClick={() => setTab('All')} />
-            {view !== 'board' &&
-              statuses.map((s) => <FilterTab key={s} label={statusLabels[s]} active={tab === s} onClick={() => setTab(s)} />)}
-            <FilterTab label="Archived" active={archived} onClick={() => setTab('Archived')} />
+            {statusFilter}
           </nav>
 
           <div className="row wrap end toolbar">
-            <Field label="Search">
-              {(props) => (
-                <input {...props} type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Title or description" />
-              )}
-            </Field>
-            {tags.data && tags.data.length > 0 && (
-              <Field label="Tag">
-                {(props) => (
-                  <select {...props} value={tag} onChange={(e) => setTag(e.target.value)}>
-                    <option value="">All tags</option>
-                    {tags.data.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </Field>
-            )}
-            <Field label="Sort by">
-              {(props) => (
-                <select {...props} value={sort} onChange={(e) => setSort(e.target.value as IdeaSort)}>
-                  {(Object.keys(sortLabels) as IdeaSort[]).map((s) => (
-                    <option key={s} value={s}>
-                      {sortLabels[s]}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </Field>
+            {searchField}
+            {tagField}
+            {sortField}
             <div ref={viewTabs} className="tabs" role="group" aria-label="View">
-              <FilterTab label="List" active={view === 'list'} onClick={() => setView('list')} />
-              <FilterTab label="Board" active={view === 'board'} onClick={() => setView('board')} />
-              <FilterTab label="Calendar" active={view === 'calendar'} onClick={() => setView('calendar')} />
-              <FilterTab label="Timeline" active={view === 'timeline'} onClick={() => setView('timeline')} />
-              <FilterTab label="Matrix" active={view === 'matrix'} onClick={() => setView('matrix')} />
+              {viewChoice()}
             </div>
+          </div>
+        </>
+      )}
+
+      {/* On a phone the filters would push the ideas a screen down, so they wait behind a Filters button. */}
+      {!noIdeas && narrow && (
+        <>
+          <div className="row end phone-filters">
+            {searchField}
+            <button
+              ref={filtersToggle}
+              type="button"
+              className="button filters-toggle"
+              aria-expanded={filtersOpen}
+              aria-controls="idea-filters"
+              aria-label={activeFilters > 0 ? `Filters, ${activeFilters} active` : 'Filters'}
+              onClick={() => setFiltersOpen(!filtersOpen)}
+            >
+              <SlidersHorizontal aria-hidden="true" size={18} /> Filters
+              {activeFilters > 0 && <span className="filter-count">{activeFilters}</span>}
+            </button>
+          </div>
+          {filtersOpen && (
+            <section
+              id="idea-filters"
+              className="card stack filter-sheet"
+              aria-label="Filters"
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  closeFilters();
+                }
+              }}
+            >
+              <nav className="tabs wrap-tabs" aria-label="Filter by status">
+                {statusFilter}
+              </nav>
+              {tagField}
+              {sortField}
+              {/* Not "Done", which is a status above. */}
+              <button type="button" className="button" onClick={closeFilters}>
+                Close filters
+              </button>
+            </section>
+          )}
+          <div className="tabs view-icons" role="group" aria-label="View">
+            {viewChoice(true)}
           </div>
         </>
       )}
@@ -250,10 +325,17 @@ function useDebounced<T>(value: T, delay: number): T {
   return settled;
 }
 
-function FilterTab({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function FilterTab({ label, icon, active, onClick }: { label: string; icon?: ReactNode; active: boolean; onClick: () => void }) {
   return (
-    <button type="button" className={active ? 'tab active' : 'tab'} aria-pressed={active} onClick={onClick}>
-      {label}
+    <button
+      type="button"
+      className={`${active ? 'tab active' : 'tab'}${icon ? ' icon-tab' : ''}`}
+      aria-pressed={active}
+      aria-label={icon ? label : undefined}
+      title={icon ? label : undefined}
+      onClick={onClick}
+    >
+      {icon ?? label}
     </button>
   );
 }

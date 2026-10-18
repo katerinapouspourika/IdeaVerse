@@ -1882,6 +1882,48 @@ a.tag:focus-visible {
   }
 }
 
+/* Ideas list on a phone: a search box and a Filters button, the other filters in a panel, and the views as icons. */
+.phone-filters .field {
+  flex: 1 1 auto;
+}
+
+/* The search box's placeholder says what it is for; its label stays for screen readers. */
+.phone-filters .field label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.filters-toggle {
+  flex: none;
+}
+
+.filter-count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+}
+
+.tabs.wrap-tabs {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+.icon-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+}
+
 /* Shared helpers */
 .visually-hidden {
   position: absolute;
