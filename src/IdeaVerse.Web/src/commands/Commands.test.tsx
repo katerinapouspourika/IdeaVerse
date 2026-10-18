@@ -84,7 +84,7 @@ describe('Command palette', () => {
     await userEvent.type(screen.getByRole('combobox', { name: 'Search ideas or type a command' }), 'studio');
     await userEvent.keyboard('{Enter}');
 
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveValue('ws-2'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Workspace: Studio' })).toBeInTheDocument());
   });
 
   it('closes with Escape and gives focus back', async () => {
