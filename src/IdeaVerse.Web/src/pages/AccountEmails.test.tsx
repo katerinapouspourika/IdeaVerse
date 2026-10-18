@@ -23,7 +23,7 @@ describe('Registration and confirmation', () => {
     renderApp('/register');
 
     await userEvent.type(await screen.findByLabelText('Email'), 'wrong@example.com');
-    await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!');
+    await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!-long');
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
     expect(await screen.findByText(/Open it and you’re signed in, ready to go\. The link works for one day\./)).toBeInTheDocument();
