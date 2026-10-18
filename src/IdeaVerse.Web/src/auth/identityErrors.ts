@@ -17,10 +17,6 @@ export interface AccountProblems {
 /** Identity's error codes for a password that breaks a rule, mapped to the rule it breaks. */
 const passwordCodes: Record<string, string> = {
   PasswordTooShort: 'length',
-  PasswordRequiresLower: 'lower',
-  PasswordRequiresUpper: 'upper',
-  PasswordRequiresDigit: 'digit',
-  PasswordRequiresNonAlphanumeric: 'symbol',
   PasswordRequiresUniqueChars: 'length',
 };
 

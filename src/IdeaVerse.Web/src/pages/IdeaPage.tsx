@@ -3,6 +3,7 @@ import { Archive, ArchiveRestore, ArrowLeft, CalendarClock, Ellipsis, Pencil, Tr
 import { Link, useNavigate, useParams } from 'react-router';
 
 import { ImproveIdea } from '../ai/ImproveIdea';
+import { useRecentIdea } from '../commands/recentIdeas';
 import { ApiError } from '../api/client';
 import { addDays, describeDue, formatDate, formatStart, todayIso } from '../api/dates';
 import { useArchiveIdea, useDeleteIdea, useIdea, useMoveIdea, usePostponeIdea, useSetStart, useUpdateIdea } from '../api/queries';
@@ -27,6 +28,7 @@ import { TeamSection } from './TeamSection';
 export function IdeaPage() {
   const { id = '' } = useParams();
   const idea = useIdea(id);
+  useRecentIdea(id, idea.data, idea.error instanceof ApiError && idea.error.status === 404);
   usePageMeta(idea.data?.title ?? 'Idea', { index: false });
 
   if (idea.isLoading) {
@@ -166,7 +168,7 @@ function QuickStatus({ idea }: { idea: Idea }) {
           ))}
         </select>
       </label>
-      {idea.isOverdue && <span className="badge overdue">Overdue</span>}
+      {idea.isOverdue && <span className="badge status-badge overdue">Overdue</span>}
     </span>
   );
 }
