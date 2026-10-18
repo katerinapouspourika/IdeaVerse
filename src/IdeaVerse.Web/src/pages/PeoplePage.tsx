@@ -18,6 +18,7 @@ import {
 import { personLabel, type Invitation, type Workspace, type WorkspaceMember, type WorkspaceRole } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Field } from '../components/Field';
+import { Person } from '../components/Person';
 import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 import { useConfirm, useToast } from '../components/Feedback';
 import { Skeleton } from '../components/Skeleton';
@@ -253,11 +254,7 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
             const isOwner = member.role === 'Owner';
             return (
               <li key={member.userId}>
-                <span>
-                  {personLabel(member.name, member.email)}
-                  {isMe && <span className="muted"> (you)</span>}
-                  {member.name && <span className="muted small block">{member.email}</span>}
-                </span>
+                <Person name={member.name} email={member.email} after={isMe && <span className="muted"> (you)</span>} />
                 <span className="row">
                   {canManage && !isOwner && !isMe ? (
                     <select

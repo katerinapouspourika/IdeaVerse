@@ -131,7 +131,12 @@ export function MentionTextarea({ value, onChange, mentions, onMentionsChange, p
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => choose(person)}
             >
-              <strong>{person.name}</strong> <span className="muted small">{person.email}</span>
+              <strong className="person-line">{person.name}</strong>{' '}
+              {person.name !== person.email && (
+                <span className="person-line muted small" title={person.email}>
+                  {person.email}
+                </span>
+              )}
             </li>
           ))}
         </ul>
