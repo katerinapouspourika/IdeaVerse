@@ -2,6 +2,8 @@ import { Link } from 'react-router';
 
 import { describeDue, formatDate, todayIso } from '../api/dates';
 import { statusLabels, type Idea } from '../api/types';
+import { StatusBadge } from '../components/StatusBadge';
+import { useNarrowScreen } from '../components/useNarrowScreen';
 import { useIdeaPanel } from '../panel/useIdeaPanel';
 
 /** The width of a month on the scale, so a long roadmap scrolls sideways rather than squeezing its bars. */
@@ -31,6 +33,7 @@ function monthsFor(ideas: Idea[], today: string): string[] {
  * dates in words, which is what screen readers read; the bars are decoration.
  */
 export function IdeaTimeline({ ideas }: { ideas: Idea[] }) {
+  const narrow = useNarrowScreen();
   const { linkProps } = useIdeaPanel();
   const today = todayIso();
   const months = monthsFor(ideas, today);
@@ -45,6 +48,10 @@ export function IdeaTimeline({ ideas }: { ideas: Idea[] }) {
 
   if (ideas.length === 0) {
     return <p className="card muted">No ideas to show on the timeline.</p>;
+  }
+
+  if (narrow) {
+    return <TimelineList ideas={sorted} />;
   }
 
   return (
@@ -100,6 +107,49 @@ export function IdeaTimeline({ ideas }: { ideas: Idea[] }) {
           </ol>
         </div>
       </div>
+    </section>
+  );
+}
+
+/**
+ * The timeline on a phone, where a scale of months leaves bars too thin to read: the ideas in the same order, as a list
+ * grouped by the month they are due, each with its dates from start to target in words.
+ */
+function TimelineList({ ideas }: { ideas: Idea[] }) {
+  const { linkProps } = useIdeaPanel();
+  const monthName = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const months = new Map<string, Idea[]>();
+  for (const idea of ideas) {
+    const month = idea.targetDate.slice(0, 7);
+    months.set(month, [...(months.get(month) ?? []), idea]);
+  }
+
+  return (
+    <section className="card timeline-list" aria-labelledby="timeline-heading">
+      <h2 id="timeline-heading" className="visually-hidden">
+        Timeline
+      </h2>
+      {[...months].map(([month, due]) => (
+        <div key={month} className="agenda-day">
+          <h3 className="agenda-date">{monthName.format(new Date(`${month}-01T00:00:00Z`))}</h3>
+          <ol className="agenda-ideas">
+            {due.map((idea) => (
+              <li key={idea.id} className={`agenda-idea status-${idea.status.toLowerCase()}${idea.isOverdue ? ' is-overdue' : ''}`}>
+                <Link {...linkProps(idea.id)} className="agenda-title stretched-link">
+                  {idea.title}
+                </Link>
+                <span className="row small muted wrap">
+                  <StatusBadge idea={idea} />
+                </span>
+                <span className={idea.isOverdue ? 'small overdue-text' : 'small muted'}>
+                  {idea.startDate ? `Starts ${formatDate(idea.startDate)}` : 'No start date'} · due{' '}
+                  {formatDate(idea.targetDate)} ({describeDue(idea.targetDate)})
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
     </section>
   );
 }
