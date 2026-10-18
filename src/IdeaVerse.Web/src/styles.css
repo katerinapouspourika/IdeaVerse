@@ -265,6 +265,132 @@ a {
   }
 }
 
+/* On a phone the signed-in header names the current workspace beside the logo, which then stands without its name. */
+.phone-workspace {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 800;
+}
+
+.phone-workspace .workspace-badge {
+  flex: none;
+  border-radius: 6px;
+}
+
+.phone-workspace-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar.phone .brand-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* The header's buttons pack tighter on a phone to leave the workspace's name room; the narrowest drop its badge. */
+.topbar.phone .account {
+  gap: 2px;
+}
+
+.topbar.phone .header-icon,
+.topbar.phone .menu-button {
+  width: 36px;
+  height: 36px;
+}
+
+@media (max-width: 360px) {
+  .phone-workspace .workspace-badge {
+    display: none;
+  }
+}
+
+/* A phone's bottom bar of the app's main pages, clear of the home indicator; the page leaves room for it below. */
+.shell.has-tab-bar {
+  padding-bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+}
+
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  gap: 2px;
+  padding: 4px calc(6px + env(safe-area-inset-right, 0px)) calc(4px + env(safe-area-inset-bottom, 0px)) calc(6px + env(safe-area-inset-left, 0px));
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border);
+}
+
+/* Tabs share the spare width evenly beyond their own, so the longer "Notifications" still fits a 320px screen. */
+.tab-bar-link {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 53px;
+  padding: 0 2px;
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tab-icon {
+  position: relative;
+  display: inline-flex;
+  padding: 4px 14px;
+  border-radius: 999px;
+}
+
+.tab-bar-link[aria-current='page'] {
+  color: var(--accent);
+}
+
+.tab-bar-link[aria-current='page'] .tab-icon {
+  background: var(--accent-soft);
+}
+
+.tab-new .tab-icon {
+  background: var(--gradient);
+  color: #ffffff;
+}
+
+.tab-count {
+  position: absolute;
+  top: -4px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: var(--surface);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* While typing, the on-screen keyboard needs the room, so the bar steps aside. */
+.shell:has(input:not([type='checkbox'], [type='radio'], [type='range']):focus, textarea:focus) .tab-bar {
+  display: none;
+}
+
 .content {
   flex: 1;
   width: 100%;
