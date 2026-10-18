@@ -60,10 +60,11 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const [pending, setPending] = useState(false);
   const text = copy[mode];
   const state = location.state as { from?: string; signedOut?: boolean; email?: string } | null;
-  // Filled in when they came from "Sign in instead" after finding their email already has an account.
-  const [email, setEmail] = useState(state?.email ?? '');
-  // A template chosen before signing up: kept for when they reach their ideas, and carried between sign-up and sign-in.
   const [params] = useSearchParams();
+  // Filled in when they came from "Sign in instead" after finding their email already has an account, or from an
+  // invitation email, which links to `/register?email=…` so they sign up with the invited address.
+  const [email, setEmail] = useState(state?.email ?? params.get('email') ?? '');
+  // A template chosen before signing up: kept for when they reach their ideas, and carried between sign-up and sign-in.
   const chosen = findTemplate(params.get('template') ?? undefined);
   useEffect(() => {
     if (chosen) {

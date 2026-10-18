@@ -127,6 +127,14 @@ describe('AuthPage', () => {
     expect(await screen.findByLabelText('Email')).toHaveValue('kat@example.com');
   });
 
+  it('fills in the invited address when an invitation email opens sign-up', async () => {
+    fakeApi(signedOut);
+
+    renderApp('/register?email=new%2Bteam%40example.com');
+
+    expect(await screen.findByLabelText('Email')).toHaveValue('new+team@example.com');
+  });
+
   it('starts the sign-up card empty after typing on the sign-in card', async () => {
     fakeApi({ ...signedOut, 'POST /api/v1/auth/login?useCookies=true': { status: 401, body: { title: 'Unauthorized' } } });
     renderApp('/login');
