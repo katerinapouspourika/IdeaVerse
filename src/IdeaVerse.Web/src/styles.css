@@ -4018,9 +4018,75 @@ legend,
   font-weight: 600;
 }
 
-/* Settings' workspace section, which People links to: clear of the sticky header when scrolled to. */
-#workspace {
+/* Settings: a sticky menu of its sections beside the cards, which clear the sticky header when jumped to. */
+.settings-layout {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.settings-nav {
+  position: sticky;
+  top: 84px;
+}
+
+.settings-nav ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-nav a {
+  display: block;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.settings-nav a:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.settings-sections > [id] {
   scroll-margin-top: 80px;
+}
+
+.save-state {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Phones: the menu becomes a row of jump links above the cards. */
+@media (max-width: 760px) {
+  .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .settings-nav {
+    position: static;
+  }
+
+  .settings-nav ul {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .settings-nav a {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    font-size: 0.9rem;
+  }
 }
 
 /* People: what each workspace role may do. */
