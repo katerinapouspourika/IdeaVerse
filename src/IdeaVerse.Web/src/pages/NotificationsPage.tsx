@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router';
 
 import { formatMoment, todayIso } from '../api/dates';
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from '../api/queries';
-import type { Notification, ReminderKind } from '../api/types';
+import { notificationLink, type Notification, type ReminderKind } from '../api/types';
 import { ErrorMessage, LoadError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
 import { usePageMeta } from '../seo/usePageMeta';
@@ -137,7 +137,7 @@ function NotificationItem({ notification }: { notification: Notification }) {
       </div>
       <p className="notification-message">{notification.message}</p>
       <div className="row">
-        <Link to={`/ideas/${notification.ideaId}`} onClick={() => unread && markRead.mutate(notification.id)}>
+        <Link to={notificationLink(notification)} onClick={() => unread && markRead.mutate(notification.id)}>
           Open idea
         </Link>
         {unread && (

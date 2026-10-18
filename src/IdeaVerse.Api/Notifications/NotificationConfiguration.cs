@@ -30,6 +30,7 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
     builder.HasOne(n => n.Idea).WithMany().HasForeignKey(n => n.IdeaId).OnDelete(DeleteBehavior.Cascade);
     builder.HasOne(n => n.User).WithMany().HasForeignKey(n => n.UserId).OnDelete(DeleteBehavior.Cascade);
     builder.HasOne(n => n.Component).WithMany().HasForeignKey(n => n.ComponentId).OnDelete(DeleteBehavior.Cascade);
+    builder.HasOne(n => n.Comment).WithMany().HasForeignKey(n => n.CommentId).OnDelete(DeleteBehavior.SetNull);
     builder.HasOne(n => n.Actor).WithMany().HasForeignKey(n => n.ActorId).OnDelete(DeleteBehavior.SetNull);
     builder.HasIndex(n => new { n.IdeaId, n.UserId, n.Kind, n.TargetDate })
       .IsUnique()

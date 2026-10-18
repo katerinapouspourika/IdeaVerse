@@ -51,6 +51,8 @@ public sealed class NotificationService(IdeaVerseDbContext context, UserCalendar
         n.TargetDate,
         n.CreatedAt,
         n.ReadAt,
+        n.CommentId,
+        n.ComponentId,
         ComponentTitle = n.Component!.Title,
         ActorName = n.Actor!.DisplayName,
         ActorEmail = n.Actor.Email,
@@ -84,7 +86,9 @@ public sealed class NotificationService(IdeaVerseDbContext context, UserCalendar
             StartContent.For(n.StartsAt, n.CreatedAt, zone, n.StartDate, n.StartHasTime)),
           today),
         n.CreatedAt,
-        n.ReadAt))
+        n.ReadAt,
+        n.CommentId,
+        n.ComponentId))
       .ToList();
     return new NotificationsResponse(items, unread);
   }
