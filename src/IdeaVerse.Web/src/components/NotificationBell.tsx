@@ -40,6 +40,8 @@ export function NotificationBell() {
     };
   }, [open]);
 
+  useAppBadge(notifications.data?.unreadCount);
+
   const items = notifications.data?.items.slice(0, previewSize) ?? [];
 
   return (
@@ -87,4 +89,24 @@ export function NotificationBell() {
       )}
     </div>
   );
+}
+
+/**
+ * Shows the unread count on the installed app's icon, where the browser supports badges, and clears it once there is
+ * nothing unread or the bell goes away, as on signing out.
+ */
+function useAppBadge(unread: number | undefined) {
+  useEffect(() => {
+    if (unread === undefined || !('setAppBadge' in navigator)) {
+      return;
+    }
+    // Badging can be refused, for instance when the app is not installed; the bell still shows the count.
+    const ignore = () => {};
+    if (unread > 0) {
+      navigator.setAppBadge(unread).catch(ignore);
+    } else {
+      navigator.clearAppBadge().catch(ignore);
+    }
+    return () => void navigator.clearAppBadge().catch(ignore);
+  }, [unread]);
 }

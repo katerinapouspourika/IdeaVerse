@@ -299,6 +299,13 @@ a {
   overflow-wrap: anywhere;
 }
 
+/* The card's short links, such as "Forgot your password?", stand alone, so each is at least a 24px target. */
+.auth a:not(.button) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+
 .muted {
   color: var(--muted);
 }
@@ -452,7 +459,22 @@ textarea:focus-visible,
   display: flex;
   gap: 4px;
   overflow-x: auto;
-  padding-bottom: 2px;
+  /* Room inside the scroller for a tab's focus ring, which it would otherwise clip. */
+  padding: 4px;
+  margin: -4px;
+}
+
+/* While more tabs lie beyond an edge, that edge fades as a hint to scroll (see useEdgeFade). */
+.tabs[data-fade='end'] {
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+}
+
+.tabs[data-fade='start'] {
+  mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent);
+}
+
+.tabs[data-fade='both'] {
+  mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
 }
 
 .tab {
@@ -2148,6 +2170,11 @@ a:focus-visible {
   color: var(--danger);
 }
 
+.menu-check {
+  margin-left: auto;
+  color: var(--accent);
+}
+
 .popover {
   display: flex;
   flex-direction: column;
@@ -2177,7 +2204,7 @@ a:focus-visible {
 .toasts {
   position: fixed;
   left: 50%;
-  bottom: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   z-index: 90;
   transform: translateX(-50%);
   display: flex;
@@ -2238,6 +2265,25 @@ a:focus-visible {
   }
 }
 
+@keyframes toast-in-top {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* On a phone, toasts drop in from the top, clear of the form fields, buttons, and keyboard at the bottom of the screen. */
+@media (max-width: 700px) {
+  .toasts {
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    bottom: auto;
+  }
+
+  .toast {
+    animation-name: toast-in-top;
+  }
+}
+
 /* Confirmation dialog */
 .modal-backdrop {
   position: fixed;
@@ -2264,6 +2310,7 @@ a:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-height: 32px;
   font-weight: 700;
   text-decoration: none;
 }
@@ -2848,6 +2895,15 @@ a:focus-visible {
   grid-area: check;
   min-width: 0;
   overflow-wrap: anywhere;
+  /* The whole label toggles the box, so it is padded into a comfortable target without moving the row. */
+  min-height: 36px;
+  padding: 6px 8px;
+  margin: -6px -8px;
+  border-radius: var(--radius-small);
+}
+
+.component-row .check:has(input:enabled):hover {
+  background: var(--accent-soft);
 }
 
 .component-row .check input {
