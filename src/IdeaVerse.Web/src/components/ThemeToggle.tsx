@@ -6,9 +6,9 @@ import { Menu } from './Menu';
 
 const darkQuery = '(prefers-color-scheme: dark)';
 
-/** Whether the device prefers dark, following changes; light where the browser cannot tell. */
+/** Whether the device prefers dark, following changes; light where the browser cannot tell, or while prerendering. */
 function useDeviceDark() {
-  const [dark, setDark] = useState(() => window.matchMedia?.(darkQuery).matches ?? false);
+  const [dark, setDark] = useState(() => typeof window !== 'undefined' && (window.matchMedia?.(darkQuery).matches ?? false));
   useEffect(() => {
     const query = window.matchMedia?.(darkQuery);
     if (!query) {

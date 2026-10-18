@@ -156,7 +156,9 @@ describe('PeoplePage', () => {
     });
     renderApp('/people');
 
-    expect(await screen.findByText('Only the workspace’s owner and admins can invite people.')).toBeInTheDocument();
+    const ask = await screen.findByRole('link', { name: 'leo@example.com' });
+    expect(ask).toHaveAttribute('href', 'mailto:leo@example.com');
+    expect(ask.closest('p')).toHaveTextContent('To invite someone, ask leo@example.com.');
     expect(screen.queryByRole('form', { name: 'Invite people' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Rename' })).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: /Role of/ })).not.toBeInTheDocument();
@@ -166,6 +168,26 @@ describe('PeoplePage', () => {
     await confirmDialog('Leave workspace');
 
     await waitFor(() => expect(calls.some((c) => c.method === 'DELETE' && c.path === '/api/v1/workspaces/ws-1/members/u-me')).toBe(true));
+  });
+
+  it('names every owner and admin a member can ask to invite someone', async () => {
+    const admin: WorkspaceMember = { userId: 'u-ada', email: 'ada@example.com', name: 'Ada Admin', role: 'Admin', joinedAt: '2026-10-02T09:00:00Z' };
+    fakeApi(peopleRoutes('Member', [{ ...kat, name: 'Kat Owner' }, admin, mia]));
+    renderApp('/people');
+
+    const ada = await screen.findByRole('link', { name: 'Ada Admin' });
+    expect(ada).toHaveAttribute('href', 'mailto:ada@example.com');
+    expect(ada.closest('p')).toHaveTextContent('To invite someone, ask Kat Owner or Ada Admin.');
+  });
+
+  it('explains what each role can do', async () => {
+    fakeApi(peopleRoutes('Member', [kat, mia]));
+    renderApp('/people');
+
+    await userEvent.click(await screen.findByText('What can each role do?'));
+
+    expect(screen.getByText(/hand the workspace to someone else or delete it/)).toBeVisible();
+    expect(screen.getByText(/Invite people, answer join requests/)).toBeVisible();
   });
 
   it('lets the owner hand the workspace to someone else', async () => {

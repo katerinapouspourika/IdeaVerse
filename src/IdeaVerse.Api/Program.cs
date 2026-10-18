@@ -38,6 +38,11 @@ builder.Services
   .AddIdentityApiEndpoints<User>(o =>
   {
     o.User.RequireUniqueEmail = true;
+    o.Password.RequiredLength = 12;
+    o.Password.RequireDigit = false;
+    o.Password.RequireLowercase = false;
+    o.Password.RequireUppercase = false;
+    o.Password.RequireNonAlphanumeric = false;
     o.SignIn.RequireConfirmedEmail = builder.Configuration.GetValue("Auth:RequireConfirmedEmail", defaultValue: true);
   })
   .AddEntityFrameworkStores<IdeaVerseDbContext>();

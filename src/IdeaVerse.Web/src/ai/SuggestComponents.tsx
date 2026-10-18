@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useAddComponent, useAiStatus, useSuggestComponents } from '../api/queries';
 import type { ComponentSuggestion } from '../api/types';
 import { ErrorMessage } from '../components/ErrorMessage';
-import { AiAllowance, Thinking } from './AiAllowance';
+import { AiAllowance, Thinking, UnavailableAiButton } from './AiAllowance';
 
 /** Asks AI what an idea needs, and adds the suggestions the user keeps. */
 export function SuggestComponents({ ideaId, workspaceId }: { ideaId: string; workspaceId: string }) {
@@ -13,8 +13,12 @@ export function SuggestComponents({ ideaId, workspaceId }: { ideaId: string; wor
   const [chosen, setChosen] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
 
-  if (!status.data?.enabled) {
+  if (!status.data) {
     return null;
+  }
+
+  if (!status.data.enabled) {
+    return <UnavailableAiButton label="Suggest with AI" />;
   }
 
   const ask = () =>
@@ -74,7 +78,7 @@ export function SuggestComponents({ ideaId, workspaceId }: { ideaId: string; wor
           Dismiss
         </button>
       </div>
-      {status.data && <AiAllowance status={status.data} />}
+      <AiAllowance status={status.data} />
     </div>
   );
 }

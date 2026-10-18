@@ -306,7 +306,8 @@ public sealed class InvitationService(
       .SingleAsync(cancellationToken)
       .ConfigureAwait(false);
     var inviter = sender.DisplayName is { } name ? $"{name} ({sender.Email})" : sender.Email!;
-    await mailSender.SendAsync(InvitationEmail(invitation, workspaceName, inviter), cancellationToken).ConfigureAwait(false);
+    var hasAccount = await context.Users.AnyAsync(u => u.NormalizedEmail == invitation.NormalizedEmail, cancellationToken).ConfigureAwait(false);
+    await mailSender.SendAsync(InvitationEmail(invitation, workspaceName, inviter, hasAccount), cancellationToken).ConfigureAwait(false);
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
     return new InvitationResponse(invitation.Id, invitation.Email, invitation.Role, sender.Email!, sender.DisplayName, invitation.SentAt, invitation.ExpiresAt);
@@ -336,18 +337,24 @@ public sealed class InvitationService(
   /// <param name="invitation">The invitation.</param>
   /// <param name="workspaceName">The workspace's name.</param>
   /// <param name="inviter">Who sent it: their name and email, or just their email.</param>
+  /// <param name="hasAccount">Whether the address already has an account; without one, the link signs them up with it.</param>
   /// <returns>The email.</returns>
-  private MailMessage InvitationEmail(Invitation invitation, string workspaceName, string inviter)
+  private MailMessage InvitationEmail(Invitation invitation, string workspaceName, string inviter, bool hasAccount)
   {
-    var link = app.Value.Link("/invitations");
+    var link = hasAccount
+      ? app.Value.Link("/invitations")
+      : app.Value.Link($"/register?email={Uri.EscapeDataString(invitation.Email)}");
     var expires = invitation.ExpiresAt.ToString("dddd d MMMM yyyy", CultureInfo.InvariantCulture);
+    var role = invitation.Role == WorkspaceRole.Admin ? "an Admin" : "a Member";
     var content = new EmailContent(
       $"Join {workspaceName} on IdeaVerse",
       [
-        $"{inviter} invited you to join {workspaceName} on IdeaVerse, where the team plans its ideas together.",
-        $"New to IdeaVerse? Create an account with this email address ({invitation.Email}) and the invitation will be waiting for you.",
+        $"{inviter} invited you to join {workspaceName} as {role} on IdeaVerse, where the team plans its ideas together.",
+        hasAccount
+          ? $"Sign in with this email address ({invitation.Email}) to accept it."
+          : $"You're new to IdeaVerse: create your account with this email address ({invitation.Email}), confirm it, and the invitation will be waiting for you.",
       ],
-      new EmailAction("Open your invitations", new Uri(link)),
+      new EmailAction("Accept invitation", new Uri(link)),
       $"The invitation expires on {expires}. If you weren't expecting it, you can ignore this email.");
     return EmailLayout.Compose(invitation.Email, Subject(workspaceName), content, app.Value);
   }

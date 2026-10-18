@@ -89,4 +89,5 @@ jobs:
         run: npm test
 
       - name: Build
-        run: npx vite build
+        # The full build, prerender included, as the Docker image builds it, so code that breaks prerendering fails here.
+        run: npm run build

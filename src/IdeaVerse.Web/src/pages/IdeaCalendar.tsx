@@ -55,7 +55,7 @@ export function IdeaCalendar({ ideas }: { ideas: Idea[] }) {
                       <Link
                         key={idea.id}
                         to={`/ideas/${idea.id}`}
-                        className={idea.isOverdue ? 'calendar-idea is-overdue' : idea.status === 'Done' ? 'calendar-idea is-done' : 'calendar-idea'}
+                        className={`calendar-idea status-${idea.status.toLowerCase()}${idea.isOverdue ? ' is-overdue' : ''}`}
                       >
                         {idea.title}
                       </Link>

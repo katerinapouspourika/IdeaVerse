@@ -161,12 +161,24 @@ describe('Contact page when sending is not possible', () => {
     expect(screen.getByRole('form', { name: 'Contact us' })).toBeInTheDocument();
   });
 
-  it('says so before anyone writes, and gives the email address instead', async () => {
+  it('presents the email address as the way to reach us when there is no form', async () => {
     fakeApi({ ...signedOut, 'GET /api/v1/contact': { status: 200, body: { available: false, email: 'hello@ideaverse.example' } } });
     renderApp('/contact');
 
-    expect(await screen.findByRole('heading', { name: 'Our contact form isn’t available right now' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Email us' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'hello@ideaverse.example' })).toHaveAttribute('href', 'mailto:hello@ideaverse.example');
+    expect(screen.getByText(/email us and we’ll reply\./)).toBeInTheDocument();
+    expect(screen.queryByText(/send us a message/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/isn’t available/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'Contact us' })).not.toBeInTheDocument();
+  });
+
+  it('asks visitors to check back when there is neither a form nor an address', async () => {
+    fakeApi({ ...signedOut, 'GET /api/v1/contact': { status: 200, body: { available: false, email: null } } });
+    renderApp('/contact');
+
+    expect(await screen.findByRole('heading', { name: 'We’ll be here soon' })).toBeInTheDocument();
+    expect(screen.queryByText(/send us a message/)).not.toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'Contact us' })).not.toBeInTheDocument();
   });
 

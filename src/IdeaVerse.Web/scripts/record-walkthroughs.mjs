@@ -21,7 +21,7 @@ const base = process.env.BASE_URL ?? 'http://localhost:5173';
 const mailpit = process.env.MAILPIT_URL ?? 'http://localhost:8025';
 const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'how-it-works');
 const size = { width: 1024, height: 640 };
-const password = 'Passw0rd!';
+const password = 'Passw0rd!-long';
 const stamp = Date.now();
 const people = {
   kat: { email: `kat+${stamp}@ideaverse.example`, name: 'Kat Papadopoulou' },
