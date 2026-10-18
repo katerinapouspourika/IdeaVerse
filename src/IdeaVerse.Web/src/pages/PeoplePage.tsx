@@ -1,5 +1,5 @@
 import { Palette } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { Fragment, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 
 import { formatDate } from '../api/dates';
@@ -59,10 +59,65 @@ function People({ workspace }: { workspace: Workspace }) {
           <OpenInvitations workspaceId={workspace.id} />
         </>
       ) : (
-        <p className="muted small">Only the workspace’s owner and admins can invite people.</p>
+        <AskToInvite workspaceId={workspace.id} />
       )}
       {workspace.role === 'Owner' && <DangerZone workspace={workspace} />}
     </div>
+  );
+}
+
+/** Tells a member who can invite people, by name, with their addresses to write to. */
+function AskToInvite({ workspaceId }: { workspaceId: string }) {
+  const members = useWorkspaceMembers(workspaceId);
+  const managers = (members.data ?? []).filter((m) => m.role === 'Owner' || m.role === 'Admin');
+
+  if (managers.length === 0) {
+    return <p className="muted small">Only the workspace’s owner and admins can invite people.</p>;
+  }
+
+  return (
+    <p className="muted small">
+      To invite someone, ask{' '}
+      {managers.map((m, i) => (
+        <Fragment key={m.userId}>
+          {i > 0 && (i === managers.length - 1 ? ' or ' : ', ')}
+          <a href={`mailto:${m.email}`}>{personLabel(m.name, m.email)}</a>
+        </Fragment>
+      ))}
+      .
+    </p>
+  );
+}
+
+/** What each workspace role may do, as the API enforces it. */
+const roleAbilities: { role: WorkspaceRole; can: string }[] = [
+  {
+    role: 'Owner',
+    can: 'Everything an admin can, plus hand the workspace to someone else or delete it. There is one owner, who can’t leave until they hand it over.',
+  },
+  {
+    role: 'Admin',
+    can: 'Invite people, answer join requests, remove people and change their roles, rename and brand the workspace, and edit, archive or delete any idea in it.',
+  },
+  {
+    role: 'Member',
+    can: 'See and discuss every idea, create their own, and edit the ones they own or are on the team of; they archive or delete only their own.',
+  },
+];
+
+function RoleGuide() {
+  return (
+    <details className="role-guide small">
+      <summary>What can each role do?</summary>
+      <dl>
+        {roleAbilities.map(({ role, can }) => (
+          <Fragment key={role}>
+            <dt>{role}</dt>
+            <dd className="muted">{can}</dd>
+          </Fragment>
+        ))}
+      </dl>
+    </details>
   );
 }
 
@@ -288,6 +343,7 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
           })}
         </ul>
       )}
+      <RoleGuide />
       <LoadError queries={members} />
       <ErrorMessage error={changeRole.error ?? remove.error} />
     </section>

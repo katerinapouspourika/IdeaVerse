@@ -3833,3 +3833,22 @@ legend,
 #workspace {
   scroll-margin-top: 80px;
 }
+
+/* People: what each workspace role may do. */
+.role-guide summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.role-guide dl {
+  margin: 10px 0 0;
+}
+
+.role-guide dt {
+  font-weight: 800;
+}
+
+.role-guide dd {
+  margin: 2px 0 10px;
+}
