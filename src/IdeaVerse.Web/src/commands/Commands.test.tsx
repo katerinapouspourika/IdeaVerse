@@ -194,6 +194,51 @@ describe('Command palette results', () => {
     expect(await screen.findByText('Nothing matches.')).toBeInTheDocument();
   });
 
+  it('ranks a whole title, then its start, then a word’s start, then anywhere in it, then the description', async () => {
+    const found = [
+      anIdea({ id: 'a', title: 'Notes', description: 'A list of everything' }),
+      anIdea({ id: 'b', title: 'Customer onboarding checklist' }),
+      anIdea({ id: 'c', title: 'Team offsite in Lisbon' }),
+      anIdea({ id: 'd', title: 'Listening tour' }),
+      anIdea({ id: 'e', title: 'LIS' }),
+      anIdea({ id: 'f', title: 'Lisbon follow-up' }),
+    ];
+    fakeApi({ ...routes, [`${ideasRoute}?search=lis`]: { status: 200, body: found } });
+    renderApp('/ideas');
+    await ready();
+
+    await userEvent.keyboard('{Control>}k{/Control}');
+    await userEvent.type(screen.getByRole('combobox', { name: 'Search ideas or type a command' }), 'lis');
+
+    const ideas = await screen.findByRole('group', { name: 'Ideas' });
+    expect(within(ideas).getAllByRole('option').map((o) => o.querySelector('.grow')?.textContent)).toEqual([
+      'LIS',
+      'Listening tour',
+      'Lisbon follow-up',
+      'Team offsite in Lisbon',
+      'Customer onboarding checklist',
+      'Notes',
+    ]);
+  });
+
+  it('offers the ideas opened lately in this workspace before anything is typed', async () => {
+    localStorage.setItem('ideaverse.recentIdeas', JSON.stringify([{ id: 'idea-9', workspaceId: 'ws-2', title: 'Elsewhere' }]));
+    fakeApi(routes);
+    const router = renderApp('/ideas/idea-1');
+    await screen.findByRole('heading', { name: 'Spring launch' });
+
+    await userEvent.keyboard('{Control>}k{/Control}');
+    const recent = screen.getByRole('group', { name: 'Recent ideas' });
+    expect(within(recent).getAllByRole('option').map((o) => o.textContent)).toEqual(['Spring launch']);
+    expect(within(recent).getByRole('option')).toHaveAttribute('aria-selected', 'true');
+    await userEvent.type(screen.getByRole('combobox', { name: 'Search ideas or type a command' }), 'go');
+    expect(screen.queryByRole('group', { name: 'Recent ideas' })).not.toBeInTheDocument();
+
+    await userEvent.clear(screen.getByRole('combobox', { name: 'Search ideas or type a command' }));
+    await userEvent.click(within(screen.getByRole('group', { name: 'Recent ideas' })).getByRole('option', { name: 'Spring launch' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/ideas/idea-1'));
+  });
+
   it('keeps focus inside while tabbing', async () => {
     fakeApi(routes);
     renderApp('/ideas');
