@@ -2400,8 +2400,119 @@ a:focus-visible {
   padding: 14px 16px;
 }
 
-.notification-popover .mini-list a {
+/* The bell's drop-down: a header with Mark all read, the latest few notifications, and a link to the rest. */
+.notification-popover {
+  gap: 6px;
+  padding: 12px 8px 8px;
+}
+
+.notification-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 8px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.notification-popover > p {
+  margin: 4px 8px;
+}
+
+.notification-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Title and time on the first line, the idea (and workspace) below, with the unread dot in a column of its own. */
+.notification-menu-item {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: 10px;
+  row-gap: 2px;
+  padding: 8px;
+  border-radius: var(--radius-small);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.notification-menu-item:hover {
+  background: var(--accent-soft);
+}
+
+.notification-menu-item:focus-visible {
+  background: var(--accent-soft);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.unread-dot {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.notification-menu .unread .unread-dot {
+  background: var(--accent);
+}
+
+.notification-menu-title,
+.notification-menu-idea {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notification-menu-title {
+  grid-column: 2;
+  grid-row: 1;
   font-size: 0.92rem;
+}
+
+.notification-menu .unread .notification-menu-title {
+  font-weight: 700;
+}
+
+.notification-menu-time {
+  grid-column: 3;
+  grid-row: 1;
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.notification-menu-idea {
+  grid-column: 2 / -1;
+  grid-row: 2;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.notification-menu-item .workspace-tag {
+  grid-column: 2 / -1;
+  grid-row: 3;
+  font-size: 0.8rem;
+}
+
+.notification-popover-foot {
+  display: block;
+  padding: 10px 8px 4px;
+  border-top: 1px solid var(--border);
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+
+.notification-popover-foot:hover {
+  text-decoration: underline;
 }
 
 /* On narrow screens the bell sits mid-header, so its panel spans the header instead of hanging off the left edge. */
