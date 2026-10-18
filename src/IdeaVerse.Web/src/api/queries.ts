@@ -30,6 +30,7 @@ import type {
   Notifications,
   PriorityInput,
   ReceivedInvitation,
+  UndoPostpone,
   Workspace,
   WorkspaceMember,
   WorkspaceRole,
@@ -435,6 +436,15 @@ export function usePostponeIdea(id: string) {
   const invalidate = useInvalidateIdea();
   return useMutation({
     mutationFn: (targetDate: string) => request<Idea>('POST', `/api/v1/ideas/${id}/postpone`, { targetDate }),
+    onSuccess: () => invalidate(id),
+  });
+}
+
+/** Takes back the user's postponement just made, so it isn't counted. */
+export function useUndoPostpone(id: string) {
+  const invalidate = useInvalidateIdea();
+  return useMutation({
+    mutationFn: (previous: UndoPostpone) => request<Idea>('POST', `/api/v1/ideas/${id}/postpone/undo`, previous),
     onSuccess: () => invalidate(id),
   });
 }

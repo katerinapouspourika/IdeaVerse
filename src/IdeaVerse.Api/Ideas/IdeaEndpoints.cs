@@ -35,6 +35,7 @@ internal static class IdeaEndpoints
     group.MapGet("/{id:guid}", GetAsync).WithName(GetIdeaRouteName);
     group.MapPut("/{id:guid}", UpdateAsync).WithValidation<UpdateIdeaRequest>().RejectWhenArchived();
     group.MapPost("/{id:guid}/postpone", PostponeAsync).WithValidation<PostponeIdeaRequest>().RejectWhenArchived();
+    group.MapPost("/{id:guid}/postpone/undo", UndoPostponeAsync).WithValidation<UndoPostponeRequest>().RejectWhenArchived();
     group.MapPut("/{id:guid}/priority", SetPriorityAsync).WithValidation<SetPriorityRequest>().RejectWhenArchived();
     group.MapPut("/{id:guid}/start", SetStartAsync).WithValidation<SetStartRequest>().RejectWhenArchived();
     group.MapPut("/{id:guid}/vote", VoteAsync).RejectVoteWhenArchived();
@@ -170,6 +171,23 @@ internal static class IdeaEndpoints
     var result = await service.PostponeAsync(user.GetUserId(), id, request, cancellationToken).ConfigureAwait(false);
     return ToHttpResult(result);
   }
+
+  /// <summary>
+  /// Takes back the user's latest postponement of an idea, restoring its earlier target date and status.
+  /// </summary>
+  /// <param name="id">The idea identifier.</param>
+  /// <param name="request">The validated request.</param>
+  /// <param name="user">The signed-in user.</param>
+  /// <param name="service">The idea service.</param>
+  /// <param name="cancellationToken">Token to cancel the request.</param>
+  /// <returns>The restored idea, 404, 403 when the user is not on the idea's team, a validation problem, or 409 when there is no recent postponement by the user.</returns>
+  private static async Task<Results<Ok<IdeaResponse>, NotFound, ValidationProblem, ProblemHttpResult>> UndoPostponeAsync(
+    Guid id,
+    UndoPostponeRequest request,
+    ClaimsPrincipal user,
+    IdeaService service,
+    CancellationToken cancellationToken)
+    => ToHttpResult(await service.UndoPostponeAsync(user.GetUserId(), id, request, cancellationToken).ConfigureAwait(false));
 
   /// <summary>
   /// Scores an idea's impact and effort.

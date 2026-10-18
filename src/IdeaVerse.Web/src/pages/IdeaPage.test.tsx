@@ -217,6 +217,24 @@ describe('IdeaPage', () => {
     expect(await screen.findByText(/^Postponed to /)).toBeInTheDocument();
   });
 
+  it('takes the postponement back with Undo, restoring the earlier date and status', async () => {
+    const idea = anIdea({ status: 'InProgress' });
+    const calls = fakeApi({
+      ...ideaRoutes({ status: 'InProgress' }, [owner]),
+      'POST /api/v1/ideas/idea-1/postpone': (body) => ({ status: 200, body: anIdea({ ...(body as object), status: 'Postponed', postponeCount: 1 }) }),
+      'POST /api/v1/ideas/idea-1/postpone/undo': (body) => ({ status: 200, body: anIdea({ ...(body as object), postponeCount: 0 }) }),
+    });
+    renderApp('/ideas/idea-1');
+
+    const form = await screen.findByRole('form', { name: 'Postpone idea' });
+    await userEvent.click(within(form).getByRole('button', { name: 'Postpone' }));
+    await screen.findByText(/^Postponed to /);
+    await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
+
+    await waitFor(() => expect(calls.find((c) => c.path.endsWith('/postpone/undo'))?.body).toEqual({ targetDate: idea.targetDate, status: 'InProgress' }));
+    expect(await screen.findByText(/^Back to /)).toBeInTheDocument();
+  });
+
   it('explains when the idea is missing or in another workspace', async () => {
     fakeApi({ ...signedIn, 'GET /api/v1/ideas/nope': { status: 404 } });
 
