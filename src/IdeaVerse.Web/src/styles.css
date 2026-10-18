@@ -1831,6 +1831,14 @@ h3 {
   gap: 8px;
 }
 
+/* The tick sits in its own column, so a line that wraps lines up with the text above it. */
+.check-steps li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: start;
+}
+
 .check-steps li::before {
   content: '✓';
   display: inline-flex;
@@ -1838,7 +1846,7 @@ h3 {
   justify-content: center;
   width: 22px;
   height: 22px;
-  margin-right: 10px;
+  margin-top: 1px;
   border-radius: 999px;
   background: var(--ok-soft);
   color: var(--ok);
@@ -3255,6 +3263,10 @@ a:focus-visible {
   width: min(480px, 100%);
 }
 
+.pricing-plan p {
+  margin: 0;
+}
+
 .faq {
   max-width: 760px;
 }
@@ -3263,9 +3275,35 @@ a:focus-visible {
   text-align: center;
 }
 
+/* A chevron on the right in place of the browser's triangle, turned up while the answer is open. */
 .faq-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   cursor: pointer;
   font-weight: 800;
+  list-style: none;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.faq-chevron {
+  flex: none;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+
+.faq-item[open] .faq-chevron {
+  transform: rotate(180deg);
 }
 
 .faq-item p {

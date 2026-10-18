@@ -16,6 +16,8 @@ export function ContactPage() {
   const send = useSendContactMessage();
   const status = useContactStatus();
   const directEmail = status.data?.email ?? null;
+  // Without the form, the public address is simply how to reach us, so the page says so from the top.
+  const formOff = status.data?.available === false;
   const [copied, setCopied] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -64,24 +66,35 @@ export function ContactPage() {
         <div className="landing-inner stack center">
           <p className="eyebrow">Contact us</p>
           <h1 className="display">We’d love to hear from you</h1>
-          <p className="lead">Questions, feedback, or ideas for IdeaVerse itself — send us a message and we’ll reply by email.</p>
+          <p className="lead">
+            {!formOff
+              ? 'Questions, feedback, or ideas for IdeaVerse itself — send us a message and we’ll reply by email.'
+              : directEmail
+                ? 'Questions, feedback, or ideas for IdeaVerse itself — email us and we’ll reply.'
+                : 'Questions, feedback, or ideas for IdeaVerse itself — we’re always glad to hear them.'}
+          </p>
         </div>
       </section>
 
       <section className="landing-section">
         <div className="landing-inner contact-inner">
-          {status.data && !status.data.available ? (
-            <div className="card stack center" role="status">
+          {formOff ? (
+            <div className="card stack center">
               <span className="feature-icon big" aria-hidden="true">
                 <Mail size={36} />
               </span>
-              <h2>Our contact form isn’t available right now</h2>
               {directEmail ? (
-                <p>
-                  Please email us at <a href={`mailto:${directEmail}`}>{directEmail}</a> instead. We’ll reply as soon as we can.
-                </p>
+                <>
+                  <h2>Email us</h2>
+                  <p>
+                    Write to <a href={`mailto:${directEmail}`}>{directEmail}</a> — we reply by email.
+                  </p>
+                </>
               ) : (
-                <p>Please try again a little later.</p>
+                <>
+                  <h2>We’ll be here soon</h2>
+                  <p className="muted">There’s no way to write to us from this page just yet. Please check back a little later.</p>
+                </>
               )}
             </div>
           ) : send.isSuccess ? (
