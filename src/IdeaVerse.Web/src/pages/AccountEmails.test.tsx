@@ -10,12 +10,29 @@ describe('Registration and confirmation', () => {
     renderApp('/register');
 
     await userEvent.type(await screen.findByLabelText('Email'), 'new@example.com');
-    await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!');
+    await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!-long');
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
     expect(await screen.findByRole('heading', { name: 'Check your inbox' })).toBeInTheDocument();
     expect(screen.getByText('new@example.com')).toBeInTheDocument();
     expect(calls.some((c) => c.path.startsWith('/api/v1/auth/login'))).toBe(false);
+  });
+
+  it('says the link signs the new user in and lasts a day, and lets them start again with another email', async () => {
+    fakeApi({ ...signedOut, 'POST /api/v1/auth/register': { status: 200 } });
+    renderApp('/register');
+
+    await userEvent.type(await screen.findByLabelText('Email'), 'wrong@example.com');
+    await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!');
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(await screen.findByText(/Open it and you’re signed in, ready to go\. The link works for one day\./)).toBeInTheDocument();
+    expect(screen.queryByText(/then sign in/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Start again' }));
+
+    expect(await screen.findByRole('heading', { name: 'Create your account' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Email')).toHaveValue('wrong@example.com');
+    expect(screen.getByLabelText('Password')).toHaveValue('');
   });
 
   it('explains an unconfirmed sign-in and resends the link', async () => {

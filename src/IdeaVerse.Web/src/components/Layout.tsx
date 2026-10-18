@@ -194,6 +194,9 @@ function LoadingBar() {
 
 function PublicBar() {
   const menu = useMenu();
+  const { pathname } = useLocation();
+  // The sign-in and sign-up pages are already the way in, so the header does not offer it again.
+  const onAuthPage = pathname === '/login' || pathname === '/register';
 
   return (
     <header className="topbar">
@@ -212,9 +215,11 @@ function PublicBar() {
         <NavLink to="/login" className="nav-link">
           Sign in
         </NavLink>
-        <Link to="/register" className="button primary small">
-          Get started free
-        </Link>
+        {!onAuthPage && (
+          <Link to="/register" className="button primary small">
+            Get started free
+          </Link>
+        )}
       </nav>
       <div className="account">
         <ThemeToggle />

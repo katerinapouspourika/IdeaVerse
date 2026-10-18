@@ -32,7 +32,7 @@ describe('Account settings', () => {
 
     const form = await screen.findByRole('form', { name: 'Password' });
     await userEvent.type(within(form).getByLabelText('Current password'), 'Wrong1!');
-    await userEvent.type(within(form).getByLabelText('New password'), 'Newpass1!');
+    await userEvent.type(within(form).getByLabelText('New password'), 'New-passw0rd!');
     await userEvent.click(within(form).getByRole('button', { name: 'Change password' }));
     await waitFor(() => expect(within(form).getByLabelText('Current password')).toHaveAccessibleDescription('That isn’t your current password.'));
 
@@ -41,7 +41,7 @@ describe('Account settings', () => {
     await userEvent.click(within(form).getByRole('button', { name: 'Change password' }));
 
     expect(await within(form).findByRole('status')).toHaveTextContent('Password changed.');
-    expect(calls.filter((c) => c.method === 'POST').at(-1)?.body).toEqual({ oldPassword: 'Passw0rd!', newPassword: 'Newpass1!' });
+    expect(calls.filter((c) => c.method === 'POST').at(-1)?.body).toEqual({ oldPassword: 'Passw0rd!', newPassword: 'New-passw0rd!' });
   });
 
   it('sends a confirmation link to a new email address', async () => {
