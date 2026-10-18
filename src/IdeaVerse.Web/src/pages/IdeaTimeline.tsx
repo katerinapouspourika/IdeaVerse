@@ -28,8 +28,9 @@ function monthsFor(ideas: Idea[], today: string): string[] {
 }
 
 /**
- * A roadmap of the ideas: each is a bar from the day it was added to its target date, against a scale of months with a
- * line for today. Each row also says its dates in words, which is what screen readers read; the bars are decoration.
+ * A roadmap of the ideas: each is a bar from its start date to its target date, against a scale of months with a line
+ * for today; an idea with no start date is a dot on its target date, as there is no span to draw. Each row also says its
+ * dates in words, which is what screen readers read; the bars are decoration.
  */
 export function IdeaTimeline({ ideas }: { ideas: Idea[] }) {
   const narrow = useNarrowScreen();
@@ -76,8 +77,8 @@ export function IdeaTimeline({ ideas }: { ideas: Idea[] }) {
           </div>
           <ol className="timeline-rows">
             {sorted.map((idea) => {
-              const start = idea.createdAt.slice(0, 10) < idea.targetDate ? idea.createdAt.slice(0, 10) : idea.targetDate;
-              const left = at(start);
+              const start = idea.startDate;
+              const left = at(start ?? idea.targetDate);
               const width = Math.max(at(idea.targetDate) - left, 0.8);
               const state = idea.isOverdue ? 'is-overdue' : `status-${idea.status.toLowerCase()}`;
               return (
@@ -88,12 +89,17 @@ export function IdeaTimeline({ ideas }: { ideas: Idea[] }) {
                       {idea.title}
                     </Link>
                     <span className={idea.isOverdue ? 'small overdue-text' : 'small muted'}>
-                      {statusLabels[idea.status]} · {formatDate(idea.targetDate)} ({describeDue(idea.targetDate)})
+                      {statusLabels[idea.status]} · {start ? `starts ${formatDate(start)}` : 'no start date'} · due{' '}
+                      {formatDate(idea.targetDate)} ({describeDue(idea.targetDate)})
                     </span>
                   </div>
                   <div className="timeline-track" aria-hidden="true">
                     <span className="timeline-today-line" style={{ left: `${at(today)}%` }} />
-                    <span className={`timeline-bar ${state}${day(start) < from ? ' clipped' : ''}`} style={{ left: `${left}%`, width: `${width}%` }} />
+                    {start ? (
+                      <span className={`timeline-bar ${state}${day(start) < from ? ' clipped' : ''}`} style={{ left: `${left}%`, width: `${width}%` }} />
+                    ) : (
+                      <span className={`timeline-bar timeline-marker ${state}`} style={{ left: `${left}%` }} />
+                    )}
                   </div>
                 </li>
               );
@@ -136,7 +142,7 @@ function TimelineList({ ideas }: { ideas: Idea[] }) {
                   <StatusBadge idea={idea} />
                 </span>
                 <span className={idea.isOverdue ? 'small overdue-text' : 'small muted'}>
-                  {idea.startDate ? `From ${formatDate(idea.startDate)} to ` : 'No start date · due '}
+                  {idea.startDate ? `Starts ${formatDate(idea.startDate)}` : 'No start date'} · due{' '}
                   {formatDate(idea.targetDate)} ({describeDue(idea.targetDate)})
                 </span>
               </li>

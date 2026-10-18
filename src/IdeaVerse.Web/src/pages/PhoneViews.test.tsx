@@ -30,7 +30,7 @@ describe('Calendar and Timeline on a phone', () => {
       .map((l) => l.closest('li')!);
     expect(first).toHaveTextContent('Old report');
     expect(first).toHaveTextContent('Overdue');
-    expect(second).toHaveTextContent(/Spring launch.*From /);
+    expect(second).toHaveTextContent(/Spring launch.*Starts /);
     expect(within(calendar).queryByRole('link', { name: 'Team offsite' })).not.toBeInTheDocument();
 
     await userEvent.click(within(calendar).getByRole('button', { name: /Next month/ }));
@@ -62,7 +62,7 @@ describe('Calendar and Timeline on a phone', () => {
     const links = within(timeline).getAllByRole('link');
     expect(links.map((l) => l.textContent)).toEqual(['Old report', 'Spring launch', 'Team offsite']);
     expect(links[0]!.closest('li')).toHaveTextContent(/No start date · due /);
-    expect(links[1]!.closest('li')).toHaveTextContent(/From .* to .*\(/);
+    expect(links[1]!.closest('li')).toHaveTextContent(/Starts .* · due .*\(/);
 
     await userEvent.click(links[1]!);
     expect(await screen.findByRole('dialog', { name: 'Spring launch' })).toBeInTheDocument();

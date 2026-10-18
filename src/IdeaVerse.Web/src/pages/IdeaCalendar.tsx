@@ -9,9 +9,13 @@ import { useNarrowScreen } from '../components/useNarrowScreen';
 
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+/** How many planned spans a day shows before summing up the rest, so busy months stay readable. */
+const maxSpans = 3;
+
 /**
- * A month grid with each idea on its target date, starting on the user's current month. On a phone, where a grid's
- * cells are too small to read, the month's ideas are a list grouped by target date instead.
+ * A month grid with each idea on its target date, starting on the user's current month. An idea with a start date also
+ * shows on its start day, as an outlined chip, with a thin line on each day in between. On a phone, where a grid's cells
+ * are too small to read, the month's ideas are a list grouped by target date instead.
  */
 export function IdeaCalendar({ ideas }: { ideas: Idea[] }) {
   const narrow = useNarrowScreen();
@@ -23,9 +27,19 @@ export function IdeaCalendar({ ideas }: { ideas: Idea[] }) {
   );
 
   const byDate = new Map<string, Idea[]>();
+  const byStart = new Map<string, Idea[]>();
   for (const idea of ideas) {
     byDate.set(idea.targetDate, [...(byDate.get(idea.targetDate) ?? []), idea]);
+    if (idea.startDate && idea.startDate < idea.targetDate) {
+      byStart.set(idea.startDate, [...(byStart.get(idea.startDate) ?? []), idea]);
+    }
   }
+  // Earliest start first, so an idea's line keeps roughly the same place from day to day.
+  const planned = ideas
+    .filter((i) => i.startDate && i.startDate < i.targetDate)
+    .sort((a, b) => a.startDate!.localeCompare(b.startDate!) || a.targetDate.localeCompare(b.targetDate));
+  const spanning = (date: string) => planned.filter((i) => i.startDate! < date && date < i.targetDate);
+  const chipClass = (idea: Idea) => `status-${idea.status.toLowerCase()}${idea.isOverdue ? ' is-overdue' : ''}`;
 
   const nav = (
     <div className="row spread calendar-nav">
@@ -71,14 +85,21 @@ export function IdeaCalendar({ ideas }: { ideas: Idea[] }) {
                   <td key={date} className={date === today ? 'today' : undefined}>
                     <span className="day">{Number(date.slice(8))}</span>
                     {byDate.get(date)?.map((idea) => (
+                      <Link key={idea.id} to={`/ideas/${idea.id}`} className={`calendar-idea ${chipClass(idea)}`}>
+                        {idea.title}
+                      </Link>
+                    ))}
+                    {byStart.get(date)?.map((idea) => (
                       <Link
-                        key={idea.id}
+                        key={`start-${idea.id}`}
                         to={`/ideas/${idea.id}`}
-                        className={`calendar-idea status-${idea.status.toLowerCase()}${idea.isOverdue ? ' is-overdue' : ''}`}
+                        aria-label={`Starts: ${idea.title}`}
+                        className={`calendar-idea calendar-start ${chipClass(idea)}`}
                       >
                         {idea.title}
                       </Link>
                     ))}
+                    <Spans ideas={spanning(date)} className={chipClass} />
                   </td>
                 ),
               )}
@@ -86,6 +107,12 @@ export function IdeaCalendar({ ideas }: { ideas: Idea[] }) {
           ))}
         </tbody>
       </table>
+      {planned.length > 0 && (
+        <p className="small muted calendar-legend">
+          <span className="calendar-idea calendar-start status-planned">Outlined</span> on the start day, filled on the target date,
+          with a line on each day in between.
+        </p>
+      )}
     </section>
   );
 }
@@ -120,7 +147,7 @@ function CalendarAgenda({ month, title, byDate, today }: CalendarAgendaProps) {
                 </Link>
                 <span className="row small muted wrap">
                   <StatusBadge idea={idea} />
-                  {idea.startDate && idea.startDate < idea.targetDate && <span>From {formatDate(idea.startDate)}</span>}
+                  {idea.startDate && idea.startDate < idea.targetDate && <span>Starts {formatDate(idea.startDate)}</span>}
                 </span>
               </li>
             ))}
@@ -128,6 +155,21 @@ function CalendarAgenda({ month, title, byDate, today }: CalendarAgendaProps) {
         </li>
       ))}
     </ol>
+  );
+}
+
+/** The thin lines of the ideas under way on a day, up to `maxSpans`; their start and target chips name them. */
+function Spans({ ideas, className }: { ideas: Idea[]; className: (idea: Idea) => string }) {
+  if (ideas.length === 0) {
+    return null;
+  }
+  return (
+    <span className="calendar-spans" aria-hidden="true">
+      {ideas.slice(0, maxSpans).map((idea) => (
+        <span key={idea.id} className={`calendar-span ${className(idea)}`} title={idea.title} />
+      ))}
+      {ideas.length > maxSpans && <span className="calendar-more">+{ideas.length - maxSpans}</span>}
+    </span>
   );
 }
 

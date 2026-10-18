@@ -629,6 +629,7 @@ textarea:focus-visible,
 .badge.overdue,
 .calendar-idea.is-overdue,
 .agenda-idea.is-overdue,
+.calendar-span.is-overdue,
 .timeline-bar.is-overdue {
   --status-bg: var(--status-overdue-bg);
   --status-text: var(--status-overdue-text);
@@ -1263,6 +1264,41 @@ a.tag:focus-visible {
 .agenda-idea:hover .agenda-title {
   color: var(--accent);
   text-decoration: underline;
+}
+
+/* The start day of a planned span: outlined in the status colour, where the target date is filled. */
+.calendar-idea.calendar-start {
+  background: transparent;
+  border: 1px dashed var(--status-bar);
+  border-left: 3px solid var(--status-bar);
+}
+
+/* The days in between: a thin line per idea under way, so a busy month stays readable. */
+.calendar-spans {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.calendar-span {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--status-bar);
+  opacity: 0.7;
+}
+
+.calendar-more {
+  font-size: 0.7rem;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.calendar-legend .calendar-idea {
+  display: inline;
+  margin: 0;
+  color: var(--status-text);
 }
 
 /* On narrow screens the month buttons show only their arrows, so the month's name fits between them. */
@@ -3362,7 +3398,7 @@ a:focus-visible {
   }
 }
 
-/* Timeline: each idea as a bar from when it was added to its target date */
+/* Timeline: each idea as a bar from its start date to its target date, or a dot on its target date without a start */
 
 .timeline {
   padding: 12px 0;
@@ -3484,6 +3520,15 @@ a:focus-visible {
 .timeline-bar.clipped {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
+}
+
+/* No start date: a dot centred on the target date, ringed in the surface colour so it reads as a point, not a bar. */
+.timeline-marker {
+  top: 19px;
+  width: 14px;
+  height: 14px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 0 2px var(--surface);
 }
 
 @media (max-width: 600px) {
