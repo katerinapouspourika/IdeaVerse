@@ -2203,6 +2203,42 @@ textarea:disabled {
   align-items: flex-start;
 }
 
+/* The idea at a glance under its title: status, target, start, owner, and tags, wrapping on narrow screens. */
+.idea-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.fact-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.fact-chip-label {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.fact-chip.overdue {
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.fact-chip.overdue .fact-chip-label {
+  color: inherit;
+}
+
 /* Tag editor: chips followed by a text box, framed together like one input. */
 .tag-input {
   display: flex;
@@ -2588,6 +2624,16 @@ a:focus-visible {
 
 .postpone-form .button {
   align-self: flex-start;
+}
+
+/* The Postpone menu opens under its button, at the card's left edge. */
+.postpone-form .menu {
+  align-self: flex-start;
+}
+
+.postpone-form .menu-list {
+  left: 0;
+  right: auto;
 }
 
 @media (max-width: 960px) {

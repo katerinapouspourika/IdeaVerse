@@ -24,6 +24,13 @@ export function addDays(isoDate: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** Adds calendar months to a `YYYY-MM-DD` date, keeping the day where the month has it and otherwise taking the month's last day. */
+export function addMonths(isoDate: string, months: number): string {
+  const [year, month, day] = isoDate.split('-').map(Number) as [number, number, number];
+  const lastDay = new Date(Date.UTC(year, month - 1 + months + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(year, month - 1 + months, Math.min(day, lastDay))).toISOString().slice(0, 10);
+}
+
 /** Whole days from today until the date; negative when it has passed. */
 export function daysUntil(isoDate: string, now: Date = new Date(), timeZone: string = currentTimeZone): number {
   const day = 24 * 60 * 60 * 1000;
