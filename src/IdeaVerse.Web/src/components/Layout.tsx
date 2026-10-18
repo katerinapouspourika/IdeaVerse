@@ -2,12 +2,12 @@ import { Download, LogOut, Menu as MenuIcon, Settings, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, ScrollRestoration, useLocation, useMatches, useNavigate } from 'react-router';
 
-import { useReceivedInvitations } from '../api/queries';
+import { useJoinRequests, useReceivedInvitations } from '../api/queries';
 import { personLabel } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { hadSession } from '../auth/sessionHint';
 import { Commands } from '../commands/Commands';
-import { useWorkspace, WorkspaceProvider } from '../workspaces/WorkspaceContext';
+import { canManageWorkspace, useWorkspace, WorkspaceProvider } from '../workspaces/WorkspaceContext';
 import { WorkspaceSwitcher } from '../workspaces/WorkspaceSwitcher';
 import { scrollKey } from '../freshLoadScroll';
 import { ExploreMenu } from './ExploreMenu';
@@ -111,12 +111,30 @@ function useMenu() {
   return { open, toggle: () => setOpen((o) => !o) };
 }
 
-function MenuButton({ open, toggle }: { open: boolean; toggle: () => void }) {
+/** The small-screen menu's button; `waiting` counts what inside the menu needs the user, such as invitations, and marks the button with a dot. */
+function MenuButton({ open, toggle, waiting = 0 }: { open: boolean; toggle: () => void; waiting?: number }) {
   return (
-    <button type="button" className="menu-button" aria-expanded={open} aria-controls="site-menu" aria-label="Menu" onClick={toggle}>
+    <button
+      type="button"
+      className="menu-button"
+      aria-expanded={open}
+      aria-controls="site-menu"
+      aria-label={waiting > 0 ? `Menu, ${waiting} waiting` : 'Menu'}
+      onClick={toggle}
+    >
       {open ? <X aria-hidden="true" size={22} /> : <MenuIcon aria-hidden="true" size={22} />}
+      {waiting > 0 && !open && <span className="menu-dot" aria-hidden="true" />}
     </button>
   );
+}
+
+/** What waits for the user behind the header's links: invitations they received, and, for owners and admins, requests to join the current workspace. */
+function useWaiting() {
+  const { current } = useWorkspace();
+  const invitations = useReceivedInvitations();
+  const manages = canManageWorkspace(current);
+  const requests = useJoinRequests(current?.id ?? '', manages);
+  return { invitations: invitations.data?.length ?? 0, joinRequests: manages ? (requests.data?.length ?? 0) : 0 };
 }
 
 function AppBar() {
@@ -125,6 +143,7 @@ function AppBar() {
   const navigate = useNavigate();
   const menu = useMenu();
   const { install } = useInstallPrompt();
+  const waiting = useWaiting();
 
   const signOut = async () => {
     await logout();
@@ -146,11 +165,20 @@ function AppBar() {
           </NavLink>
         )}
         {current && (
-          <NavLink to="/people" className="nav-link">
+          <NavLink
+            to="/people"
+            className="nav-link"
+            aria-label={waiting.joinRequests > 0 ? `People, ${waiting.joinRequests} asking to join` : undefined}
+          >
             People
+            {waiting.joinRequests > 0 && (
+              <span className="nav-count" aria-hidden="true">
+                {waiting.joinRequests}
+              </span>
+            )}
           </NavLink>
         )}
-        <InvitationsLink />
+        <InvitationsLink count={waiting.invitations} />
       </nav>
       <div className="account">
         <Commands />
@@ -174,7 +202,7 @@ function AppBar() {
             ]}
           />
         )}
-        <MenuButton {...menu} />
+        <MenuButton {...menu} waiting={waiting.invitations + waiting.joinRequests} />
       </div>
     </header>
   );
@@ -309,9 +337,7 @@ function AppFooter() {
 }
 
 /** Header link to the user's open invitations, shown only while they have some. */
-function InvitationsLink() {
-  const invitations = useReceivedInvitations();
-  const count = invitations.data?.length ?? 0;
+function InvitationsLink({ count }: { count: number }) {
   return count === 0 ? null : (
     <NavLink to="/invitations" className="nav-link">
       Invitations ({count})

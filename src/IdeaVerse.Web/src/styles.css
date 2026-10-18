@@ -851,6 +851,35 @@ textarea:focus-visible,
   background: var(--accent-soft);
 }
 
+/* How many requests wait behind a header link, such as people asking to join. */
+.nav-count {
+  display: inline-block;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: var(--surface);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  vertical-align: 1px;
+}
+
+/* Marks the small-screen menu button when something inside the menu waits for the user. */
+.menu-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
 .switcher {
   max-width: 14rem;
   padding: 6px 8px;
@@ -1162,6 +1191,7 @@ h3 {
 }
 
 .menu-button {
+  position: relative;
   display: none;
   align-items: center;
   justify-content: center;
