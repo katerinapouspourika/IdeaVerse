@@ -62,14 +62,50 @@ describe('IdeasPage', () => {
     expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
   });
 
-  it('shows an empty state when there are no ideas', async () => {
+  it('offers only a blank idea or a template when the workspace has no ideas yet', async () => {
     fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
 
     renderApp('/ideas');
 
     expect(await screen.findByText(/No ideas yet/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Add your first idea' }));
+    expect(screen.queryByRole('navigation', { name: 'Filter by status' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Search')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Sort by')).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'View' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /idea/ }).filter((b) => b.classList.contains('primary'))).toHaveLength(1);
+    expect(screen.getByRole('link', { name: 'Start from Product launch' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add a blank idea' }));
     expect(screen.getByRole('form', { name: 'New idea' })).toBeInTheDocument();
+    expect(screen.queryByText(/No ideas yet/)).not.toBeInTheDocument();
+  });
+
+  it('opens the New idea form from a template shortcut in an empty workspace', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
+
+    renderApp('/ideas');
+
+    await userEvent.click(await screen.findByRole('link', { name: 'Start from Marketing campaign' }));
+
+    const form = await screen.findByRole('form', { name: 'New idea' });
+    expect(within(form).getByLabelText('Start from')).toHaveValue('marketing-campaign');
+    expect(screen.queryByText(/No ideas yet/)).not.toBeInTheDocument();
+  });
+
+  it('keeps the filters when every idea is archived, so the archive can still be opened', async () => {
+    const calls = fakeApi({
+      ...signedIn,
+      [ideasRoute]: { status: 200, body: [] },
+      [`${ideasRoute}?archived=true`]: { status: 200, body: [anIdea({ title: 'Old plan' })] },
+    });
+
+    renderApp('/ideas');
+
+    expect(await screen.findByText(/No active ideas/)).toBeInTheDocument();
+
+    await waitFor(() => expect(calls.some((c) => c.path === `${ideasRoute.slice(4)}?archived=true`)).toBe(true));
+    await userEvent.click(await screen.findByRole('button', { name: 'Archived' }));
+    expect(await screen.findByText('Old plan')).toBeInTheDocument();
   });
 
   it('remembers the view and order after a reload', async () => {
