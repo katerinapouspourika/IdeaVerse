@@ -165,7 +165,7 @@ function QuickStatus({ idea }: { idea: Idea }) {
           ))}
         </select>
       </label>
-      {idea.isOverdue && <span className="badge overdue">Overdue</span>}
+      {idea.isOverdue && <span className="badge status-badge overdue">Overdue</span>}
     </span>
   );
 }

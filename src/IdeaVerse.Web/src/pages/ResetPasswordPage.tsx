@@ -3,10 +3,11 @@ import { Link, useSearchParams } from 'react-router';
 
 import { resetPassword } from '../api/account';
 import { readAccountProblems, type AccountProblems } from '../auth/identityErrors';
-import { meetsPasswordRules } from '../auth/passwordRules';
+import { meetsPasswordRules, weakPasswordMessage } from '../auth/passwordRules';
 import { PasswordRules } from '../auth/PasswordRules';
 import { Field } from '../components/Field';
 import { useInlineValidation } from '../components/useInlineValidation';
+import { PasswordInput } from '../components/PasswordInput';
 import { usePageMeta } from '../seo/usePageMeta';
 
 /** Opened from the password reset email; sets a new password with the link's code. */
@@ -21,7 +22,7 @@ export function ResetPasswordPage() {
   const [pending, setPending] = useState(false);
   const [problems, setProblems] = useState<AccountProblems | null>(null);
   const validation = useInlineValidation({
-    password: () => (password ? undefined : 'Choose a new password.') ?? (meetsPasswordRules(password) ? undefined : 'Your password doesn’t meet every rule yet.'),
+    password: () => (password ? undefined : 'Choose a new password.') ?? (meetsPasswordRules(password) ? undefined : weakPasswordMessage),
     confirmation: () => (confirmation ? undefined : 'Repeat your new password.') ?? (password === confirmation ? undefined : 'The two passwords don’t match.'),
   });
 
@@ -73,9 +74,8 @@ export function ResetPasswordPage() {
       <form onSubmit={(event) => void submit(event)} className="stack" noValidate>
         <Field label="New password" hint={<PasswordRules password={password} />} error={validation.errors.password ?? problems?.password}>
           {(props) => (
-            <input
+            <PasswordInput
               {...props}
-              type="password"
               autoComplete="new-password"
               required
               value={password}
@@ -86,9 +86,8 @@ export function ResetPasswordPage() {
         </Field>
         <Field label="Repeat new password" error={validation.errors.confirmation}>
           {(props) => (
-            <input
+            <PasswordInput
               {...props}
-              type="password"
               autoComplete="new-password"
               required
               value={confirmation}

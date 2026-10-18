@@ -7,10 +7,11 @@ import { currentZoneName, matchesZone, timeZoneOption, timeZoneOptions } from '.
 import type { Account, ReminderKind, Workspace } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { readAccountProblems } from '../auth/identityErrors';
-import { meetsPasswordRules } from '../auth/passwordRules';
+import { meetsPasswordRules, weakPasswordMessage } from '../auth/passwordRules';
 import { PasswordRules } from '../auth/PasswordRules';
 import { Field } from '../components/Field';
 import { useInlineValidation } from '../components/useInlineValidation';
+import { PasswordInput } from '../components/PasswordInput';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { useConfirm } from '../components/Feedback';
 import { usePageMeta } from '../seo/usePageMeta';
@@ -328,7 +329,7 @@ function PasswordForm() {
   const validation = useInlineValidation({
     oldPassword: () => (oldPassword ? undefined : 'Enter your current password.'),
     newPassword: () =>
-      newPassword ? (meetsPasswordRules(newPassword) ? undefined : 'Your new password doesn’t meet every rule yet.') : 'Choose a new password.',
+      newPassword ? (meetsPasswordRules(newPassword) ? undefined : weakPasswordMessage) : 'Choose a new password.',
   });
 
   const submit = (event: FormEvent) => {
@@ -349,9 +350,8 @@ function PasswordForm() {
       <h2>Password</h2>
       <Field label="Current password" error={validation.errors.oldPassword ?? problems?.currentPassword}>
         {(props) => (
-          <input
+          <PasswordInput
             {...props}
-            type="password"
             required
             autoComplete="current-password"
             value={oldPassword}
@@ -366,9 +366,8 @@ function PasswordForm() {
         error={validation.errors.newPassword ?? problems?.password}
       >
         {(props) => (
-          <input
+          <PasswordInput
             {...props}
-            type="password"
             required
             autoComplete="new-password"
             value={newPassword}
@@ -433,9 +432,8 @@ function DeleteAccountForm() {
       </p>
       <Field label="Password" error={validation.errors.password ?? fieldError(save.error, 'password')}>
         {(props) => (
-          <input
+          <PasswordInput
             {...props}
-            type="password"
             required
             autoComplete="current-password"
             value={password}

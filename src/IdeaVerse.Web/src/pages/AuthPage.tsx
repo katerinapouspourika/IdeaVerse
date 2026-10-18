@@ -6,9 +6,10 @@ import { ApiError } from '../api/client';
 import { afterSignIn } from '../auth/afterSignIn';
 import { useAuth } from '../auth/AuthContext';
 import { readAccountProblems, type AccountProblems } from '../auth/identityErrors';
-import { meetsPasswordRules } from '../auth/passwordRules';
+import { meetsPasswordRules, weakPasswordMessage } from '../auth/passwordRules';
 import { PasswordRules } from '../auth/PasswordRules';
 import { Field } from '../components/Field';
+import { PasswordInput } from '../components/PasswordInput';
 import { ResendConfirmation } from '../components/ResendConfirmation';
 import { emailProblem, useInlineValidation } from '../components/useInlineValidation';
 import { usePageMeta } from '../seo/usePageMeta';
@@ -17,9 +18,23 @@ import { findTemplate } from '../templates/templates';
 
 type Mode = 'login' | 'register';
 
-const copy: Record<Mode, { title: string; action: string; switchText: string; switchLink: string; switchTo: string }> = {
-  login: { title: 'Sign in', action: 'Sign in', switchText: 'New to IdeaVerse?', switchLink: 'Create account', switchTo: '/register' },
-  register: { title: 'Create your account', action: 'Create account', switchText: 'Already have an account?', switchLink: 'Sign in', switchTo: '/login' },
+const copy: Record<Mode, { title: string; subtitle: string; action: string; switchText: string; switchLink: string; switchTo: string }> = {
+  login: {
+    title: 'Sign in',
+    subtitle: 'Welcome back. Sign in to pick up your ideas where you left them.',
+    action: 'Sign in',
+    switchText: 'New to IdeaVerse?',
+    switchLink: 'Create account',
+    switchTo: '/register',
+  },
+  register: {
+    title: 'Create your account',
+    subtitle: 'Plan ideas, line up what they need, and never lose track of a date.',
+    action: 'Create account',
+    switchText: 'Already have an account?',
+    switchLink: 'Sign in',
+    switchTo: '/login',
+  },
 };
 
 /** Identity's login failure detail for an account whose email is not confirmed yet. */
@@ -76,7 +91,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
     password: () =>
       mode === 'login'
         ? (password ? undefined : 'Enter your password.')
-        : ((password ? undefined : 'Choose a password.') ?? (meetsPasswordRules(password) ? undefined : 'Your password doesn’t meet every rule yet.')),
+        : ((password ? undefined : 'Choose a password.') ?? (meetsPasswordRules(password) ? undefined : weakPasswordMessage)),
   });
   const switchTo = chosen ? `${text.switchTo}?template=${chosen.slug}` : text.switchTo;
 
@@ -87,12 +102,18 @@ export function AuthPage({ mode }: { mode: Mode }) {
     return <Navigate to={destination} replace />;
   }
 
+  /** Back to the sign-up form, with the email kept to correct. */
+  const startAgain = () => {
+    setPassword('');
+    setRegistered(false);
+  };
+
   if (registered) {
     return (
       <section className="card auth">
         <h1>Check your inbox</h1>
         <p>
-          We sent a confirmation link to <strong>{email}</strong>. Open it to activate your account, then sign in.
+          We sent a confirmation link to <strong>{email}</strong>. Open it and you’re signed in, ready to go. The link works for one day.
         </p>
         {chosen && (
           <p className="note">
@@ -102,7 +123,13 @@ export function AuthPage({ mode }: { mode: Mode }) {
         <p className="muted small">Nothing there? Check your spam folder, or send it again.</p>
         <ResendConfirmation email={email} />
         <p className="muted small">
-          Confirmed already? <Link to={switchTo}>Sign in</Link>
+          Wrong email?{' '}
+          <button type="button" className="link-button" onClick={startAgain}>
+            Start again
+          </button>
+        </p>
+        <p className="muted small">
+          Confirmed on another device? <Link to={switchTo}>Sign in</Link>
         </p>
       </section>
     );
@@ -145,7 +172,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
       <section className="card auth">
       <img src="/logo.png" alt="" className="logo auth-logo" width="72" height="72" />
       <h1>{text.title}</h1>
-      <p className="muted">Plan ideas, line up what they need, and never lose track of a date.</p>
+      <p className="muted">{text.subtitle}</p>
       {chosen && (
         <p className="note">
           You’ll start with the <strong>{chosen.name}</strong> template once you’re in.
@@ -177,9 +204,8 @@ export function AuthPage({ mode }: { mode: Mode }) {
         )}
         <Field label="Password" hint={mode === 'register' ? <PasswordRules password={password} /> : undefined} error={validation.errors.password ?? problems?.password}>
           {(props) => (
-            <input
+            <PasswordInput
               {...props}
-              type="password"
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               required
               value={password}
@@ -204,6 +230,11 @@ export function AuthPage({ mode }: { mode: Mode }) {
         <button type="submit" className="button primary" disabled={pending}>
           {pending ? 'Please wait…' : text.action}
         </button>
+        {mode === 'register' && (
+          <p className="muted small">
+            By creating an account you agree to the <Link to="/terms">Terms</Link> and <Link to="/privacy">Privacy Policy</Link>.
+          </p>
+        )}
       </form>
       <p className="muted small">
         {text.switchText} <Link to={switchTo}>{text.switchLink}</Link>

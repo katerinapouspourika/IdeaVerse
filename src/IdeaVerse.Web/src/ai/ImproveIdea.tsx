@@ -1,7 +1,7 @@
 import { useAiStatus, useImproveIdea, useUpdateIdea } from '../api/queries';
 import type { Idea } from '../api/types';
 import { ErrorMessage } from '../components/ErrorMessage';
-import { AiAllowance, Thinking } from './AiAllowance';
+import { AiAllowance, Thinking, UnavailableAiButton } from './AiAllowance';
 
 /** Asks AI to critique an idea and propose a sharper title and description, which the user can use or dismiss. */
 export function ImproveIdea({ idea }: { idea: Idea }) {
@@ -9,8 +9,12 @@ export function ImproveIdea({ idea }: { idea: Idea }) {
   const improve = useImproveIdea(idea.id, idea.workspaceId);
   const update = useUpdateIdea(idea.id);
 
-  if (!status.data?.enabled) {
+  if (!status.data) {
     return null;
+  }
+
+  if (!status.data.enabled) {
+    return <UnavailableAiButton label="Improve with AI" />;
   }
 
   if (!improve.data) {
