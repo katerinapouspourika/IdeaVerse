@@ -1,12 +1,14 @@
 import { useEffect, useId, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { ArrowRightLeft, Bell, Home, Lightbulb, Plus, Settings, Users } from 'lucide-react';
+import { ArrowRightLeft, Bell, History, Home, Lightbulb, Plus, Settings, Users } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
 import { formatDate } from '../api/dates';
 import { useIdeas } from '../api/queries';
+import type { Idea } from '../api/types';
 import { StatusBadge } from '../components/StatusBadge';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { Dialog } from './Dialog';
+import { readRecentIdeas } from './recentIdeas';
 
 interface Entry {
   id: string;
@@ -17,10 +19,37 @@ interface Entry {
   run: () => void;
 }
 
-const groups = ['Ideas', 'Actions'] as const;
+const groups = ['Recent ideas', 'Ideas', 'Actions'] as const;
 
 /** How many matching ideas the palette lists. */
 const maxIdeas = 6;
+
+/** How many recently opened ideas the palette lists before anything is typed. */
+const maxRecent = 5;
+
+/**
+ * How well an idea's title answers the search, best first: the whole title, its start, a word's start, anywhere in it,
+ * and last a match in the description alone.
+ */
+function rank(idea: Idea, needle: string) {
+  const title = idea.title.toLowerCase();
+  if (title === needle) {
+    return 0;
+  }
+  if (title.startsWith(needle)) {
+    return 1;
+  }
+  let at = title.indexOf(needle);
+  if (at < 0) {
+    return 4;
+  }
+  for (; at >= 0; at = title.indexOf(needle, at + 1)) {
+    if (!/[\p{L}\p{N}]/u.test(title[at - 1]!)) {
+      return 2;
+    }
+  }
+  return 3;
+}
 
 /**
  * Finds ideas in the current workspace by title or description and runs common actions, all from the keyboard: type to
@@ -35,6 +64,8 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   const listId = useId();
   const navigate = useNavigate();
   const { all, current, select } = useWorkspace();
+  // Read once, on opening: the ideas opened lately in this workspace.
+  const [recent] = useState(() => readRecentIdeas());
   const search = useDebounced(query.trim(), 150);
   const ideas = useIdeas(current?.id ?? '', { search: search || undefined }, current !== null && search !== '');
 
@@ -74,19 +105,36 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   const ideasCurrent = search !== '' && search === query.trim() && !ideas.isPlaceholderData;
   const searching = query.trim() !== '' && current !== null && !ideasCurrent;
   const entries: Entry[] = [
+    ...(needle === '' && current
+      ? recent
+          .filter((r) => r.workspaceId === current.id)
+          .slice(0, maxRecent)
+          .map((r) => ({
+            id: `recent-${r.id}`,
+            group: 'Recent ideas' as const,
+            label: r.title,
+            icon: <History size={16} />,
+            run: go(`/ideas/${r.id}`),
+          }))
+      : []),
     ...(ideasCurrent
-      ? (ideas.data ?? []).slice(0, maxIdeas).map((idea) => ({
-          id: `idea-${idea.id}`,
-          group: 'Ideas' as const,
-          label: idea.title,
-          icon: <Lightbulb size={16} />,
-          detail: (
-            <>
-              <StatusBadge idea={idea} /> <span className="muted small">{formatDate(idea.targetDate)}</span>
-            </>
-          ),
-          run: go(`/ideas/${idea.id}`),
-        }))
+      ? (ideas.data ?? [])
+          // Sorting is stable, so ideas that rank alike keep the API's order.
+          .map((idea) => ({ idea, rank: rank(idea, needle) }))
+          .sort((a, b) => a.rank - b.rank)
+          .slice(0, maxIdeas)
+          .map(({ idea }) => ({
+            id: `idea-${idea.id}`,
+            group: 'Ideas' as const,
+            label: idea.title,
+            icon: <Lightbulb size={16} />,
+            detail: (
+              <>
+                <StatusBadge idea={idea} /> <span className="muted small">{formatDate(idea.targetDate)}</span>
+              </>
+            ),
+            run: go(`/ideas/${idea.id}`),
+          }))
       : []),
     ...actions.filter((a) => a.label.toLowerCase().includes(needle)),
   ];

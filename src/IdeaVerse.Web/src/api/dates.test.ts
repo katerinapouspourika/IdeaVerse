@@ -1,4 +1,4 @@
-import { addDays, daysUntil, describeDue, setTimeZone, todayIso } from './dates';
+import { addDays, daysUntil, describeDue, formatAgo, formatDate, setTimeZone, todayIso } from './dates';
 
 describe('dates', () => {
   const now = new Date('2026-10-10T23:30:00Z');
@@ -34,5 +34,25 @@ describe('dates', () => {
 
   it('counts days until a date', () => {
     expect(daysUntil('2026-10-17', now)).toBe(7);
+  });
+
+  it.each([
+    ['2026-10-10T23:29:40Z', 'just now'],
+    ['2026-10-10T23:05:00Z', '25 min ago'],
+    ['2026-10-10T21:10:00Z', '2 h ago'],
+    ['2026-10-09T23:45:00Z', 'yesterday'],
+    ['2026-10-07T12:00:00Z', '3 days ago'],
+  ])('describes a moment at %s as "%s"', (moment, expected) => {
+    expect(formatAgo(moment, now, 'UTC')).toBe(expected);
+  });
+
+  it('counts days ago by the calendar of the time zone', () => {
+    // 06:00 UTC on the 10th is still 23:00 on the 9th in Phoenix (UTC-7), where it is now 16:30 on the 10th.
+    expect(formatAgo('2026-10-10T06:00:00Z', now, 'America/Phoenix')).toBe('yesterday');
+    expect(formatAgo('2026-10-10T06:00:00Z', now, 'UTC')).toBe('17 h ago');
+  });
+
+  it('gives the date for moments over a week ago', () => {
+    expect(formatAgo('2026-10-01T09:00:00Z', now, 'UTC')).toBe(formatDate('2026-10-01'));
   });
 });

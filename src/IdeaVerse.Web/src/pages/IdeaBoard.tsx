@@ -68,7 +68,7 @@ export function IdeaBoard({ ideas }: { ideas: Idea[] }) {
         return (
           <section
             key={status}
-            className={over === status ? 'board-column drop-target' : 'board-column'}
+            className={`board-column status-${status.toLowerCase()}${over === status ? ' drop-target' : ''}`}
             aria-labelledby={`column-${status}`}
             onDragOver={(event) => {
               if (event.dataTransfer.types.includes(dragType)) {
@@ -80,7 +80,7 @@ export function IdeaBoard({ ideas }: { ideas: Idea[] }) {
             onDrop={(event) => drop(event, status)}
           >
             <h2 id={`column-${status}`} className="board-heading">
-              <span className={`badge status-${status.toLowerCase()}`}>{statusLabels[status]}</span>
+              <span className={`badge status-badge status-${status.toLowerCase()}`}>{statusLabels[status]}</span>
               <span className="muted small">{column.length}</span>
             </h2>
             <ul className="board-cards">

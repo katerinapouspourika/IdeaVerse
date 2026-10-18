@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react';
 import { Link } from 'react-router';
 
 import { useAuth } from '../auth/AuthContext';
@@ -32,11 +33,13 @@ export function PricingPage() {
       <section className="landing-section">
         <div className="landing-inner pricing">
           <article className="card stack pricing-plan" aria-labelledby="plan-name">
-            <p className="eyebrow">Early access</p>
-            <h2 id="plan-name" className="section-title">
-              Free
-            </h2>
-            <p className="muted">For teams of any size, while IdeaVerse is in early access.</p>
+            <div className="stack tight">
+              <p className="eyebrow">Early access</p>
+              <h2 id="plan-name" className="section-title">
+                Free
+              </h2>
+              <p className="muted">For teams of any size, while IdeaVerse is in early access.</p>
+            </div>
             <ul className="check-steps">
               {included.map((item) => (
                 <li key={item}>{item}</li>
@@ -62,7 +65,10 @@ export function PricingPage() {
           </h2>
           {faq.map((item) => (
             <details key={item.question} className="card faq-item">
-              <summary>{item.question}</summary>
+              <summary>
+                {item.question}
+                <ChevronDown aria-hidden="true" size={20} className="faq-chevron" />
+              </summary>
               <p>{item.answer}</p>
             </details>
           ))}
