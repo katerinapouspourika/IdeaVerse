@@ -217,6 +217,18 @@ export interface Notification {
   message: string;
   createdAt: string;
   readAt: string | null;
+  /** The comment a comment or mention is about, or `null` for other kinds and once the comment is deleted. */
+  commentId: string | null;
+  /** The component an assignment or a component's due date is about. */
+  componentId: string | null;
+}
+
+/** Where a notification leads: its idea, at the comment or component it is about when there is one. */
+export function notificationLink(notification: Pick<Notification, 'ideaId' | 'commentId' | 'componentId'>): string {
+  const idea = `/ideas/${notification.ideaId}`;
+  if (notification.commentId) return `${idea}#comment-${notification.commentId}`;
+  if (notification.componentId) return `${idea}#component-${notification.componentId}`;
+  return idea;
 }
 
 export interface Notifications {

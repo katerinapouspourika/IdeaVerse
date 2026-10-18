@@ -129,7 +129,7 @@ A used-up allowance returns 429, and an AI failure returns 502.
 
 | Method | Route | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/v1/notifications` | The 50 most recent reminders (newest, then most urgent, first), each with its idea's workspace, and the unread count. |
+| `GET` | `/api/v1/notifications` | The 50 most recent reminders (newest, then most urgent, first), each with its idea's workspace, and the unread count. Comments and mentions carry the comment's `commentId` (`null` once it is deleted), and assignments and component countdowns the `componentId`. |
 | `POST` | `/api/v1/notifications/{id}/read` | Mark one reminder read. |
 | `POST` | `/api/v1/notifications/read-all` | Mark all reminders read. |
 

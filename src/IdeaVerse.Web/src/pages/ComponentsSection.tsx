@@ -18,6 +18,7 @@ import { useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
 import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
+import { useLinkedItem } from './useLinkedItem';
 
 const componentDragType = 'application/x-ideaverse-component';
 
@@ -36,6 +37,7 @@ export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: st
   const list = useRef<HTMLUListElement>(null);
   const moveHintId = useId();
   const canReorder = canEdit && (components.data?.length ?? 0) > 1;
+  const linked = useLinkedItem('component', components.data?.map((c) => c.id));
 
   /** Moves a component to another place in the list, announcing where it went; returns whether it moved. */
   const move = (component: Component, to: number) => {
@@ -117,6 +119,7 @@ export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: st
               workspaceId={workspaceId}
               component={component}
               canEdit={canEdit}
+              linked={linked === component.id}
               reorder={
                 canReorder
                   ? {
@@ -213,6 +216,8 @@ interface ComponentItemProps {
   workspaceId: string;
   component: Component;
   canEdit: boolean;
+  /** Whether a link, such as a notification's, just brought the user to this component. */
+  linked: boolean;
   /** Present when the list can be reordered. */
   reorder?: Reorder;
   onToggle: (isDone: boolean, onSettled: () => void) => void;
@@ -220,7 +225,7 @@ interface ComponentItemProps {
 }
 
 /** A checklist row whose checkbox responds the moment it is clicked, before the API confirms the change. */
-function ComponentItem({ ideaId, workspaceId, component, canEdit, reorder, onToggle, onRemove }: ComponentItemProps) {
+function ComponentItem({ ideaId, workspaceId, component, canEdit, linked, reorder, onToggle, onRemove }: ComponentItemProps) {
   const [pending, setPending] = useState<boolean | null>(null);
   const [assigning, setAssigning] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -264,7 +269,12 @@ function ComponentItem({ ideaId, workspaceId, component, canEdit, reorder, onTog
 
   return (
     <li
-      className={[checked ? 'done' : '', reorder?.dragging ? 'dragging' : '', highlighted ? 'drop-target' : ''].filter(Boolean).join(' ') || undefined}
+      id={`component-${component.id}`}
+      tabIndex={-1}
+      className={
+        [checked ? 'done' : '', reorder?.dragging ? 'dragging' : '', highlighted ? 'drop-target' : '', linked ? 'linked' : ''].filter(Boolean).join(' ') ||
+        undefined
+      }
       draggable={reorder !== undefined && dragArmed}
       onDragStart={(event) => {
         event.dataTransfer.setData(componentDragType, component.id);

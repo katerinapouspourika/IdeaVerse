@@ -1,5 +1,6 @@
 namespace Pouspourika.IdeaVerse.Api.Notifications;
 
+using Pouspourika.IdeaVerse.Api.Comments;
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Data;
 using Pouspourika.IdeaVerse.Api.Ideas;
@@ -72,6 +73,17 @@ public sealed class Notification
   /// Gets the component.
   /// </summary>
   public Component? Component { get; init; }
+
+  /// <summary>
+  /// Gets the identifier of the <see cref="Comments.Comment"/> a comment or mention notification is about, or
+  /// <see langword="null"/> for other notifications and once the comment is deleted.
+  /// </summary>
+  public Guid? CommentId { get; init; }
+
+  /// <summary>
+  /// Gets the comment.
+  /// </summary>
+  public Comment? Comment { get; init; }
 
   /// <summary>
   /// Gets the identifier of the <see cref="Data.User"/> whose action caused the notification, or <see langword="null"/> for countdown reminders.
