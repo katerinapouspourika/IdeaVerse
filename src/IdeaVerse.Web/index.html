@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#232b8f" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fefdfc" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161c45" />
     <meta name="description" content="IdeaVerse helps teams capture ideas, plan what each one needs, share the work, and get reminded before dates slip." />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -14,13 +15,19 @@
     <!--
       Returning users skip the prerendered public home page while their dashboard loads (see src/auth/sessionHint.ts).
       Should the app fail to start, the page reveals itself after three seconds rather than stay blank.
-      It also applies the colour scheme chosen in the header (see src/theme.ts) before the page paints.
+      It also applies the colour scheme chosen in the header (see src/theme.ts) before the page paints, pointing both
+      theme-color tags at that scheme's header colour.
     -->
     <script>
       try {
         if (location.pathname === '/' && localStorage.getItem('ideaverse.session') === '1') document.documentElement.classList.add('has-session');
         var theme = localStorage.getItem('ideaverse.theme');
-        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+        if (theme === 'light' || theme === 'dark') {
+          document.documentElement.dataset.theme = theme;
+          document.querySelectorAll('meta[name="theme-color"]').forEach(function (meta) {
+            meta.content = theme === 'dark' ? '#161c45' : '#fefdfc';
+          });
+        }
       } catch {}
     </script>
     <style>
