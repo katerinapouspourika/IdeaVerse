@@ -55,6 +55,7 @@ public sealed class WebAppTests : IDisposable
   [Arguments("/workspaces/new", "App")]
   [Arguments("/workspaces/0199a0f0-0000-7000-8000-000000000000/invite", "App")]
   [Arguments("/join/abc123", "App")]
+  [Arguments("/workspace/settings", "App")]
   public async Task Get_WebAppRoute_ServesItsPageWithoutLongCaching(string path, string title)
   {
     await using var factory = new IdeaVerseApiFactory(webRoot.FullName);

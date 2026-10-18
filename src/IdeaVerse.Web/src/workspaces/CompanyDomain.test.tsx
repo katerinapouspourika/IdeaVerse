@@ -12,7 +12,7 @@ const peopleRoutes = {
   'GET /api/v1/workspaces/ws-1/join-requests': { status: 200, body: [] },
 };
 
-describe('Company domain on the People page', () => {
+describe('Company domain and join requests', () => {
   it('turns on the suggested domain, then hides the workspace again', async () => {
     let current = { domain: null as string | null, discoverable: false, suggestedDomain: 'acme.com' };
     const calls = fakeApi({
@@ -23,7 +23,7 @@ describe('Company domain on the People page', () => {
         return { status: 200, body: current };
       },
     });
-    renderApp('/people');
+    renderApp('/workspace/settings');
 
     const card = within(await screen.findByRole('region', { name: 'Company domain' }));
     await userEvent.click(await card.findByRole('button', { name: 'Use acme.com' }));
@@ -40,7 +40,7 @@ describe('Company domain on the People page', () => {
 
   it('explains that a public email address cannot set a domain', async () => {
     fakeApi({ ...peopleRoutes, 'GET /api/v1/workspaces/ws-1/discovery': { status: 200, body: { domain: null, discoverable: false, suggestedDomain: null } } });
-    renderApp('/people');
+    renderApp('/workspace/settings');
 
     expect(await screen.findByText(/Your email is at a public provider/)).toBeInTheDocument();
   });

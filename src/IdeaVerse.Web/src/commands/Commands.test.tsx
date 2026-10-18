@@ -52,7 +52,7 @@ describe('Command palette', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Search and commands' }));
     await userEvent.type(screen.getByRole('combobox', { name: 'Search ideas or type a command' }), 'go to');
     const options = within(screen.getByRole('listbox')).getAllByRole('option').map((o) => o.textContent);
-    expect(options).toEqual(['Go to Ideas', 'Go to People', 'Go to Home', 'Go to Notifications', 'Go to Settings']);
+    expect(options).toEqual(['Go to Ideas', 'Go to People', 'Go to Workspace settings', 'Go to Home', 'Go to Notifications', 'Go to Settings']);
     await userEvent.keyboard('{ArrowDown}{Enter}');
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/people'));

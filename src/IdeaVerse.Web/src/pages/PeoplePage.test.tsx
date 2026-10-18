@@ -160,7 +160,7 @@ describe('PeoplePage', () => {
     expect(ask).toHaveAttribute('href', 'mailto:leo@example.com');
     expect(ask.closest('p')).toHaveTextContent('To invite someone, ask leo@example.com.');
     expect(screen.queryByRole('form', { name: 'Invite people' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Rename' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Workspace settings' })).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: /Role of/ })).not.toBeInTheDocument();
     expect(calls.some((c) => c.path.endsWith('/invitations') && c.path.includes('ws-1'))).toBe(false);
 
@@ -202,45 +202,6 @@ describe('PeoplePage', () => {
     expect(screen.getByText(/Invite people, answer join requests/)).toBeVisible();
   });
 
-  it('lets the owner hand the workspace to someone else', async () => {
-    const calls = fakeApi({
-      ...peopleRoutes('Owner', [kat, mia]),
-      'POST /api/v1/workspaces/ws-1/transfer': { status: 200, body: aWorkspace({ role: 'Admin' }) },
-    });
-    renderApp('/people');
-
-    const form = await screen.findByRole('form', { name: 'Transfer ownership' });
-    await userEvent.selectOptions(await within(form).findByLabelText('New owner'), 'mia@example.com');
-    await userEvent.click(within(form).getByRole('button', { name: 'Transfer ownership' }));
-    await confirmDialog('Hand over');
-
-    await waitFor(() => expect(calls.find((c) => c.path.endsWith('/transfer'))?.body).toEqual({ userId: 'u-mia' }));
-  });
-
-  it('deletes the workspace only after its name is typed', async () => {
-    let deleted = false;
-    const calls = fakeApi({
-      ...peopleRoutes('Owner', [kat]),
-      'GET /api/v1/workspaces': () => ({ status: 200, body: deleted ? [] : [aWorkspace()] }),
-      'DELETE /api/v1/workspaces/ws-1': () => {
-        deleted = true;
-        return { status: 204 };
-      },
-    });
-    const router = renderApp('/people');
-
-    const form = await screen.findByRole('form', { name: 'Delete workspace' });
-    const button = within(form).getByRole('button', { name: 'Delete workspace' });
-    await userEvent.type(within(form).getByLabelText('Type “Acme Marketing” to confirm'), 'Acme');
-    expect(button).toBeDisabled();
-    await userEvent.type(within(form).getByLabelText('Type “Acme Marketing” to confirm'), ' Marketing');
-    await userEvent.click(button);
-
-    expect(await screen.findByRole('heading', { name: 'Welcome to IdeaVerse' })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/');
-    expect(calls.some((c) => c.method === 'DELETE' && c.path === '/api/v1/workspaces/ws-1')).toBe(true);
-  });
-
   it('opens on the workspace an email links to', async () => {
     fakeApi({
       ...peopleRoutes('Owner', [kat]),
@@ -270,11 +231,17 @@ describe('PeoplePage', () => {
     expect(screen.getByRole('link', { name: 'Invitations (1)' })).toBeInTheDocument();
   });
 
-  it('hides the danger zone from everyone but the owner', async () => {
-    fakeApi(peopleRoutes('Member', [kat, mia]));
-    renderApp('/people');
+  it('keeps to people, linking to the workspace’s settings', async () => {
+    fakeApi(peopleRoutes('Owner', [kat, mia]));
+    const router = renderApp('/people');
 
-    await screen.findByRole('heading', { name: 'People in Acme Marketing' });
+    const link = await screen.findByRole('link', { name: 'Workspace settings' });
     expect(screen.queryByRole('region', { name: 'Danger zone' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Invite link' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Company domain' })).not.toBeInTheDocument();
+    await userEvent.click(link);
+
+    expect(await screen.findByRole('heading', { name: 'Workspace settings', level: 1 })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/workspace/settings');
   });
 });

@@ -12,7 +12,7 @@ const peopleRoutes = {
   'GET /api/v1/workspaces/ws-1/invitations': { status: 200, body: [] },
 };
 
-describe('Invite link on the People page', () => {
+describe('Invite link in Workspace settings', () => {
   it('turns the link on, then replaces it after asking', async () => {
     let current: string | null = null;
     const calls = fakeApi({
@@ -23,7 +23,7 @@ describe('Invite link on the People page', () => {
         return { status: 200, body: { url: current } };
       },
     });
-    renderApp('/people');
+    renderApp('/workspace/settings');
 
     const card = within(await screen.findByRole('region', { name: 'Invite link' }));
     await userEvent.click(await card.findByRole('button', { name: 'Turn on invite link' }));
@@ -42,7 +42,7 @@ describe('Invite link on the People page', () => {
       'GET /api/v1/workspaces/ws-1/invite-link': { status: 200, body: { url: link } },
       'DELETE /api/v1/workspaces/ws-1/invite-link': { status: 204 },
     });
-    renderApp('/people');
+    renderApp('/workspace/settings');
 
     const card = within(await screen.findByRole('region', { name: 'Invite link' }));
     await userEvent.click(await card.findByRole('button', { name: 'Turn off' }));
@@ -54,9 +54,9 @@ describe('Invite link on the People page', () => {
 
   it('is not shown to members', async () => {
     fakeApi({ ...peopleRoutes, 'GET /api/v1/workspaces': { status: 200, body: [aWorkspace({ role: 'Member' })] } });
-    renderApp('/people');
+    renderApp('/workspace/settings');
 
-    expect(await screen.findByText('Only the workspace’s owner and admins can invite people.')).toBeInTheDocument();
+    expect(await screen.findByText(/Only the workspace’s owner and admins can change/)).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Invite link' })).not.toBeInTheDocument();
   });
 });
