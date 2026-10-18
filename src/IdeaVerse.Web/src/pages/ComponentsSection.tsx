@@ -1,11 +1,12 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { GripVertical } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { CalendarDays, CircleAlert, Ellipsis, GripVertical, Trash2, UserRound, UserRoundCheck } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 
 import { SuggestComponents } from '../ai/SuggestComponents';
-import { formatDate, todayIso } from '../api/dates';
+import { daysUntil, describeDue, formatDate } from '../api/dates';
 import {
   keys,
+  workspaceMembersQuery,
   useAddComponent,
   useComponents,
   useDeleteComponent,
@@ -14,8 +15,10 @@ import {
   useWorkspaceMembers,
 } from '../api/queries';
 import { personLabel, type Component } from '../api/types';
+import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
+import { Menu } from '../components/Menu';
 import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
 
@@ -30,6 +33,7 @@ export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: st
   const add = useAddComponent(ideaId);
   const reorder = useReorderComponents(ideaId);
   const toast = useToast();
+  const { account } = useAuth();
   const [announcement, setAnnouncement] = useState('');
   const [dragged, setDragged] = useState<string | null>(null);
   const refocus = useRef<string | null>(null);
@@ -99,6 +103,22 @@ export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: st
     });
   };
 
+  /** Assigns a component to the signed-in user, finding them among the workspace's people, and offers Undo. */
+  const assignToMe = async (component: Component) => {
+    const people = await client.fetchQuery(workspaceMembersQuery(workspaceId)).catch(() => []);
+    const me = people.find((person) => person.email.toLowerCase() === account?.email.toLowerCase());
+    if (!me) {
+      toast({ message: 'Couldn’t assign it to you. Try again.', tone: 'error' });
+      return;
+    }
+    const assign = (assigneeId: string | null, then?: () => void) =>
+      update.mutate(
+        { id: component.id, title: component.title, notes: component.notes, isDone: component.isDone, assigneeId, dueDate: component.dueDate },
+        { onSuccess: then },
+      );
+    assign(me.userId, () => toast({ message: `Assigned “${component.title}” to you`, undo: () => assign(component.assigneeId) }));
+  };
+
   return (
     <section className="card stack" aria-labelledby="components-heading">
       <h2 id="components-heading">What it needs</h2>
@@ -117,6 +137,7 @@ export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: st
               workspaceId={workspaceId}
               component={component}
               canEdit={canEdit}
+              isMine={component.assigneeEmail !== null && component.assigneeEmail.toLowerCase() === account?.email.toLowerCase()}
               reorder={
                 canReorder
                   ? {
@@ -146,6 +167,7 @@ export function ComponentsSection({ ideaId, workspaceId, canEdit }: { ideaId: st
                   { onSettled },
                 )
               }
+              onAssignToMe={() => void assignToMe(component)}
               onRemove={() => removeComponent(component)}
             />
           ))}
@@ -213,38 +235,78 @@ interface ComponentItemProps {
   workspaceId: string;
   component: Component;
   canEdit: boolean;
+  /** Whether the component is already assigned to the signed-in user. */
+  isMine: boolean;
   /** Present when the list can be reordered. */
   reorder?: Reorder;
   onToggle: (isDone: boolean, onSettled: () => void) => void;
+  onAssignToMe: () => void;
   onRemove: () => void;
 }
 
-/** A checklist row whose checkbox responds the moment it is clicked, before the API confirms the change. */
-function ComponentItem({ ideaId, workspaceId, component, canEdit, reorder, onToggle, onRemove }: ComponentItemProps) {
+/** The field the details editor starts on: the one whose chip was clicked. */
+type DetailsField = 'assignee' | 'due';
+
+/**
+ * How soon a component not yet done is due, in the user's own calendar: `overdue` once the date has passed, `soon` today and
+ * for the next two days.
+ */
+function dueUrgency(dueDate: string, isDone: boolean): 'overdue' | 'soon' | null {
+  if (isDone) return null;
+  const days = daysUntil(dueDate);
+  return days < 0 ? 'overdue' : days <= 2 ? 'soon' : null;
+}
+
+/** The due date chip's text, which says in words what its colour shows. */
+function dueText(dueDate: string, urgency: 'overdue' | 'soon' | null): string {
+  if (urgency === 'overdue') return `Overdue · ${formatDate(dueDate)}`;
+  if (urgency === 'soon') return `Due ${describeDue(dueDate)} · ${formatDate(dueDate)}`;
+  return `Due ${formatDate(dueDate)}`;
+}
+
+/**
+ * A checklist row: its checkbox responds the moment it is clicked, before the API confirms the change. For the team, the title
+ * renames the component in place, its assignee and due date chips open the details editor, and the "⋯" menu holds the rest.
+ */
+function ComponentItem({ ideaId, workspaceId, component, canEdit, isMine, reorder, onToggle, onAssignToMe, onRemove }: ComponentItemProps) {
   const [pending, setPending] = useState<boolean | null>(null);
-  const [assigning, setAssigning] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [details, setDetails] = useState<DetailsField | null>(null);
   const [dropTarget, setDropTarget] = useState(false);
-  // Only the handle starts a drag, so dragging across the label or a form field selects text as usual.
+  // Only the handle starts a drag, so dragging across the title or a form field selects text as usual.
   const [dragArmed, setDragArmed] = useState(false);
   // A cancelled drag never leaves the row it was over, so the highlight shows only while a drag is under way.
   const highlighted = dropTarget && (reorder?.acceptsDrop ?? false);
-  const editButton = useRef<HTMLButtonElement>(null);
-  const wasEditing = useRef(false);
+  const titleButton = useRef<HTMLButtonElement>(null);
+  const wasRenaming = useRef(false);
+  // The chip or menu button that opened the details editor, which gets focus back when it closes.
+  const detailsOpener = useRef<HTMLElement | null>(null);
 
-  // Returns focus to Edit once the edit is saved or cancelled.
+  // Returns focus to the title once the rename is saved or cancelled.
   useEffect(() => {
-    if (wasEditing.current && !editing) {
-      editButton.current?.focus();
+    if (wasRenaming.current && !renaming) {
+      titleButton.current?.focus();
     }
-    wasEditing.current = editing;
-  }, [editing]);
+    wasRenaming.current = renaming;
+  }, [renaming]);
+
   const checked = pending ?? component.isDone;
-  const late = !component.isDone && component.dueDate !== null && component.dueDate < todayIso();
+  const assignee = component.assigneeEmail ? personLabel(component.assigneeName, component.assigneeEmail) : null;
+  const urgency = component.dueDate ? dueUrgency(component.dueDate, checked) : null;
 
   const toggle = () => {
     setPending(!checked);
     onToggle(!checked, () => setPending(null));
+  };
+
+  const openDetails = (field: DetailsField) => {
+    detailsOpener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setDetails(field);
+  };
+
+  const closeDetails = () => {
+    setDetails(null);
+    detailsOpener.current?.focus();
   };
 
   const onHandleKey = (event: KeyboardEvent) => {
@@ -253,14 +315,6 @@ function ComponentItem({ ideaId, workspaceId, component, canEdit, reorder, onTog
       reorder?.onKeyMove(event.key === 'ArrowUp' ? -1 : 1);
     }
   };
-
-  if (editing) {
-    return (
-      <li>
-        <EditComponentForm ideaId={ideaId} component={component} onDone={() => setEditing(false)} />
-      </li>
-    );
-  }
 
   return (
     <li
@@ -308,95 +362,134 @@ function ComponentItem({ ideaId, workspaceId, component, canEdit, reorder, onTog
             <GripVertical aria-hidden="true" size={16} />
           </button>
         )}
-        <label className="check">
-          <input type="checkbox" checked={checked} onChange={toggle} disabled={!canEdit} />
-          <span>
-            <span className="check-title">{component.title}</span>
-            {component.notes && <span className="muted small block">{component.notes}</span>}
-            {(component.assigneeEmail || component.dueDate) && (
-              <span className={late ? 'small block overdue-text' : 'muted small block'}>
-                {component.assigneeEmail && personLabel(component.assigneeName, component.assigneeEmail)}
-                {component.assigneeEmail && component.dueDate && ' · '}
-                {component.dueDate && `due ${formatDate(component.dueDate)}`}
-              </span>
-            )}
-          </span>
+        <label className="component-check">
+          <input type="checkbox" aria-label={component.title} checked={checked} onChange={toggle} disabled={!canEdit} />
         </label>
+        <div className="component-body">
+          {renaming ? (
+            <RenameForm ideaId={ideaId} component={component} onDone={() => setRenaming(false)} />
+          ) : canEdit ? (
+            <button ref={titleButton} type="button" className="check-title title-button" aria-label={`Rename ${component.title}`} title="Rename" onClick={() => setRenaming(true)}>
+              {component.title}
+            </button>
+          ) : (
+            <span className="check-title">{component.title}</span>
+          )}
+          {component.notes && <span className="muted small block">{component.notes}</span>}
+          {(assignee || component.dueDate) && (
+            <span className="chips">
+              {assignee && (
+                <Chip icon={<UserRound aria-hidden="true" size={14} />} onEdit={canEdit ? () => openDetails('assignee') : undefined} editLabel={`Change who does ${component.title}: ${assignee}`}>
+                  <span className="visually-hidden">Assigned to </span>
+                  {assignee}
+                </Chip>
+              )}
+              {component.dueDate && (
+                <Chip
+                  className={urgency ?? undefined}
+                  icon={urgency === 'overdue' ? <CircleAlert aria-hidden="true" size={14} /> : <CalendarDays aria-hidden="true" size={14} />}
+                  onEdit={canEdit ? () => openDetails('due') : undefined}
+                  editLabel={`Change the due date of ${component.title}: ${dueText(component.dueDate, urgency)}`}
+                >
+                  {dueText(component.dueDate, urgency)}
+                </Chip>
+              )}
+            </span>
+          )}
+        </div>
         {canEdit && (
-          <span className="row component-actions">
-            <button ref={editButton} type="button" className="button ghost small" aria-label={`Edit ${component.title}`} onClick={() => setEditing(true)}>
-              Edit
-            </button>
-            <button type="button" className="button ghost small" aria-label={`Assign ${component.title}`} onClick={() => setAssigning(!assigning)}>
-              Assign
-            </button>
-            <button type="button" className="button ghost small" aria-label={`Remove ${component.title}`} onClick={onRemove}>
-              Remove
-            </button>
-          </span>
+          <Menu
+            label={`More actions for ${component.title}`}
+            trigger={<Ellipsis aria-hidden="true" size={18} />}
+            items={[
+              { label: 'Assignee and due date', icon: <CalendarDays aria-hidden="true" size={16} />, onSelect: () => openDetails('assignee') },
+              ...(isMine ? [] : [{ label: 'Assign to me', icon: <UserRoundCheck aria-hidden="true" size={16} />, onSelect: onAssignToMe }]),
+              { label: 'Remove', icon: <Trash2 aria-hidden="true" size={16} />, onSelect: onRemove, danger: true },
+            ]}
+          />
         )}
       </div>
-      {assigning && <AssignForm ideaId={ideaId} workspaceId={workspaceId} component={component} onDone={() => setAssigning(false)} />}
+      {details && <DetailsForm ideaId={ideaId} workspaceId={workspaceId} component={component} field={details} onDone={closeDetails} />}
     </li>
   );
 }
 
-/** Renames a component or changes its notes in place; Escape cancels. */
-function EditComponentForm({ ideaId, component, onDone }: { ideaId: string; component: Component; onDone: () => void }) {
+/** An assignee or due date tag on a row; a button that opens the details editor for those who can change it. */
+function Chip({ className, icon, onEdit, editLabel, children }: { className?: string; icon: ReactNode; onEdit?: () => void; editLabel: string; children: ReactNode }) {
+  const classes = className ? `chip ${className}` : 'chip';
+  return onEdit ? (
+    <button type="button" className={classes} aria-label={editLabel} onClick={onEdit}>
+      {icon}
+      {children}
+    </button>
+  ) : (
+    <span className={classes}>
+      {icon}
+      {children}
+    </span>
+  );
+}
+
+/** Renames a component in place: Enter saves, Escape cancels, and leaving the field saves a changed title. */
+function RenameForm({ ideaId, component, onDone }: { ideaId: string; component: Component; onDone: () => void }) {
   const update = useUpdateComponent(ideaId);
   const [title, setTitle] = useState(component.title);
-  const [notes, setNotes] = useState(component.notes ?? '');
+  // Set once the form is closing, so the field losing focus as it goes doesn't save again.
+  const closed = useRef(false);
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
+  const close = () => {
+    closed.current = true;
+    onDone();
+  };
+
+  const save = () => {
+    if (closed.current || update.isPending) {
+      return;
+    }
+    if (title.trim() === '' || title === component.title) {
+      close();
+      return;
+    }
     update.mutate(
-      {
-        id: component.id,
-        title,
-        notes: notes || null,
-        isDone: component.isDone,
-        assigneeId: component.assigneeId,
-        dueDate: component.dueDate,
-      },
-      { onSuccess: onDone },
+      { id: component.id, title, notes: component.notes, isDone: component.isDone, assigneeId: component.assigneeId, dueDate: component.dueDate },
+      { onSuccess: close },
     );
   };
 
   return (
     <form
-      className="row wrap end"
-      onSubmit={submit}
-      aria-label={`Edit ${component.title}`}
+      className="rename-form"
+      aria-label={`Rename ${component.title}`}
+      onSubmit={(event) => {
+        event.preventDefault();
+        save();
+      }}
       onKeyDown={(event) => {
         if (event.key === 'Escape') {
           event.preventDefault();
-          onDone();
+          close();
         }
       }}
     >
-      <Field label="Title" error={fieldError(update.error, 'title')} className="grow">
-        {(props) => <input {...props} required maxLength={200} autoFocus value={title} onChange={(e) => setTitle(e.target.value)} />}
+      <Field label={<span className="visually-hidden">Title</span>} hint="Enter saves, Escape cancels." error={fieldError(update.error, 'title')}>
+        {(props) => (
+          <input {...props} required maxLength={200} autoFocus value={title} onChange={(e) => setTitle(e.target.value)} onBlur={save} />
+        )}
       </Field>
-      <Field label=<>Notes <span className="muted">(optional)</span></> className="grow">
-        {(props) => <input {...props} maxLength={2000} value={notes} onChange={(e) => setNotes(e.target.value)} />}
-      </Field>
-      <button type="submit" className="button small" disabled={update.isPending}>
-        Save
-      </button>
-      <button type="button" className="button ghost small" onClick={onDone}>
-        Cancel
-      </button>
       <ErrorMessage error={update.error} />
     </form>
   );
 }
 
-/** Chooses who is responsible for a component and when it is due. */
-function AssignForm({ ideaId, workspaceId, component, onDone }: { ideaId: string; workspaceId: string; component: Component; onDone: () => void }) {
+/** Chooses who is responsible for a component and when it is due, and changes its notes; Escape cancels. */
+function DetailsForm({ ideaId, workspaceId, component, field, onDone }: { ideaId: string; workspaceId: string; component: Component; field: DetailsField; onDone: () => void }) {
   const people = useWorkspaceMembers(workspaceId);
   const update = useUpdateComponent(ideaId);
+  const { account } = useAuth();
   const [assigneeId, setAssigneeId] = useState(component.assigneeId ?? '');
   const [dueDate, setDueDate] = useState(component.dueDate ?? '');
+  const [notes, setNotes] = useState(component.notes ?? '');
+  const me = people.data?.find((person) => person.email.toLowerCase() === account?.email.toLowerCase());
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -404,7 +497,7 @@ function AssignForm({ ideaId, workspaceId, component, onDone }: { ideaId: string
       {
         id: component.id,
         title: component.title,
-        notes: component.notes,
+        notes: notes || null,
         isDone: component.isDone,
         assigneeId: assigneeId || null,
         dueDate: dueDate || null,
@@ -414,28 +507,50 @@ function AssignForm({ ideaId, workspaceId, component, onDone }: { ideaId: string
   };
 
   return (
-    <form className="row wrap end assign-form" onSubmit={submit} aria-label={`Assign ${component.title}`}>
-      <Field label="Assigned to" error={fieldError(update.error, 'assigneeId')} className="grow">
-        {(props) => (
-          <select {...props} value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
-            <option value="">Nobody</option>
-            {(people.data ?? []).map((person) => (
-              <option key={person.userId} value={person.userId}>
-                {personLabel(person.name, person.email)}
-              </option>
-            ))}
-          </select>
+    <form
+      className="stack tight assign-form"
+      onSubmit={submit}
+      aria-label={`Details of ${component.title}`}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onDone();
+        }
+      }}
+    >
+      <div className="row wrap end">
+        <Field label="Assigned to" error={fieldError(update.error, 'assigneeId')} className="grow">
+          {(props) => (
+            <select {...props} autoFocus={field === 'assignee'} value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+              <option value="">Nobody</option>
+              {(people.data ?? []).map((person) => (
+                <option key={person.userId} value={person.userId}>
+                  {personLabel(person.name, person.email)}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+        {me && assigneeId !== me.userId && (
+          <button type="button" className="button ghost small" onClick={() => setAssigneeId(me.userId)}>
+            Assign to me
+          </button>
         )}
+        <Field label="Due" error={fieldError(update.error, 'dueDate')}>
+          {(props) => <input {...props} type="date" autoFocus={field === 'due'} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />}
+        </Field>
+      </div>
+      <Field label=<>Notes <span className="muted">(optional)</span></>>
+        {(props) => <input {...props} maxLength={2000} value={notes} onChange={(e) => setNotes(e.target.value)} />}
       </Field>
-      <Field label="Due">
-        {(props) => <input {...props} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />}
-      </Field>
-      <button type="submit" className="button small" disabled={update.isPending}>
-        Save
-      </button>
-      <button type="button" className="button ghost small" onClick={onDone}>
-        Cancel
-      </button>
+      <div className="row">
+        <button type="submit" className="button small" disabled={update.isPending}>
+          Save
+        </button>
+        <button type="button" className="button ghost small" onClick={onDone}>
+          Cancel
+        </button>
+      </div>
       <ErrorMessage error={update.error} />
       <LoadError queries={people} />
     </form>
