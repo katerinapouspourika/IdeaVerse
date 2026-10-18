@@ -136,7 +136,7 @@ describe('IdeaPage', () => {
 
     renderApp('/ideas/idea-1');
 
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveValue('ws-2'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Workspace: Globex' })).toBeInTheDocument());
   });
 
   it('checks off a component and keeps it checked once saved', async () => {

@@ -84,7 +84,7 @@ describe('Command palette', () => {
     await userEvent.type(screen.getByRole('combobox', { name: 'Search ideas or type a command' }), 'studio');
     await userEvent.keyboard('{Enter}');
 
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveValue('ws-2'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Workspace: Studio' })).toBeInTheDocument());
   });
 
   it('closes with Escape and gives focus back', async () => {
@@ -250,5 +250,110 @@ describe('Command palette results', () => {
     await userEvent.tab();
 
     expect(close).toHaveFocus();
+  });
+});
+
+describe('Idea actions in the command palette', () => {
+  /** Opens the palette on the ideas page and finds Spring launch. */
+  async function findSpringLaunch() {
+    await ready();
+    await userEvent.keyboard('{Control>}k{/Control}');
+    const input = screen.getByRole('combobox', { name: 'Search ideas or type a command' });
+    await userEvent.type(input, 'spring');
+    await screen.findByRole('option', { name: /Spring launch/ });
+    return input;
+  }
+
+  it('lists the highlighted idea’s actions with Tab and changes its status, with Undo', async () => {
+    const calls = fakeApi({
+      ...routes,
+      'PUT /api/v1/ideas/idea-1': (body) => ({ status: 200, body: { ...launch, ...(body as object) } }),
+    });
+    renderApp('/ideas');
+    await findSpringLaunch();
+
+    await userEvent.keyboard('{Tab}');
+    const actions = await screen.findByRole('group', { name: 'Actions for Spring launch' });
+    await within(actions).findByRole('option', { name: 'Set status to Done' });
+    expect(screen.getByRole('status')).toHaveTextContent('6 actions');
+    expect(within(actions).getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'Open',
+      'Open in side panel',
+      'Copy link',
+      'Set status to In progress',
+      'Set status to Postponed',
+      'Set status to Done',
+    ]);
+
+    await userEvent.type(screen.getByRole('combobox', { name: 'Search ideas or type a command' }), 'done');
+    await userEvent.keyboard('{Enter}');
+
+    expect(screen.queryByRole('dialog', { name: 'Search and commands' })).not.toBeInTheDocument();
+    expect(await screen.findByText('“Spring launch” set to Done')).toBeInTheDocument();
+    expect(calls.find((c) => c.method === 'PUT')?.body).toMatchObject({ status: 'Done' });
+    await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    await waitFor(() => expect(calls.filter((c) => c.method === 'PUT').at(-1)?.body).toMatchObject({ status: 'Planned' }));
+  });
+
+  it('offers no status change to someone who can’t edit the idea, and copies its link', async () => {
+    const user = userEvent.setup();
+    const readOnly = { ...launch, canEdit: false, role: 'Viewer' as const };
+    fakeApi({ ...routes, [`${ideasRoute}?search=spring`]: { status: 200, body: [readOnly] }, 'GET /api/v1/ideas/idea-1': { status: 200, body: readOnly } });
+    renderApp('/ideas');
+    await findSpringLaunch();
+
+    await user.keyboard('{Tab}');
+    const actions = await screen.findByRole('group', { name: 'Actions for Spring launch' });
+    await waitFor(() => expect(within(actions).getAllByRole('option').map((o) => o.textContent)).toEqual(['Open', 'Open in side panel', 'Copy link']));
+    await user.keyboard('{ArrowDown}{ArrowDown}{Enter}');
+
+    expect(await screen.findByText('Copied the link to “Spring launch”')).toBeInTheDocument();
+    expect(await navigator.clipboard.readText()).toBe(`${window.location.origin}/ideas/idea-1`);
+  });
+
+  it('opens a recent idea in the side panel', async () => {
+    localStorage.setItem('ideaverse.recentIdeas', JSON.stringify([{ id: 'idea-1', workspaceId: 'ws-1', title: 'Spring launch' }]));
+    fakeApi(routes);
+    const router = renderApp('/ideas');
+    await ready();
+
+    await userEvent.keyboard('{Control>}k{/Control}');
+    await userEvent.keyboard('{Tab}{ArrowDown}{Enter}');
+
+    expect(await screen.findByRole('dialog', { name: 'Spring launch' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/ideas');
+    expect(router.state.location.search).toBe('?idea=idea-1');
+  });
+
+  it('goes back to the search with Shift+Tab or Escape, keeping what was typed', async () => {
+    fakeApi(routes);
+    renderApp('/ideas');
+    const input = await findSpringLaunch();
+
+    await userEvent.keyboard('{Tab}');
+    expect(await screen.findByRole('group', { name: 'Actions for Spring launch' })).toBeInTheDocument();
+    expect(input).toHaveValue('');
+    await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
+    expect(input).toHaveValue('spring');
+    expect(await screen.findByRole('group', { name: 'Ideas' })).toBeInTheDocument();
+
+    await userEvent.keyboard('{Tab}');
+    await screen.findByRole('group', { name: 'Actions for Spring launch' });
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('dialog', { name: 'Search and commands' })).toBeInTheDocument();
+    expect(input).toHaveValue('spring');
+  });
+
+  it('does nothing with Tab on an entry that isn’t an idea', async () => {
+    fakeApi(routes);
+    renderApp('/ideas');
+    await ready();
+
+    await userEvent.keyboard('{Control>}k{/Control}');
+    await userEvent.type(screen.getByRole('combobox', { name: 'Search ideas or type a command' }), 'go to');
+    await userEvent.keyboard('{Tab}');
+
+    expect(screen.queryByRole('group', { name: /Actions for/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Search ideas or type a command' })).toHaveFocus();
   });
 });

@@ -36,7 +36,7 @@ describe('InvitationsPage', () => {
 
     expect(await screen.findByText('Globex idea')).toBeInTheDocument();
     await waitFor(() => expect(router.state.location.pathname).toBe('/ideas'));
-    expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveValue('ws-2');
+    expect(screen.getByRole('button', { name: 'Workspace: Globex' })).toBeInTheDocument();
   });
 
   it('declines an invitation', async () => {
