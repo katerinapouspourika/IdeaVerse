@@ -7,9 +7,10 @@ import { currentZoneName, matchesZone, timeZoneOption, timeZoneOptions } from '.
 import type { Account, ReminderKind, Workspace } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { readAccountProblems } from '../auth/identityErrors';
-import { meetsPasswordRules } from '../auth/passwordRules';
+import { meetsPasswordRules, weakPasswordMessage } from '../auth/passwordRules';
 import { PasswordRules } from '../auth/PasswordRules';
 import { Field } from '../components/Field';
+import { PasswordInput } from '../components/PasswordInput';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { useConfirm } from '../components/Feedback';
 import { usePageMeta } from '../seo/usePageMeta';
@@ -344,16 +345,16 @@ function PasswordForm() {
       <h2>Password</h2>
       <Field label="Current password" error={problems?.currentPassword}>
         {(props) => (
-          <input {...props} type="password" required autoComplete="current-password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} />
+          <PasswordInput {...props} required autoComplete="current-password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} />
         )}
       </Field>
       <Field
         label="New password"
         hint={<PasswordRules password={newPassword} />}
-        error={weak ? 'Your new password doesn’t meet every rule yet.' : problems?.password}
+        error={weak ? weakPasswordMessage : problems?.password}
       >
         {(props) => (
-          <input {...props} type="password" required autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+          <PasswordInput {...props} required autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
         )}
       </Field>
       {problems?.other && (
@@ -408,7 +409,7 @@ function DeleteAccountForm() {
       </p>
       <Field label="Password" error={fieldError(save.error, 'password')}>
         {(props) => (
-          <input {...props} type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <PasswordInput {...props} required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
         )}
       </Field>
       <ErrorMessage error={save.error} />
