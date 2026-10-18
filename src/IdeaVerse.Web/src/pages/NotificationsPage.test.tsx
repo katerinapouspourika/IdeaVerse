@@ -1,6 +1,7 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { todayIso } from '../api/dates';
 import type { Comment, Component, Notification } from '../api/types';
 import { aWorkspace, anIdea, fakeApi, ideasRoute, signedIn, signedInAccount } from '../test/fakeApi';
 import { renderApp } from '../test/render';
@@ -166,6 +167,52 @@ describe('Notifications', () => {
     expect(await screen.findByRole('heading', { name: 'Black Friday teaser' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/ideas/idea-1');
     expect(calls.some((c) => c.path === '/api/v1/notifications/n-2/read')).toBe(true);
+  });
+
+  it('filters to unread notifications and to mentions, keeping the choice in the address', async () => {
+    const mention: Notification = { ...tomorrow, id: 'n-3', kind: 'Mentioned', message: 'Mia mentioned you on “Black Friday teaser”.', readAt: '2026-11-26T09:00:00Z' };
+    fakeApi(routes([tomorrow, mention, comingUp], 1));
+    const router = renderApp('/notifications');
+    const main = screen.getByRole('main');
+    expect(await within(main).findAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Unread' }));
+    expect(within(main).getAllByRole('listitem')).toHaveLength(1);
+    expect(within(main).getByRole('listitem')).toHaveTextContent('is tomorrow');
+    expect(screen.getByRole('button', { name: 'Unread' })).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Mentions' }));
+    expect(within(main).getAllByRole('listitem')).toHaveLength(1);
+    expect(within(main).getByRole('listitem')).toHaveTextContent('Mia mentioned you');
+    expect(router.state.location.search).toBe('?show=mentions');
+  });
+
+  it('says so when a filter leaves nothing to show', async () => {
+    fakeApi(routes([comingUp], 0));
+
+    renderApp('/notifications?show=mentions');
+
+    expect(await screen.findByText(/No mentions yet/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mentions' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('groups notifications under Today and Earlier by the account’s own date', async () => {
+    // Just after midnight in Kiritimati (UTC+14), which is still the day before in UTC.
+    const today = todayIso(new Date(), 'Pacific/Kiritimati');
+    const justAfterMidnight = new Date(`${today}T00:01:00+14:00`);
+    const fresh = { ...tomorrow, createdAt: justAfterMidnight.toISOString(), message: 'Fresh one' };
+    const lastNight = { ...comingUp, createdAt: new Date(justAfterMidnight.getTime() - 60 * 60_000).toISOString(), message: 'Last night' };
+    fakeApi({
+      ...routes([fresh, lastNight], 1),
+      'GET /api/v1/account': { status: 200, body: { ...signedInAccount, timeZone: 'Pacific/Kiritimati' } },
+    });
+
+    renderApp('/notifications');
+
+    const todays = await screen.findByRole('region', { name: 'Today' });
+    expect(within(todays).getByRole('listitem')).toHaveTextContent('Fresh one');
+    expect(within(screen.getByRole('region', { name: 'Earlier' })).getByRole('listitem')).toHaveTextContent('Last night');
   });
 
   it('opens a mention at its comment, focused and highlighted', async () => {
