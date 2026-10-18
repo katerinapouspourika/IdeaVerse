@@ -121,12 +121,32 @@ describe('AI help', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('used its 50 AI requests for today');
   });
 
-  it('hides AI help when it isn’t set up', async () => {
+  it('greys out brainstorming and says why when AI help isn’t set up', async () => {
     fakeApi({ ...signedIn, ...aiOff, [ideasRoute]: { status: 200, body: [] } });
     renderApp('/ideas');
 
-    await screen.findByRole('heading', { name: 'Ideas' });
-    expect(screen.queryByRole('button', { name: 'Brainstorm with AI' })).not.toBeInTheDocument();
+    const brainstorm = await screen.findByRole('button', { name: 'Brainstorm with AI' });
+    expect(brainstorm).toHaveAttribute('aria-disabled', 'true');
+    expect(brainstorm).toHaveAccessibleDescription('AI help isn’t set up for this workspace yet.');
+
+    await userEvent.click(brainstorm);
+    expect(screen.queryByRole('form', { name: 'Brainstorm' })).not.toBeInTheDocument();
+  });
+
+  it('greys out AI help on an idea and says why when it isn’t set up', async () => {
+    const calls = fakeApi({ ...ideaRoutes(), ...aiOff });
+    renderApp('/ideas/idea-1');
+
+    const improve = await screen.findByRole('button', { name: 'Improve with AI' });
+    const suggest = await screen.findByRole('button', { name: 'Suggest with AI' });
+    for (const button of [improve, suggest]) {
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+      expect(button).toHaveAccessibleDescription('AI help isn’t set up for this workspace yet.');
+    }
+
+    await userEvent.click(improve);
+    await userEvent.click(suggest);
+    expect(calls.some((c) => c.method === 'POST')).toBe(false);
   });
 
   it('hides AI help on an idea from people who can’t edit it', async () => {

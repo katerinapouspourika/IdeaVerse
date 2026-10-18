@@ -3,6 +3,7 @@ import { Archive, Lightbulb, Plus, SearchX } from 'lucide-react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 
 import { daysUntil, describeDue, formatDate } from '../api/dates';
+import { UnavailableAiButton } from '../ai/AiAllowance';
 import { BrainstormPanel, describeBrainstormed } from '../ai/BrainstormPanel';
 import { useAiStatus, useIdeas, useTags } from '../api/queries';
 import { personLabel, sortLabels, statuses, statusLabels, type Idea, type IdeaSort, type IdeaStatus, type Workspace } from '../api/types';
@@ -117,6 +118,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
                 Brainstorm with AI
               </button>
             )}
+            {ai.data?.enabled === false && <UnavailableAiButton label="Brainstorm with AI" compact />}
             <button type="button" className="button primary" onClick={() => setAdding({ title: '', description: '' })}>
               New idea
             </button>
