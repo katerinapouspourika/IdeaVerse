@@ -628,6 +628,7 @@ textarea:focus-visible,
 
 .badge.overdue,
 .calendar-idea.is-overdue,
+.agenda-idea.is-overdue,
 .calendar-span.is-overdue,
 .timeline-bar.is-overdue {
   --status-bg: var(--status-overdue-bg);
@@ -1196,6 +1197,73 @@ a.tag:focus-visible {
   padding: 1px 4px;
   margin-top: 2px;
   text-decoration: none;
+}
+
+/* On a phone, the calendar and the timeline are lists grouped by day or month (`useNarrowScreen`). */
+.agenda,
+.agenda-ideas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.agenda,
+.timeline-list {
+  gap: 16px;
+}
+
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.agenda-ideas {
+  gap: 6px;
+}
+
+.agenda-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+.agenda-today {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--coral);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.agenda-idea {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--status-bar);
+  border-radius: var(--radius-small);
+}
+
+.agenda-idea:hover {
+  background: var(--accent-soft);
+}
+
+.agenda-title {
+  font-weight: 800;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.agenda-idea:hover .agenda-title {
+  color: var(--accent);
+  text-decoration: underline;
 }
 
 /* The start day of a planned span: outlined in the status colour, where the target date is filled. */
