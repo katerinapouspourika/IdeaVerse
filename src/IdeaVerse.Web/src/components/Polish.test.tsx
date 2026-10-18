@@ -25,18 +25,27 @@ describe('Header', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
   });
 
-  it('switches between the device’s colour scheme, light, and dark, and remembers the choice', async () => {
+  it('picks light, dark, or the device’s colour scheme from a menu, and remembers the choice', async () => {
     fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
     renderApp('/ideas');
     await screen.findByRole('button', { name: 'Account: kat@example.com' });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Theme: match device' }));
-    expect(document.documentElement.dataset.theme).toBe('light');
-    await userEvent.click(screen.getByRole('button', { name: 'Theme: light' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Theme: light (matches device)' }));
+    expect(screen.getByRole('menuitemradio', { name: 'Match device' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('menuitemradio', { name: 'Light' })).toHaveAttribute('aria-checked', 'false');
+    await userEvent.click(screen.getByRole('menuitemradio', { name: 'Dark' }));
     expect(document.documentElement.dataset.theme).toBe('dark');
     expect(localStorage.getItem('ideaverse.theme')).toBe('dark');
+
     await userEvent.click(screen.getByRole('button', { name: 'Theme: dark' }));
+    expect(screen.getByRole('menuitemradio', { name: 'Dark' })).toHaveAttribute('aria-checked', 'true');
+    await userEvent.click(screen.getByRole('menuitemradio', { name: 'Light' }));
+    expect(document.documentElement.dataset.theme).toBe('light');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Theme: light' }));
+    await userEvent.click(screen.getByRole('menuitemradio', { name: 'Match device' }));
     expect(document.documentElement.dataset.theme).toBeUndefined();
+    expect(localStorage.getItem('ideaverse.theme')).toBeNull();
   });
 
   it('offers a link that skips straight to the page content', async () => {
