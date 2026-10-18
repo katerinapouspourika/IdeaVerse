@@ -190,14 +190,12 @@ describe('SettingsPage', () => {
     const router = renderApp('/settings');
 
     const menu = within(await screen.findByRole('navigation', { name: 'Settings sections' }));
-    await menu.findByRole('link', { name: 'Workspace' });
     expect(menu.getAllByRole('link').map((link) => link.textContent)).toEqual([
       'Profile',
       'Email',
       'Password',
       'Time zone',
       'Reminders',
-      'Workspace',
       'Delete account',
     ]);
     await userEvent.click(menu.getByRole('link', { name: 'Reminders' }));

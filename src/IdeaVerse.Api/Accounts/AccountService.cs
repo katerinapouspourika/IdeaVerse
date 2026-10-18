@@ -48,7 +48,7 @@ public sealed class AccountService(IdeaVerseDbContext context, UserManager<User>
     if (shared.Count > 0)
     {
       return WorkspaceChangeResult.Conflict(
-        $"You own {string.Join(", ", shared)}, which other people use. Hand it over to someone else from its People page first.");
+        $"You own {string.Join(", ", shared)}, which other people use. Hand it over to someone else from its workspace settings first.");
     }
 
     var transaction = await context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
