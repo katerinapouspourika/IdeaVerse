@@ -433,6 +433,13 @@ textarea:focus {
   outline: none;
 }
 
+/* A field with a problem, explained in its Field error below it. */
+input[aria-invalid='true'],
+select[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
