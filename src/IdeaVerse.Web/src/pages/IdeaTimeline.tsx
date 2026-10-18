@@ -2,6 +2,8 @@ import { Link } from 'react-router';
 
 import { describeDue, formatDate, todayIso } from '../api/dates';
 import { statusLabels, type Idea } from '../api/types';
+import { StatusBadge } from '../components/StatusBadge';
+import { useNarrowScreen } from '../components/useNarrowScreen';
 import { useIdeaPanel } from '../panel/useIdeaPanel';
 
 /** The width of a month on the scale, so a long roadmap scrolls sideways rather than squeezing its bars. */
@@ -26,10 +28,12 @@ function monthsFor(ideas: Idea[], today: string): string[] {
 }
 
 /**
- * A roadmap of the ideas: each is a bar from the day it was added to its target date, against a scale of months with a
- * line for today. Each row also says its dates in words, which is what screen readers read; the bars are decoration.
+ * A roadmap of the ideas: each is a bar from its start date to its target date, against a scale of months with a line
+ * for today; an idea with no start date is a dot on its target date, as there is no span to draw. Each row also says its
+ * dates in words, which is what screen readers read; the bars are decoration.
  */
 export function IdeaTimeline({ ideas }: { ideas: Idea[] }) {
+  const narrow = useNarrowScreen();
   const { linkProps } = useIdeaPanel();
   const today = todayIso();
   const months = monthsFor(ideas, today);
@@ -44,6 +48,10 @@ export function IdeaTimeline({ ideas }: { ideas: Idea[] }) {
 
   if (ideas.length === 0) {
     return <p className="card muted">No ideas to show on the timeline.</p>;
+  }
+
+  if (narrow) {
+    return <TimelineList ideas={sorted} />;
   }
 
   return (
@@ -69,8 +77,8 @@ export function IdeaTimeline({ ideas }: { ideas: Idea[] }) {
           </div>
           <ol className="timeline-rows">
             {sorted.map((idea) => {
-              const start = idea.createdAt.slice(0, 10) < idea.targetDate ? idea.createdAt.slice(0, 10) : idea.targetDate;
-              const left = at(start);
+              const start = idea.startDate;
+              const left = at(start ?? idea.targetDate);
               const width = Math.max(at(idea.targetDate) - left, 0.8);
               const state = idea.isOverdue ? 'is-overdue' : `status-${idea.status.toLowerCase()}`;
               return (
@@ -81,12 +89,17 @@ export function IdeaTimeline({ ideas }: { ideas: Idea[] }) {
                       {idea.title}
                     </Link>
                     <span className={idea.isOverdue ? 'small overdue-text' : 'small muted'}>
-                      {statusLabels[idea.status]} · {formatDate(idea.targetDate)} ({describeDue(idea.targetDate)})
+                      {statusLabels[idea.status]} · {start ? `starts ${formatDate(start)}` : 'no start date'} · due{' '}
+                      {formatDate(idea.targetDate)} ({describeDue(idea.targetDate)})
                     </span>
                   </div>
                   <div className="timeline-track" aria-hidden="true">
                     <span className="timeline-today-line" style={{ left: `${at(today)}%` }} />
-                    <span className={`timeline-bar ${state}${day(start) < from ? ' clipped' : ''}`} style={{ left: `${left}%`, width: `${width}%` }} />
+                    {start ? (
+                      <span className={`timeline-bar ${state}${day(start) < from ? ' clipped' : ''}`} style={{ left: `${left}%`, width: `${width}%` }} />
+                    ) : (
+                      <span className={`timeline-bar timeline-marker ${state}`} style={{ left: `${left}%` }} />
+                    )}
                   </div>
                 </li>
               );
@@ -94,6 +107,49 @@ export function IdeaTimeline({ ideas }: { ideas: Idea[] }) {
           </ol>
         </div>
       </div>
+    </section>
+  );
+}
+
+/**
+ * The timeline on a phone, where a scale of months leaves bars too thin to read: the ideas in the same order, as a list
+ * grouped by the month they are due, each with its dates from start to target in words.
+ */
+function TimelineList({ ideas }: { ideas: Idea[] }) {
+  const { linkProps } = useIdeaPanel();
+  const monthName = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const months = new Map<string, Idea[]>();
+  for (const idea of ideas) {
+    const month = idea.targetDate.slice(0, 7);
+    months.set(month, [...(months.get(month) ?? []), idea]);
+  }
+
+  return (
+    <section className="card timeline-list" aria-labelledby="timeline-heading">
+      <h2 id="timeline-heading" className="visually-hidden">
+        Timeline
+      </h2>
+      {[...months].map(([month, due]) => (
+        <div key={month} className="agenda-day">
+          <h3 className="agenda-date">{monthName.format(new Date(`${month}-01T00:00:00Z`))}</h3>
+          <ol className="agenda-ideas">
+            {due.map((idea) => (
+              <li key={idea.id} className={`agenda-idea status-${idea.status.toLowerCase()}${idea.isOverdue ? ' is-overdue' : ''}`}>
+                <Link {...linkProps(idea.id)} className="agenda-title stretched-link">
+                  {idea.title}
+                </Link>
+                <span className="row small muted wrap">
+                  <StatusBadge idea={idea} />
+                </span>
+                <span className={idea.isOverdue ? 'small overdue-text' : 'small muted'}>
+                  {idea.startDate ? `Starts ${formatDate(idea.startDate)}` : 'No start date'} · due{' '}
+                  {formatDate(idea.targetDate)} ({describeDue(idea.targetDate)})
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
     </section>
   );
 }

@@ -1,11 +1,14 @@
+import { ChevronDown, Plus } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router';
 
+import { Menu } from '../components/Menu';
 import { WorkspaceBadge } from './WorkspaceBadge';
 import { useWorkspace } from './WorkspaceContext';
 
-const newWorkspace = 'new';
-
-/** Header control for choosing which workspace's ideas to view, or starting a new workspace. */
+/**
+ * Header menu for choosing which workspace's ideas to view: each workspace with its badge and the user's role, the
+ * current one checked, and New workspace set apart at the end.
+ */
 export function WorkspaceSwitcher() {
   const { all, current, select } = useWorkspace();
   const navigate = useNavigate();
@@ -15,12 +18,11 @@ export function WorkspaceSwitcher() {
     return null;
   }
 
-  const change = (value: string) => {
-    if (value === newWorkspace) {
-      void navigate('/workspaces/new');
+  const change = (workspaceId: string) => {
+    if (workspaceId === current.id) {
       return;
     }
-    select(value);
+    select(workspaceId);
     // An idea belongs to one workspace, so leave it for the new workspace's list; other pages show the new workspace in place.
     if (pathname.startsWith('/ideas/')) {
       void navigate('/ideas');
@@ -28,16 +30,39 @@ export function WorkspaceSwitcher() {
   };
 
   return (
-    <span className="switcher-group">
-      <WorkspaceBadge workspace={current} size={28} />
-      <select className="switcher" aria-label="Workspace" value={current.id} onChange={(e) => change(e.target.value)}>
-      {all.map((workspace) => (
-        <option key={workspace.id} value={workspace.id}>
-          {workspace.name}
-        </option>
-      ))}
-        <option value={newWorkspace}>+ New workspace…</option>
-      </select>
-    </span>
+    <Menu
+      label={`Workspace: ${current.name}`}
+      listLabel="Workspaces"
+      triggerClassName="switcher"
+      listClassName="switcher-list"
+      trigger={
+        <>
+          <WorkspaceBadge workspace={current} size={28} />
+          <span className="switcher-name">{current.name}</span>
+          <ChevronDown className="switcher-chevron" aria-hidden="true" size={16} />
+        </>
+      }
+      items={[
+        ...all.map((workspace) => ({
+          id: workspace.id,
+          label: workspace.name,
+          icon: <WorkspaceBadge workspace={workspace} size={28} />,
+          detail: workspace.role,
+          checked: workspace.id === current.id,
+          onSelect: () => change(workspace.id),
+        })),
+        {
+          id: 'new',
+          label: 'New workspace',
+          icon: (
+            <span className="switcher-new-icon" aria-hidden="true">
+              <Plus size={16} />
+            </span>
+          ),
+          separated: true,
+          onSelect: () => void navigate('/workspaces/new'),
+        },
+      ]}
+    />
   );
 }

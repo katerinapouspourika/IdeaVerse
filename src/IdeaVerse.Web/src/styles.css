@@ -265,6 +265,132 @@ a {
   }
 }
 
+/* On a phone the signed-in header names the current workspace beside the logo, which then stands without its name. */
+.phone-workspace {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 800;
+}
+
+.phone-workspace .workspace-badge {
+  flex: none;
+  border-radius: 6px;
+}
+
+.phone-workspace-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar.phone .brand-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* The header's buttons pack tighter on a phone to leave the workspace's name room; the narrowest drop its badge. */
+.topbar.phone .account {
+  gap: 2px;
+}
+
+.topbar.phone .header-icon,
+.topbar.phone .menu-button {
+  width: 36px;
+  height: 36px;
+}
+
+@media (max-width: 360px) {
+  .phone-workspace .workspace-badge {
+    display: none;
+  }
+}
+
+/* A phone's bottom bar of the app's main pages, clear of the home indicator; the page leaves room for it below. */
+.shell.has-tab-bar {
+  padding-bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+}
+
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  gap: 2px;
+  padding: 4px calc(6px + env(safe-area-inset-right, 0px)) calc(4px + env(safe-area-inset-bottom, 0px)) calc(6px + env(safe-area-inset-left, 0px));
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border);
+}
+
+/* Tabs share the spare width evenly beyond their own, so the longer "Notifications" still fits a 320px screen. */
+.tab-bar-link {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 53px;
+  padding: 0 2px;
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tab-icon {
+  position: relative;
+  display: inline-flex;
+  padding: 4px 14px;
+  border-radius: 999px;
+}
+
+.tab-bar-link[aria-current='page'] {
+  color: var(--accent);
+}
+
+.tab-bar-link[aria-current='page'] .tab-icon {
+  background: var(--accent-soft);
+}
+
+.tab-new .tab-icon {
+  background: var(--gradient);
+  color: #ffffff;
+}
+
+.tab-count {
+  position: absolute;
+  top: -4px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: var(--surface);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* While typing, the on-screen keyboard needs the room, so the bar steps aside. */
+.shell:has(input:not([type='checkbox'], [type='radio'], [type='range']):focus, textarea:focus) .tab-bar {
+  display: none;
+}
+
 .content {
   flex: 1;
   width: 100%;
@@ -628,6 +754,8 @@ textarea:focus-visible,
 
 .badge.overdue,
 .calendar-idea.is-overdue,
+.agenda-idea.is-overdue,
+.calendar-span.is-overdue,
 .timeline-bar.is-overdue {
   --status-bg: var(--status-overdue-bg);
   --status-text: var(--status-overdue-text);
@@ -911,14 +1039,69 @@ textarea:focus-visible,
   box-shadow: 0 0 0 2px var(--surface);
 }
 
+/* The header's workspace menu: the current workspace's badge and name, opening the list of the user's workspaces. */
 .switcher {
-  max-width: 14rem;
-  padding: 6px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 16rem;
+  padding: 4px 8px 4px 4px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--bg);
   color: var(--text);
   font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.switcher:hover {
+  background: var(--accent-soft);
+}
+
+.switcher:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.switcher-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.switcher-chevron {
+  flex: none;
+  margin-left: auto;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+
+.switcher[aria-expanded='true'] .switcher-chevron {
+  transform: rotate(180deg);
+}
+
+.switcher-list {
+  left: 0;
+  right: auto;
+  width: max-content;
+  min-width: 240px;
+  max-width: min(320px, calc(100vw - 32px));
+  max-height: min(420px, 70vh);
+  overflow-y: auto;
+}
+
+.switcher-new-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 1px dashed var(--input-border);
+  border-radius: 8px;
+  color: var(--muted);
 }
 
 .success {
@@ -1197,6 +1380,108 @@ a.tag:focus-visible {
   text-decoration: none;
 }
 
+/* On a phone, the calendar and the timeline are lists grouped by day or month (`useNarrowScreen`). */
+.agenda,
+.agenda-ideas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.agenda,
+.timeline-list {
+  gap: 16px;
+}
+
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.agenda-ideas {
+  gap: 6px;
+}
+
+.agenda-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+.agenda-today {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--coral);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.agenda-idea {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--status-bar);
+  border-radius: var(--radius-small);
+}
+
+.agenda-idea:hover {
+  background: var(--accent-soft);
+}
+
+.agenda-title {
+  font-weight: 800;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.agenda-idea:hover .agenda-title {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* The start day of a planned span: outlined in the status colour, where the target date is filled. */
+.calendar-idea.calendar-start {
+  background: transparent;
+  border: 1px dashed var(--status-bar);
+  border-left: 3px solid var(--status-bar);
+}
+
+/* The days in between: a thin line per idea under way, so a busy month stays readable. */
+.calendar-spans {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.calendar-span {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--status-bar);
+  opacity: 0.7;
+}
+
+.calendar-more {
+  font-size: 0.7rem;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.calendar-legend .calendar-idea {
+  display: inline;
+  margin: 0;
+  color: var(--status-text);
+}
+
 /* On narrow screens the month buttons show only their arrows, so the month's name fits between them. */
 .calendar-nav .button {
   position: relative;
@@ -1399,6 +1684,7 @@ a.tag:focus-visible {
   }
 
   .site-menu .switcher {
+    width: 100%;
     max-width: none;
   }
 
@@ -1594,6 +1880,48 @@ a.tag:focus-visible {
   .row.wrap > .button {
     flex: 1 1 auto;
   }
+}
+
+/* Ideas list on a phone: a search box and a Filters button, the other filters in a panel, and the views as icons. */
+.phone-filters .field {
+  flex: 1 1 auto;
+}
+
+/* The search box's placeholder says what it is for; its label stays for screen readers. */
+.phone-filters .field label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.filters-toggle {
+  flex: none;
+}
+
+.filter-count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+}
+
+.tabs.wrap-tabs {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+.icon-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
 }
 
 /* Shared helpers */
@@ -2388,8 +2716,33 @@ a:focus-visible {
 }
 
 .menu-check {
+  flex: none;
   margin-left: auto;
   color: var(--accent);
+}
+
+/* An item with a second line, such as a workspace and the user's role in it. */
+.menu-item-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.menu-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-item-detail {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--border);
 }
 
 .popover {
@@ -3097,18 +3450,18 @@ a:focus-visible {
   color: var(--muted);
 }
 
-/* A component's row: its handle, its checkbox and title, then its actions, which move under the title on narrow screens. */
+/* A component's row: its handle, its checkbox, its title over its notes and chips, then its "⋯" menu. */
 .component-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: 'check actions';
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'check body actions';
   align-items: start;
   gap: 4px 8px;
 }
 
 .component-row.reorderable {
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas: 'handle check actions';
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  grid-template-areas: 'handle check body actions';
 }
 
 /* The handle, the checkbox, and the title's first line share a centre line. */
@@ -3117,46 +3470,121 @@ a:focus-visible {
   margin-top: -6px;
 }
 
-.component-row .check {
+/* The checkbox, padded into a comfortable target without moving the row. */
+.component-check {
   grid-area: check;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  /* The whole label toggles the box, so it is padded into a comfortable target without moving the row. */
-  min-height: 36px;
-  padding: 6px 8px;
-  margin: -6px -8px;
+  display: flex;
+  padding: 7px;
+  margin: -7px;
   border-radius: var(--radius-small);
+  cursor: pointer;
 }
 
-.component-row .check:has(input:enabled):hover {
+.component-check:has(input:enabled):hover {
   background: var(--accent-soft);
 }
 
-.component-row .check input {
-  margin-top: 1px;
-  /* The label is the touch target, so the box keeps its size beside phone-sized inputs. */
+.component-check input {
+  width: 18px;
+  height: 18px;
   min-height: 0;
+  margin: 1px 0 0;
+  accent-color: var(--ok);
 }
 
-.component-actions {
+.component-body {
+  grid-area: body;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The title renames the component when clicked; it reads as text until hovered or focused. */
+.title-button {
+  padding: 0 4px;
+  margin: 0 -4px;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: text;
+}
+
+.title-button:hover {
+  background: var(--accent-soft);
+}
+
+.title-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.rename-form {
+  align-self: stretch;
+}
+
+.rename-form input {
+  min-height: 36px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* An assignee or due date; overdue and due-soon dates are tinted and say so in words too. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  /* Rounded rather than a pill, so a chip that wraps on a phone still looks like one. */
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: left;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+button.chip {
+  cursor: pointer;
+}
+
+button.chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+button.chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.chip.overdue {
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.chip.soon {
+  border-color: color-mix(in srgb, var(--warn) 35%, transparent);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.component-row > .menu {
   grid-area: actions;
-  margin-top: -6px;
-}
-
-@media (max-width: 600px) {
-  .component-row {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'check' 'actions';
-  }
-
-  .component-row.reorderable {
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas: 'handle check' '. actions';
-  }
-
-  .component-actions {
-    margin-top: 0;
-  }
+  margin-top: -8px;
 }
 
 .checklist li.dragging {
@@ -3294,7 +3722,7 @@ a:focus-visible {
   }
 }
 
-/* Timeline: each idea as a bar from when it was added to its target date */
+/* Timeline: each idea as a bar from its start date to its target date, or a dot on its target date without a start */
 
 .timeline {
   padding: 12px 0;
@@ -3416,6 +3844,15 @@ a:focus-visible {
 .timeline-bar.clipped {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
+}
+
+/* No start date: a dot centred on the target date, ringed in the surface colour so it reads as a point, not a bar. */
+.timeline-marker {
+  top: 19px;
+  width: 14px;
+  height: 14px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 0 2px var(--surface);
 }
 
 @media (max-width: 600px) {
@@ -3960,13 +4397,6 @@ a:focus-visible {
   background: var(--surface);
 }
 
-.switcher-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
 .swatches {
   display: flex;
   flex-wrap: wrap;
@@ -4018,9 +4448,75 @@ legend,
   font-weight: 600;
 }
 
-/* Settings' workspace section, which People links to: clear of the sticky header when scrolled to. */
-#workspace {
+/* Settings: a sticky menu of its sections beside the cards, which clear the sticky header when jumped to. */
+.settings-layout {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.settings-nav {
+  position: sticky;
+  top: 84px;
+}
+
+.settings-nav ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-nav a {
+  display: block;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.settings-nav a:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.settings-sections > [id] {
   scroll-margin-top: 80px;
+}
+
+.save-state {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Phones: the menu becomes a row of jump links above the cards. */
+@media (max-width: 760px) {
+  .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .settings-nav {
+    position: static;
+  }
+
+  .settings-nav ul {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .settings-nav a {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    font-size: 0.9rem;
+  }
 }
 
 /* People: what each workspace role may do. */

@@ -135,7 +135,7 @@ describe('IdeaPage', () => {
 
     renderApp('/ideas/idea-1');
 
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveValue('ws-2'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Workspace: Globex' })).toBeInTheDocument());
   });
 
   it('checks off a component and keeps it checked once saved', async () => {
@@ -291,7 +291,8 @@ describe('Archived idea', () => {
     expect(screen.queryByRole('button', { name: 'Edit details' })).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Status' })).not.toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Budget sign-off' })).toBeDisabled();
-    expect(screen.queryByRole('button', { name: 'Edit Budget sign-off' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Rename Budget sign-off' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More actions for Budget sign-off' })).not.toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'Add component' })).not.toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'Postpone idea' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Impact')).not.toBeInTheDocument();
