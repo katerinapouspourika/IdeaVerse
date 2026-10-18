@@ -827,6 +827,19 @@ textarea:focus-visible,
   gap: 8px;
 }
 
+/* Today's notifications and earlier ones, each under a small heading. */
+.notification-group {
+  gap: 10px;
+}
+
+.notification-group-title {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .notification.unread {
   border-left: 4px solid var(--accent);
 }
