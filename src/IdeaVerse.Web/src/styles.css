@@ -2513,10 +2513,11 @@ a:focus-visible {
 .idea-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   grid-template-areas:
     'main side'
-    'work side';
+    'work side'
+    'activity side';
   align-items: start;
   gap: 16px 20px;
 }
@@ -2527,6 +2528,10 @@ a:focus-visible {
 
 .idea-work {
   grid-area: work;
+}
+
+.idea-activity {
+  grid-area: activity;
 }
 
 .idea-side {
@@ -2567,8 +2572,9 @@ a:focus-visible {
     grid-template-rows: none;
     grid-template-areas:
       'main'
+      'work'
       'side'
-      'work';
+      'activity';
   }
 
   .idea-side {

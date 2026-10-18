@@ -55,18 +55,24 @@ describe('IdeaPage', () => {
     expect(screen.getByRole('menuitem', { name: 'Delete idea' })).toBeInTheDocument();
   });
 
-  it('puts the schedule, priority, and team right after the details, before the rest of the work', async () => {
+  it('reads in phone order: the details, what it needs and the discussion, then the schedule, priority, and team, and the activity last', async () => {
     fakeApi(ideaRoutes({}, [owner]));
 
     renderApp('/ideas/idea-1');
 
     const title = await screen.findByRole('heading', { name: 'Black Friday teaser' });
     const side = screen.getByRole('complementary', { name: 'Idea details' });
-    const components = screen.getByRole('heading', { name: 'What it needs' });
     expect(within(side).getByRole('heading', { name: 'Schedule' })).toBeInTheDocument();
-    expect(title.compareDocumentPosition(side) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(side.compareDocumentPosition(components) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(side.compareDocumentPosition(screen.getByRole('heading', { name: 'Discussion' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const order = [
+      title,
+      screen.getByRole('heading', { name: 'What it needs' }),
+      screen.getByRole('heading', { name: 'Discussion' }),
+      side,
+      screen.getByRole('heading', { name: 'Activity' }),
+    ];
+    order.slice(1).forEach((next, i) => {
+      expect(order[i]!.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
   });
 
   it('deletes the idea after confirming, and returns to the list', async () => {
