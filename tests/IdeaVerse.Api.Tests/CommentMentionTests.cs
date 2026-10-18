@@ -146,6 +146,46 @@ public class CommentMentionTests
   }
 
   [Test]
+  public async Task Create_MentionAndTeamNotifications_PointAtTheComment()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var mia = await factory.CreateSignedInClientAsync("mia@example.com");
+    await factory.JoinAsync(owner, mia, "mia@example.com");
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(30))).ReadIdeaAsync();
+    var miaId = await UserIdAsync(owner, "mia@example.com");
+    var mention = await (await PostAsync(owner, idea.Id, $"Over to @[Mia]({miaId})")).Content.ReadFromJsonAsync<CommentResponse>(Json.Options);
+
+    var reply = await (await PostAsync(mia, idea.Id, "On it")).Content.ReadFromJsonAsync<CommentResponse>(Json.Options);
+
+    var miaInbox = (await NotificationsAsync(mia)).Items.Single();
+    var ownerInbox = (await NotificationsAsync(owner)).Items.Single();
+    await Assert.That(miaInbox.Kind).IsEqualTo(ReminderKind.Mentioned);
+    await Assert.That(miaInbox.CommentId).IsEqualTo(mention!.Id);
+    await Assert.That(miaInbox.ComponentId).IsNull();
+    await Assert.That(ownerInbox.Kind).IsEqualTo(ReminderKind.Commented);
+    await Assert.That(ownerInbox.CommentId).IsEqualTo(reply!.Id);
+  }
+
+  [Test]
+  public async Task Delete_CommentSomeoneWasMentionedIn_KeepsTheNotificationWithoutTheComment()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var mia = await factory.CreateSignedInClientAsync("mia@example.com");
+    await factory.JoinAsync(owner, mia, "mia@example.com");
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(30))).ReadIdeaAsync();
+    var comment = await (await PostAsync(owner, idea.Id, $"Over to @[Mia]({await UserIdAsync(owner, "mia@example.com")})")).Content.ReadFromJsonAsync<CommentResponse>(Json.Options);
+
+    using var deleted = await owner.DeleteAsync($"/api/v1/ideas/{idea.Id}/comments/{comment!.Id}");
+
+    var notification = (await NotificationsAsync(mia)).Items.Single();
+    await Assert.That(deleted.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
+    await Assert.That(notification.Kind).IsEqualTo(ReminderKind.Mentioned);
+    await Assert.That(notification.CommentId).IsNull();
+  }
+
+  [Test]
   public async Task List_CommentWithMention_ReturnsItsTokensForTheApp()
   {
     await using var factory = new IdeaVerseApiFactory();

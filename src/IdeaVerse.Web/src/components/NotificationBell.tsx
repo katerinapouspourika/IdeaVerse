@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router';
 
 import { formatAgo, formatMoment } from '../api/dates';
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from '../api/queries';
-import type { Notification, ReminderKind } from '../api/types';
+import { notificationLink, type Notification, type ReminderKind } from '../api/types';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
 import { WorkspaceTag } from '../workspaces/WorkspaceTag';
 
@@ -134,7 +134,7 @@ function NotificationMenuItem({ notification, onOpen }: { notification: Notifica
 
   return (
     <li className={unread ? 'unread' : undefined}>
-      <Link to={`/ideas/${notification.ideaId}`} className="notification-menu-item" aria-label={label} title={notification.message} onClick={onOpen}>
+      <Link to={notificationLink(notification)} className="notification-menu-item" aria-label={label} title={notification.message} onClick={onOpen}>
         <span className="unread-dot" aria-hidden="true" />
         <span className="notification-menu-title">{titles[notification.kind]}</span>
         <span className="notification-menu-idea">{notification.ideaTitle}</span>

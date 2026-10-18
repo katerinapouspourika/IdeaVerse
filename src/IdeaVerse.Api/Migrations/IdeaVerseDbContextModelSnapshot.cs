@@ -552,6 +552,9 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                     b.Property<string>("ActorId")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("CommentId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("ComponentId")
                         .HasColumnType("uuid");
 
@@ -595,6 +598,8 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ActorId");
+
+                    b.HasIndex("CommentId");
 
                     b.HasIndex("UserId", "CreatedAt");
 
@@ -906,6 +911,11 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                         .HasForeignKey("ActorId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Pouspourika.IdeaVerse.Api.Comments.Comment", "Comment")
+                        .WithMany()
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Pouspourika.IdeaVerse.Api.Components.Component", "Component")
                         .WithMany()
                         .HasForeignKey("ComponentId")
@@ -924,6 +934,8 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Actor");
+
+                    b.Navigation("Comment");
 
                     b.Navigation("Component");
 

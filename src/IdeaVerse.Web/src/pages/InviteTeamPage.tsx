@@ -2,13 +2,13 @@ import { Plus, X } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 
-import { ApiError } from '../api/client';
 import { useInvite } from '../api/queries';
 import type { WorkspaceRole } from '../api/types';
 import { useToast } from '../components/Feedback';
 import { Field } from '../components/Field';
 import { usePageMeta } from '../seo/usePageMeta';
 import { pendingTemplate } from '../templates/pendingTemplate';
+import { sendInvitations } from '../workspaces/sendInvitations';
 import { SetupSteps } from '../workspaces/SetupSteps';
 import { canManageWorkspace, useWorkspace } from '../workspaces/WorkspaceContext';
 
@@ -23,14 +23,6 @@ interface Row {
   id: number;
   email: string;
   error?: string;
-}
-
-/** Why the API refused one invitation, in words for the person sending it. */
-function reasonFor(error: unknown): string {
-  if (error instanceof ApiError) {
-    return error.fieldError('email') ?? error.fieldError('role') ?? error.message;
-  }
-  return 'This invitation couldn’t be sent. Try again.';
 }
 
 /**
@@ -71,14 +63,8 @@ export function InviteTeamPage() {
       return;
     }
     setSending(true);
-    const failed: Row[] = [];
-    for (const row of filled) {
-      try {
-        await invite.mutateAsync({ email: row.email.trim(), role });
-      } catch (error) {
-        failed.push({ ...row, error: reasonFor(error) });
-      }
-    }
+    const results = await sendInvitations(invite.mutateAsync, filled.map((r) => r.email.trim()), role);
+    const failed: Row[] = filled.flatMap((row, i) => (results[i]?.error ? [{ ...row, error: results[i].error }] : []));
     setSending(false);
     const sent = filled.length - failed.length;
     if (sent > 0) {

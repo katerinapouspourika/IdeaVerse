@@ -22,12 +22,14 @@ import { Person } from '../components/Person';
 import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage';
 import { useConfirm, useToast } from '../components/Feedback';
 import { Skeleton } from '../components/Skeleton';
-import { emailProblem, useInlineValidation } from '../components/useInlineValidation';
+import { emailProblem } from '../components/useInlineValidation';
 import { usePageMeta } from '../seo/usePageMeta';
 import { canManageWorkspace, useWorkspace } from '../workspaces/WorkspaceContext';
 import { CompanyDomainCard } from '../workspaces/CompanyDomainCard';
 import { InviteLinkCard } from '../workspaces/InviteLinkCard';
+import { EmailListInput, type EmailChip } from '../workspaces/EmailListInput';
 import { JoinRequestsCard } from '../workspaces/JoinRequestsCard';
+import { sendInvitations, splitEmails } from '../workspaces/sendInvitations';
 
 /** The current workspace's people and invitations; owners and admins manage them here. */
 export function PeoplePage() {
@@ -362,50 +364,114 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
   );
 }
 
+/** Adds addresses to the list, leaving out any already in it (in any case); returns the new list and those left out. */
+function merge(chips: Sent[], emails: string[]) {
+  const next = [...chips];
+  const repeated: string[] = [];
+  for (const email of emails) {
+    if (next.some((c) => c.email.toLowerCase() === email.toLowerCase())) {
+      repeated.push(email);
+    } else {
+      next.push({ email });
+    }
+  }
+  return { next, repeated };
+}
+
+/** An address in the invite list and, once sent, why the API refused it. */
+interface Sent {
+  email: string;
+  error?: string;
+}
+
+/** Invites one or many people at once with the same role; each address is checked here first, and sent on its own. */
 function InviteForm({ workspaceId }: { workspaceId: string }) {
   const invite = useInvite(workspaceId);
-  const [email, setEmail] = useState('');
+  const members = useWorkspaceMembers(workspaceId);
+  const invitations = useInvitations(workspaceId, true);
+  const [chips, setChips] = useState<Sent[]>([]);
+  const [text, setText] = useState('');
   const [role, setRole] = useState<WorkspaceRole>('Member');
-  const [sentTo, setSentTo] = useState<string | null>(null);
-  const validation = useInlineValidation({ email: () => emailProblem(email, 'Enter the email address to invite.') });
+  const [sending, setSending] = useState(false);
+  const [sentTo, setSentTo] = useState<string[]>([]);
+  const [repeated, setRepeated] = useState<string[]>([]);
+  const [missing, setMissing] = useState<string | undefined>();
+  const memberEmails = new Set((members.data ?? []).map((m) => m.email.toLowerCase()));
+  const invitedEmails = new Set((invitations.data ?? []).map((i) => i.email.toLowerCase()));
 
-  const submit = (event: FormEvent) => {
+  const problemOf = ({ email, error }: Sent) =>
+    error ??
+    (emailProblem(email)
+      ? 'Not a valid email address.'
+      : memberEmails.has(email.toLowerCase())
+        ? 'Already in the workspace.'
+        : invitedEmails.has(email.toLowerCase())
+          ? 'Already invited. Resend it from Pending invitations.'
+          : undefined);
+  const shown: EmailChip[] = chips.map((chip) => ({ email: chip.email, problem: problemOf(chip) }));
+  const problems = shown.filter((chip) => chip.problem);
+  const ready = chips.filter((chip) => !problemOf(chip));
+
+  const add = (emails: string[]) => {
+    const merged = merge(chips, emails);
+    setChips(merged.next);
+    setRepeated(merged.repeated);
+    setSentTo([]);
+    setMissing(undefined);
+  };
+
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
-    setSentTo(null);
-    if (!validation.validate(event)) {
+    // Whatever is still typed in the box goes too.
+    const { next, repeated: typedAgain } = merge(chips, splitEmails(text));
+    setText('');
+    setChips(next);
+    setRepeated(typedAgain);
+    setSentTo([]);
+    const sendable = next.filter((chip) => !problemOf(chip));
+    if (sendable.length === 0) {
+      setMissing(next.length === 0 ? 'Enter the email addresses to invite.' : 'None of these addresses can be invited yet; see why below.');
       return;
     }
-    invite.mutate(
-      { email, role },
-      {
-        onSuccess: (invitation) => {
-          setSentTo(invitation.email);
-          setEmail('');
-          validation.reset();
-        },
-      },
-    );
+    setMissing(undefined);
+    setSending(true);
+    const results = await sendInvitations(invite.mutateAsync, sendable.map((chip) => chip.email), role);
+    setSending(false);
+    const sent = results.filter((r) => !r.error).map((r) => r.email);
+    // Sent addresses leave the list; refused ones stay with the API's reason, beside any that weren't sent.
+    setChips(next.filter((chip) => !sent.includes(chip.email)).map((chip) => ({ ...chip, error: results.find((r) => r.email === chip.email)?.error ?? chip.error })));
+    setSentTo(sent);
   };
 
   return (
-    <form className="card stack" onSubmit={submit} aria-label="Invite people" noValidate>
+    <form className="card stack" onSubmit={(event) => void submit(event)} aria-label="Invite people" noValidate>
       <h2>Invite people</h2>
       <p className="muted small">They get an email with a link. People without an account sign up with that address and find the invitation waiting.</p>
       <div className="row wrap end">
-        <Field label="Email" error={validation.errors.email ?? fieldError(invite.error, 'email')} className="grow">
+        <Field
+          label="Email addresses"
+          hint="Paste a list, or separate addresses with commas, spaces, or new lines."
+          error={missing}
+          className="grow"
+        >
           {(props) => (
-            <input
+            <EmailListInput
               {...props}
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onBlur={validation.blur('email')}
-              placeholder="name@company.com"
+              chips={shown}
+              text={text}
+              onTextChange={(value) => {
+                setText(value);
+                setMissing(undefined);
+              }}
+              onAdd={add}
+              onRemove={(email) => {
+                setChips((all) => all.filter((c) => c.email !== email));
+                setRepeated([]);
+              }}
             />
           )}
         </Field>
-        <Field label="Role" error={fieldError(invite.error, 'role')}>
+        <Field label="Role">
           {(props) => (
             <select {...props} value={role} onChange={(e) => setRole(e.target.value as WorkspaceRole)}>
               <option value="Member">Member</option>
@@ -413,16 +479,32 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
             </select>
           )}
         </Field>
-        <button type="submit" className="button primary" disabled={invite.isPending}>
-          {invite.isPending ? 'Sending…' : 'Send invitation'}
+        <button type="submit" className="button primary" disabled={sending}>
+          {sending ? 'Sending…' : ready.length > 1 ? `Send ${ready.length} invitations` : 'Send invitation'}
         </button>
       </div>
-      {sentTo && (
-        <p role="status" className="success">
-          Invitation sent to {sentTo}.
+      {repeated.length > 0 && (
+        <p className="muted small" role="note">
+          Already in the list, so left out: {repeated.join(', ')}.
         </p>
       )}
-      <ErrorMessage error={invite.error} />
+      {problems.length > 0 && (
+        <div className="stack tight" aria-live="polite">
+          <p className="error small">{problems.length === 1 ? 'This address won’t be invited:' : `These ${problems.length} addresses won’t be invited:`}</p>
+          <ul className="invite-problems small" aria-label="Addresses not invited">
+            {problems.map((chip) => (
+              <li key={chip.email}>
+                <strong>{chip.email}</strong> — {chip.problem}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {sentTo.length > 0 && (
+        <p role="status" className="success">
+          {sentTo.length === 1 ? `Invitation sent to ${sentTo[0]}.` : `${sentTo.length} invitations sent: ${sentTo.join(', ')}.`}
+        </p>
+      )}
     </form>
   );
 }

@@ -88,7 +88,7 @@ describe('Inline validation', () => {
     expect(form).toHaveAttribute('novalidate');
     await userEvent.click(within(form).getByRole('button', { name: 'Send invitation' }));
 
-    expect(within(form).getByLabelText('Email')).toHaveAccessibleDescription('Enter the email address to invite.');
+    expect(within(form).getByLabelText('Email addresses')).toHaveAccessibleDescription(expect.stringContaining('Enter the email addresses to invite.'));
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
   });
 
