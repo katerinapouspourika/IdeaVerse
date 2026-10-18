@@ -128,11 +128,11 @@ describe('Board view', () => {
     expect(within(card).getAllByRole('link').filter((l) => !l.classList.contains('tag'))).toEqual([title]);
 
     await userEvent.selectOptions(within(card).getByLabelText('Status of Spring launch'), 'InProgress');
-    expect(router.state.location.search).toBe('');
+    expect(router.state.location.search).toBe('?view=board');
 
     await userEvent.click(screen.getByRole('link', { name: 'Spring launch' }));
     expect(await screen.findByRole('dialog', { name: 'Spring launch' })).toBeInTheDocument();
-    expect(router.state.location.search).toBe('?idea=idea-1');
+    expect(router.state.location.search).toBe('?view=board&idea=idea-1');
   });
 
   it('still moves a card dragged by its title', async () => {
