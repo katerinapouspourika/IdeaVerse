@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 
-import { formatMoment } from '../api/dates';
+import { formatAgo, formatMoment } from '../api/dates';
 import { useAddComment, useComments, useDeleteComment, useEditComment, useWorkspaceMembers } from '../api/queries';
 import { personLabel, type Comment } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -56,7 +56,27 @@ function useMentionable(workspaceId: string): Mentionable[] {
 
 const tooLong = 'This comment is too long once its mentions are saved. Shorten it a little.';
 
-/** A comment's text, with its mentions marked. */
+/** Web addresses in a comment; punctuation that usually ends a sentence is left out of them. */
+const urlPattern = /\bhttps?:\/\/[^\s<>"]*[^\s<>".,;:!?)\]}'’”]/gi;
+
+/** Text with its http(s) addresses as links that open in a new tab. React escapes the text, so nothing in it becomes markup. */
+function Linkified({ text }: { text: string }) {
+  const parts: ReactNode[] = [];
+  let last = 0;
+  for (const match of text.matchAll(urlPattern)) {
+    parts.push(text.slice(last, match.index));
+    parts.push(
+      <a key={match.index} href={match[0]} target="_blank" rel="noopener noreferrer">
+        {match[0]}
+      </a>,
+    );
+    last = match.index + match[0].length;
+  }
+  parts.push(text.slice(last));
+  return parts;
+}
+
+/** A comment's text, with its mentions marked and its web addresses linked. */
 function CommentBody({ body }: { body: string }) {
   return (
     <p className="description">
@@ -66,7 +86,7 @@ function CommentBody({ body }: { body: string }) {
             @{part.mention.name}
           </span>
         ) : (
-          part.text
+          <Linkified key={i} text={part.text} />
         ),
       )}
     </p>
@@ -96,7 +116,9 @@ function CommentItem({ ideaId, comment, people, onDelete }: { ideaId: string; co
       <div className="row spread wrap small">
         <strong>{author}</strong>
         <span className="muted">
-          {formatMoment(comment.createdAt)}
+          <time dateTime={comment.createdAt} title={formatMoment(comment.createdAt)}>
+            {formatAgo(comment.createdAt)}
+          </time>
           {comment.editedAt && ' · edited'}
         </span>
       </div>
@@ -197,7 +219,7 @@ function AddCommentForm({ ideaId, people }: { ideaId: string; people: Mentionabl
       </Field>
       <ErrorMessage error={add.error} />
       <div className="row">
-        <button type="submit" className="button" disabled={add.isPending || !body.trim()}>
+        <button type="submit" className="button primary" disabled={add.isPending || !body.trim()}>
           Comment
         </button>
       </div>

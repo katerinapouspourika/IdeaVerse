@@ -54,6 +54,31 @@ describe('Discussion', () => {
     expect(within(form).getByLabelText('Add a comment')).toHaveValue('');
   });
 
+  it('links web addresses in comments without turning text into markup, and keeps mentions', async () => {
+    const body = 'See https://example.com/spec?x=1. Ask @[Mia](u-mia), not <b>bold</b> or javascript:alert(1)';
+    fakeApi(routes([{ ...mine, body }]));
+    renderApp('/ideas/idea-1');
+
+    const discussion = within(await screen.findByRole('region', { name: 'Discussion' }));
+    const link = await discussion.findByRole('link', { name: 'https://example.com/spec?x=1' });
+    expect(link).toHaveAttribute('href', 'https://example.com/spec?x=1');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(discussion.getByText('@Mia')).toHaveClass('mention');
+    expect(discussion.getByText(/not <b>bold<\/b> or javascript:alert\(1\)/)).toBeInTheDocument();
+    expect(discussion.getAllByRole('link')).toHaveLength(1);
+  });
+
+  it('says how long ago a comment was posted, with the exact time on hover', async () => {
+    const posted = new Date(Date.now() - 2 * 60 * 60 * 1000 - 60_000).toISOString();
+    fakeApi(routes([{ ...mine, createdAt: posted }]));
+    renderApp('/ideas/idea-1');
+
+    const time = await within(await screen.findByRole('region', { name: 'Discussion' })).findByText(/h ago|yesterday/);
+    expect(time).toHaveAttribute('datetime', posted);
+    expect(time).toHaveAttribute('title', formatMoment(posted));
+  });
+
   it('edits and deletes your own comment, and shows a former member’s without actions', async () => {
     const calls = fakeApi({
       ...routes([mine, orphan]),

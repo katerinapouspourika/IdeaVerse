@@ -843,6 +843,11 @@ h3 {
   margin: 0;
 }
 
+/* Long addresses in comments wrap rather than widen the card. */
+.comment .description a {
+  overflow-wrap: anywhere;
+}
+
 .activity li {
   display: flex;
   flex-wrap: wrap;
