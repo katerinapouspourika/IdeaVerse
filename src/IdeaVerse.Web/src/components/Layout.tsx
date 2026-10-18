@@ -1,13 +1,14 @@
-import { Download, LogOut, Menu as MenuIcon, Settings, X } from 'lucide-react';
+import { Bell, Download, Home, Lightbulb, LogOut, Menu as MenuIcon, Plus, Settings, Users, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, ScrollRestoration, useLocation, useMatches, useNavigate } from 'react-router';
 
-import { useJoinRequests, useReceivedInvitations } from '../api/queries';
+import { useJoinRequests, useNotifications, useReceivedInvitations } from '../api/queries';
 import { personLabel } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { hadSession } from '../auth/sessionHint';
 import { Commands } from '../commands/Commands';
 import { canManageWorkspace, useWorkspace, WorkspaceProvider } from '../workspaces/WorkspaceContext';
+import { WorkspaceBadge } from '../workspaces/WorkspaceBadge';
 import { WorkspaceSwitcher } from '../workspaces/WorkspaceSwitcher';
 import { scrollKey } from '../freshLoadScroll';
 import { ExploreMenu } from './ExploreMenu';
@@ -17,6 +18,7 @@ import { NotificationBell } from './NotificationBell';
 import { ThemeToggle } from './ThemeToggle';
 import { TimeZonePrompt } from './TimeZonePrompt';
 import { useInstallPrompt } from './useInstallPrompt';
+import { phoneQuery, useMediaQuery } from './useMediaQuery';
 
 /** What a route can tell the layout about its page. */
 export interface PageHandle {
@@ -28,7 +30,19 @@ export interface PageHandle {
 }
 
 export function Layout() {
+  return (
+    <WorkspaceProvider>
+      <FeedbackProvider>
+        <Shell />
+        <ScrollRestoration getKey={scrollKey} />
+      </FeedbackProvider>
+    </WorkspaceProvider>
+  );
+}
+
+function Shell() {
   const { account, isLoading, unreachable } = useAuth();
+  const { current } = useWorkspace();
   const { pathname } = useLocation();
   const matches = useMatches();
   // Someone signed in last time is probably still signed in, so they don't see the public header while their account loads.
@@ -37,29 +51,27 @@ export function Layout() {
   const fullWidth =
     matches.some((match) => (match.handle as PageHandle | undefined)?.fullWidth) || (pathname === '/' && !account && !returning);
   const main = useFocusOnNavigation();
+  const phone = useMediaQuery(phoneQuery);
+  // On a phone, the app's pages in a workspace have the bottom bar in place of their footer.
+  const tabBar = phone && account !== null && !fullWidth && current !== null;
 
   return (
-    <WorkspaceProvider>
-      <FeedbackProvider>
-        <div className="shell">
-          <a href="#main" className="skip-link">
-            Skip to content
-          </a>
-          {account ? <AppBar /> : returning ? <LoadingBar /> : <PublicBar />}
-          <main
-            id="main"
-            ref={main}
-            tabIndex={-1}
-            className={fullWidth ? 'content full' : account || returning ? 'content wide' : 'content'}
-          >
-            {account && !fullWidth && <TimeZonePrompt />}
-            <Outlet />
-          </main>
-          {account && !fullWidth ? <AppFooter /> : <Footer />}
-        </div>
-        <ScrollRestoration getKey={scrollKey} />
-      </FeedbackProvider>
-    </WorkspaceProvider>
+    <div className={tabBar ? 'shell has-tab-bar' : 'shell'}>
+      <a href="#main" className="skip-link">
+        Skip to content
+      </a>
+      {account ? <AppBar tabBar={tabBar} /> : returning ? <LoadingBar /> : <PublicBar />}
+      <main
+        id="main"
+        ref={main}
+        tabIndex={-1}
+        className={fullWidth ? 'content full' : account || returning ? 'content wide' : 'content'}
+      >
+        {account && !fullWidth && <TimeZonePrompt />}
+        <Outlet />
+      </main>
+      {tabBar ? <TabBar /> : account && !fullWidth ? <AppFooter /> : <Footer />}
+    </div>
   );
 }
 
@@ -137,7 +149,11 @@ function useWaiting() {
   return { invitations: invitations.data?.length ?? 0, joinRequests: manages ? (requests.data?.length ?? 0) : 0 };
 }
 
-function AppBar() {
+/**
+ * The signed-in header. With the phone's bottom bar shown (`tabBar`), it names the current workspace beside the logo,
+ * leaves the notifications to the bar, and its menu keeps only what the bar lacks.
+ */
+function AppBar({ tabBar }: { tabBar: boolean }) {
   const { account, logout } = useAuth();
   const { current } = useWorkspace();
   const navigate = useNavigate();
@@ -152,19 +168,30 @@ function AppBar() {
   };
 
   return (
-    <header className="topbar app">
+    <header className={tabBar ? 'topbar app phone' : 'topbar app'}>
       <Brand />
+      {tabBar && current && (
+        <span className="phone-workspace">
+          <WorkspaceBadge workspace={current} size={24} />
+          <span className="phone-workspace-name">
+            <span className="visually-hidden">Workspace: </span>
+            {current.name}
+          </span>
+        </span>
+      )}
       <nav id="site-menu" className={menu.open ? 'site-menu app open' : 'site-menu app'} aria-label="Main">
         <WorkspaceSwitcher />
-        <NavLink to="/" end className="nav-link">
-          Home
-        </NavLink>
-        {current && (
+        {!tabBar && (
+          <NavLink to="/" end className="nav-link">
+            Home
+          </NavLink>
+        )}
+        {current && !tabBar && (
           <NavLink to="/ideas" className="nav-link">
             Ideas
           </NavLink>
         )}
-        {current && (
+        {current && !tabBar && (
           <NavLink
             to="/people"
             className="nav-link"
@@ -183,7 +210,8 @@ function AppBar() {
       <div className="account">
         <Commands />
         <ThemeToggle />
-        <NotificationBell />
+        {/* Kept beside the bottom bar, hidden, so the installed app's icon still shows the unread count. */}
+        <NotificationBell hidden={tabBar} />
         {account && (
           <Menu
             label={`Account: ${personLabel(account.displayName, account.email)}`}
@@ -202,9 +230,57 @@ function AppBar() {
             ]}
           />
         )}
-        <MenuButton {...menu} waiting={waiting.invitations + waiting.joinRequests} />
+        <MenuButton {...menu} waiting={waiting.invitations + (tabBar ? 0 : waiting.joinRequests)} />
       </div>
     </header>
+  );
+}
+
+/**
+ * The phone's bottom bar: the workspace's main pages, a button for a new idea, and the unread notifications and join
+ * requests counted on their links.
+ */
+function TabBar() {
+  const notifications = useNotifications();
+  const { joinRequests } = useWaiting();
+  const unread = notifications.data?.unreadCount ?? 0;
+
+  return (
+    <nav className="tab-bar" aria-label="Sections">
+      <NavLink to="/" end className="tab-bar-link">
+        <span className="tab-icon" aria-hidden="true">
+          <Home size={20} />
+        </span>
+        Home
+      </NavLink>
+      <NavLink to="/ideas" className="tab-bar-link">
+        <span className="tab-icon" aria-hidden="true">
+          <Lightbulb size={20} />
+        </span>
+        Ideas
+      </NavLink>
+      {/* Opens the New idea form on the ideas page, as the N shortcut does; never marked as the current page. */}
+      <Link to="/ideas" state={{ adding: true }} className="tab-bar-link tab-new" aria-label="New idea">
+        <span className="tab-icon" aria-hidden="true">
+          <Plus size={20} />
+        </span>
+        New
+      </Link>
+      <NavLink to="/notifications" className="tab-bar-link" aria-label={unread > 0 ? `Notifications, ${unread} unread` : undefined}>
+        <span className="tab-icon" aria-hidden="true">
+          <Bell size={20} />
+          {unread > 0 && <span className="tab-count">{unread > 99 ? '99+' : unread}</span>}
+        </span>
+        Notifications
+      </NavLink>
+      <NavLink to="/people" className="tab-bar-link" aria-label={joinRequests > 0 ? `People, ${joinRequests} asking to join` : undefined}>
+        <span className="tab-icon" aria-hidden="true">
+          <Users size={20} />
+          {joinRequests > 0 && <span className="tab-count">{joinRequests}</span>}
+        </span>
+        People
+      </NavLink>
+    </nav>
   );
 }
 

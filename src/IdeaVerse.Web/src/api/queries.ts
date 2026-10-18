@@ -81,11 +81,16 @@ export function useRenameWorkspace(workspaceId: string) {
   });
 }
 
-export function useWorkspaceMembers(workspaceId: string) {
-  return useQuery({
+/** The workspace's people, for `useQuery` or, when only needed on demand, `fetchQuery`. */
+export function workspaceMembersQuery(workspaceId: string) {
+  return {
     queryKey: keys.workspaceMembers(workspaceId),
     queryFn: () => request<WorkspaceMember[]>('GET', `/api/v1/workspaces/${workspaceId}/members`),
-  });
+  };
+}
+
+export function useWorkspaceMembers(workspaceId: string) {
+  return useQuery(workspaceMembersQuery(workspaceId));
 }
 
 /** Refreshes everything a change to a workspace's people can affect: workspaces, people, and ideas. */
@@ -311,8 +316,8 @@ export function useTags(workspaceId: string) {
   });
 }
 
-export function useIdea(id: string) {
-  return useQuery({ queryKey: keys.idea(id), queryFn: () => request<Idea>('GET', `/api/v1/ideas/${id}`) });
+export function useIdea(id: string, enabled = true) {
+  return useQuery({ enabled, queryKey: keys.idea(id), queryFn: () => request<Idea>('GET', `/api/v1/ideas/${id}`) });
 }
 
 export function useComponents(ideaId: string) {
