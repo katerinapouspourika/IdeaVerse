@@ -110,7 +110,7 @@ describe('Board view', () => {
     expect(screen.getByRole('link', { name: 'Leo’s podcast' }).closest('li')).toHaveAttribute('draggable', 'false');
   });
 
-  it('opens an idea from anywhere on its card, with the title as the one link to tab to', async () => {
+  it('opens an idea from anywhere on its card, with the title as its one link to the idea besides its tags', async () => {
     fakeApi({
       ...routes(),
       'GET /api/v1/ideas/idea-1': { status: 200, body: launch },
@@ -125,7 +125,7 @@ describe('Board view', () => {
     // The title link is stretched over the card; it isn't draggable itself, so a drag from anywhere on the card moves the card.
     expect(title).toHaveClass('stretched-link');
     expect(title).toHaveAttribute('draggable', 'false');
-    expect(within(card).getAllByRole('link')).toEqual([title]);
+    expect(within(card).getAllByRole('link').filter((l) => !l.classList.contains('tag'))).toEqual([title]);
 
     await userEvent.selectOptions(within(card).getByLabelText('Status of Spring launch'), 'InProgress');
     expect(router.state.location.search).toBe('');

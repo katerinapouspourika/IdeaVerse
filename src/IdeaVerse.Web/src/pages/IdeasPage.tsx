@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Archive, Lightbulb, Plus, SearchX } from 'lucide-react';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router';
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router';
 
 import { daysUntil, describeDue, formatDate } from '../api/dates';
 import { UnavailableAiButton } from '../ai/AiAllowance';
@@ -65,7 +65,23 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const remembered = `ideaverse.ideas.${workspace.id}`;
   const [tab, setTab] = useRemembered<Tab>(remembered, 'tab', 'All', (value) => tabs.includes(value as Tab));
   const [search, setSearch] = useState('');
-  const [tag, setTag] = useRemembered(remembered, 'tag', '', (value) => typeof value === 'string');
+  const [rememberedTag, setTag] = useRemembered(remembered, 'tag', '', (value) => typeof value === 'string');
+  // A tag clicked on an idea arrives as `?tag=`; it becomes the list's tag filter, and leaves the address.
+  const [params, setParams] = useSearchParams();
+  const linkedTag = params.get('tag');
+  const tag = linkedTag ?? rememberedTag;
+  useEffect(() => {
+    if (linkedTag !== null) {
+      setTag(linkedTag);
+      setParams(
+        (current) => {
+          current.delete('tag');
+          return current;
+        },
+        { replace: true },
+      );
+    }
+  }, [linkedTag, setTag, setParams]);
   const [sort, setSort] = useRemembered<IdeaSort>(remembered, 'sort', 'TargetDate', (value) => typeof value === 'string' && value in sortLabels);
   const [view, setView] = useRemembered<View>(remembered, 'view', 'list', (value) => views.includes(value as View));
   const location = useLocation();
@@ -307,9 +323,14 @@ function IdeaList({ ideas, filtered, archived, onClearFilters }: IdeaListProps) 
       <ul className="idea-list">
         {ideas.map((idea) => (
           <li key={idea.id} className="idea-item">
-            <Link {...linkProps(idea.id)} className={idea.isOverdue ? 'card idea-card is-overdue' : 'card idea-card'}>
+            {/* The title link is stretched over the card, so a click anywhere opens the idea while its tags stay links of their own. */}
+            <div className={idea.isOverdue ? 'card idea-card is-overdue' : 'card idea-card'}>
               <div className="row spread">
-                <h2 className="idea-title">{idea.title}</h2>
+                <h2 className="idea-title">
+                  <Link {...linkProps(idea.id)} className="stretched-link">
+                    {idea.title}
+                  </Link>
+                </h2>
                 <StatusBadge idea={idea} />
               </div>
               <div className="row spread wrap">
@@ -324,8 +345,8 @@ function IdeaList({ ideas, filtered, archived, onClearFilters }: IdeaListProps) 
                 {idea.postponeCount > 0 && <span>Postponed {idea.postponeCount}×</span>}
                 <Tags tags={idea.tags} />
               </div>
-            </Link>
-            {/* Outside the link, which can't hold a button; placed over the card's corner. */}
+            </div>
+            {/* Placed over the card's corner, above its stretched link. */}
             <div className="idea-item-vote">
               <VoteButton idea={idea} />
             </div>
