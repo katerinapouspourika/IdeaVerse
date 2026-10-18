@@ -10,6 +10,7 @@ import { ErrorMessage, LoadError, fieldError } from '../components/ErrorMessage'
 import { Skeleton } from '../components/Skeleton';
 import { MentionTextarea, type Mentionable } from '../mentions/MentionTextarea';
 import { maxBodyLength, mentionLabels, segments, toBody, toEditable, type Mention } from '../mentions/mentions';
+import { useLinkedItem } from './useLinkedItem';
 
 /** The idea's comments, open to everyone in its workspace, who can mention each other with `@`. */
 export function DiscussionSection({ ideaId, workspaceId }: { ideaId: string; workspaceId: string }) {
@@ -18,6 +19,7 @@ export function DiscussionSection({ ideaId, workspaceId }: { ideaId: string; wor
   const remove = useDeleteComment(ideaId);
   const confirm = useConfirm();
   const toast = useToast();
+  const linked = useLinkedItem('comment', comments.data?.map((c) => c.id));
 
   const deleteComment = async (comment: Comment) => {
     if (await confirm({ title: 'Delete this comment?', message: 'This cannot be undone.', confirmLabel: 'Delete comment', danger: true })) {
@@ -33,7 +35,14 @@ export function DiscussionSection({ ideaId, workspaceId }: { ideaId: string; wor
       {comments.data && comments.data.length > 0 && (
         <ol className="comments">
           {comments.data.map((comment) => (
-            <CommentItem key={comment.id} ideaId={ideaId} comment={comment} people={people} onDelete={() => void deleteComment(comment)} />
+            <CommentItem
+              key={comment.id}
+              ideaId={ideaId}
+              comment={comment}
+              people={people}
+              linked={linked === comment.id}
+              onDelete={() => void deleteComment(comment)}
+            />
           ))}
         </ol>
       )}
@@ -93,7 +102,16 @@ function CommentBody({ body }: { body: string }) {
   );
 }
 
-function CommentItem({ ideaId, comment, people, onDelete }: { ideaId: string; comment: Comment; people: Mentionable[]; onDelete: () => void }) {
+interface CommentItemProps {
+  ideaId: string;
+  comment: Comment;
+  people: Mentionable[];
+  /** Whether a link, such as a notification's, just brought the user to this comment. */
+  linked: boolean;
+  onDelete: () => void;
+}
+
+function CommentItem({ ideaId, comment, people, linked, onDelete }: CommentItemProps) {
   const edit = useEditComment(ideaId);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(() => toEditable(comment.body));
@@ -112,7 +130,7 @@ function CommentItem({ ideaId, comment, people, onDelete }: { ideaId: string; co
   };
 
   return (
-    <li className="comment">
+    <li id={`comment-${comment.id}`} tabIndex={-1} className={linked ? 'comment linked' : 'comment'}>
       <div className="row spread wrap small">
         <strong>{author}</strong>
         <span className="muted">

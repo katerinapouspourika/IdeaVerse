@@ -1237,6 +1237,38 @@ h3 {
   margin: 0;
 }
 
+/*
+ * The comment or component a link, such as a notification's, points at: highlighted for a moment, then fading back. With
+ * reduced motion it stays highlighted without the fade until the highlight goes.
+ */
+.comment.linked,
+.checklist li.linked {
+  border-radius: 8px;
+  animation: linked-fade 2.5s ease-in forwards;
+}
+
+@keyframes linked-fade {
+  0%,
+  60% {
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 6px var(--accent-soft);
+  }
+
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comment.linked,
+  .checklist li.linked {
+    animation-name: none;
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 6px var(--accent-soft);
+  }
+}
+
 /* Long addresses in comments wrap rather than widen the card. */
 .comment .description a {
   overflow-wrap: anywhere;

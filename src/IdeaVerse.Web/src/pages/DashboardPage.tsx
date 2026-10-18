@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 
 import { daysUntil, describeDue, formatDate } from '../api/dates';
 import { useAssignments, useIdeas, useNotifications } from '../api/queries';
-import type { Assignment, Idea, Workspace } from '../api/types';
+import { notificationLink, type Assignment, type Idea, type Workspace } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { LoadError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
@@ -148,7 +148,7 @@ function WorkspaceDashboard({ workspace }: { workspace: Workspace }) {
                 <ul className="mini-list">
                   {notifications.data.items.slice(0, listSize).map((n) => (
                     <li key={n.id} className={n.readAt ? undefined : 'unread'}>
-                      <Link to={`/ideas/${n.ideaId}`}>{n.message}</Link>
+                      <Link to={notificationLink(n)}>{n.message}</Link>
                     </li>
                   ))}
                 </ul>

@@ -13,6 +13,8 @@ namespace Pouspourika.IdeaVerse.Api.Notifications;
 /// <param name="Message">The reminder text.</param>
 /// <param name="CreatedAt">When the reminder was raised.</param>
 /// <param name="ReadAt">When the user marked it read, if they have.</param>
+/// <param name="CommentId">The comment a comment or mention notification is about, while it exists.</param>
+/// <param name="ComponentId">The component an assignment or a component's countdown is about.</param>
 public sealed record NotificationResponse(
   Guid Id,
   Guid IdeaId,
@@ -23,4 +25,6 @@ public sealed record NotificationResponse(
   DateOnly TargetDate,
   string Message,
   DateTimeOffset CreatedAt,
-  DateTimeOffset? ReadAt);
+  DateTimeOffset? ReadAt,
+  Guid? CommentId,
+  Guid? ComponentId);

@@ -36,6 +36,8 @@ public class AssignmentTests
     await Assert.That(saved.DueDate).IsEqualTo(Today.AddDays(3));
     await Assert.That(inbox.Items.Single().Kind).IsEqualTo(ReminderKind.Assigned);
     await Assert.That(inbox.Items.Single().Message).IsEqualTo("owner@example.com assigned “Budget” for “Launch” to you.");
+    await Assert.That(inbox.Items.Single().ComponentId).IsEqualTo(component.Id);
+    await Assert.That(inbox.Items.Single().CommentId).IsNull();
   }
 
   [Test]
@@ -102,6 +104,7 @@ public class AssignmentTests
     await Assert.That(factory.Mail.Sent.Where(m => m.To == "viewer@example.com").Select(m => m.Subject)).IsEquivalentTo(
       ["Assigned to you: Budget (Launch)", "Due tomorrow: Budget (Launch)"]);
     await Assert.That(inbox.Items.Select(n => n.Message)).Contains(m => m.StartsWith("“Budget” for “Launch” is due tomorrow", StringComparison.Ordinal));
+    await Assert.That(inbox.Items.Select(n => n.ComponentId)).IsEquivalentTo([(Guid?)component.Id, component.Id]);
   }
 
   [Test]

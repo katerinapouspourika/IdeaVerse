@@ -230,6 +230,7 @@ public sealed class CommentService(IdeaVerseDbContext context, TimeProvider time
       {
         UserId = recipient,
         IdeaId = ideaId,
+        CommentId = comment.Id,
         ActorId = authorId,
         Kind = kind,
         TargetDate = idea.TargetDate,

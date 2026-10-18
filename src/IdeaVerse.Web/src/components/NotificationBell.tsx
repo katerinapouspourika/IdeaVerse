@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from '../api/queries';
+import { notificationLink } from '../api/types';
 import { WorkspaceTag } from '../workspaces/WorkspaceTag';
 
 /** How many notifications the drop-down previews. */
@@ -80,7 +81,7 @@ export function NotificationBell({ hidden = false }: { hidden?: boolean }) {
             <ul className="mini-list">
               {items.map((n) => (
                 <li key={n.id} className={n.readAt ? undefined : 'unread'}>
-                  <Link to={`/ideas/${n.ideaId}`} onClick={() => !n.readAt && markRead.mutate(n.id)}>
+                  <Link to={notificationLink(n)} onClick={() => !n.readAt && markRead.mutate(n.id)}>
                     {n.message}
                   </Link>
                   <WorkspaceTag workspaceId={n.workspaceId} name={n.workspaceName} />
