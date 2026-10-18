@@ -58,10 +58,15 @@ describe('Company domain on the People page', () => {
     });
     renderApp('/people');
 
-    const card = within(await screen.findByRole('region', { name: 'Asking to join' }));
+    const card = within(await screen.findByRole('region', { name: 'Join requests' }));
+    const members = screen.getByRole('region', { name: 'Members' });
+    expect(screen.getByRole('region', { name: 'Join requests' }).compareDocumentPosition(members) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'People, 1 asking to join' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Menu, 1 waiting' })).toBeInTheDocument();
     await userEvent.click(card.getByRole('button', { name: 'Approve Mia Chen' }));
 
-    await waitFor(() => expect(screen.queryByRole('region', { name: 'Asking to join' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Join requests' })).not.toBeInTheDocument());
+    expect(screen.getByRole('link', { name: 'People' })).toBeInTheDocument();
     expect(calls.some((c) => c.method === 'POST' && c.path.endsWith('/approve'))).toBe(true);
   });
 });

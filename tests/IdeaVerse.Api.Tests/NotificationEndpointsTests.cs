@@ -44,6 +44,21 @@ public class NotificationEndpointsTests
   }
 
   [Test]
+  public async Task List_Reminder_NamesTheIdeasWorkspace()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    var workspace = await owner.WorkspaceAsync();
+    (await owner.CreateIdeaAsync("Launch", Today.AddDays(1))).Dispose();
+    await factory.RunRemindersAsync();
+
+    var reminder = (await ReadAsync(owner)).Items.Single();
+
+    await Assert.That(reminder.WorkspaceId).IsEqualTo(workspace.Id);
+    await Assert.That(reminder.WorkspaceName).IsEqualTo(workspace.Name);
+  }
+
+  [Test]
   public async Task MarkRead_OwnReminder_LowersUnreadCount()
   {
     await using var factory = new IdeaVerseApiFactory();

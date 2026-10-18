@@ -96,6 +96,7 @@ public class DiscoveryEndpointsTests
     await Assert.That(found.Single().Requested).IsTrue();
     await Assert.That(pending.Single().Email).IsEqualTo("mia@acme.test");
     await Assert.That(notice.Body).Contains("mia@acme.test works at your company");
+    await Assert.That(FakeMailSender.LinkIn(notice, $"{IdeaVerseApiFactory.AppUrl}/people")).IsEqualTo(new Uri($"{IdeaVerseApiFactory.AppUrl}/people?workspace={workspace.Id}"));
     await Assert.That(factory.Mail.Sent.Count(m => m.Subject == DiscoveryService.RequestSubject(workspace.Name))).IsEqualTo(0);
     await Assert.That(approve.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
     await Assert.That(welcome.Body).Contains("was approved");

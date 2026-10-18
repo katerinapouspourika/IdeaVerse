@@ -180,7 +180,7 @@ function RemindersForm({ account }: { account: Account }) {
   };
 
   return (
-    <form className="card stack" onSubmit={(event) => void submit(event)} aria-label="Reminders">
+    <form id="reminders" className="card stack" onSubmit={(event) => void submit(event)} aria-label="Reminders">
       <h2>Reminders</h2>
       <p className="muted small">Reminders are for ideas you own or are on the team of. They always appear under the bell; choose which ones you get.</p>
       <fieldset className="choices">

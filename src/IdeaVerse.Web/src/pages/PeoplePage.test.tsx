@@ -38,7 +38,7 @@ describe('PeoplePage', () => {
     const members = within(screen.getByRole('region', { name: 'Members' }));
     expect(await members.findByText('Owner')).toBeInTheDocument();
     expect(members.getByRole('combobox', { name: 'Role of mia@example.com' })).toHaveValue('Member');
-    expect(within(screen.getByRole('region', { name: 'Waiting to join' })).getByText('new@example.com')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Pending invitations' })).getByText('new@example.com')).toBeInTheDocument();
   });
 
   it('lets an admin invite someone by email and role', async () => {
@@ -76,7 +76,7 @@ describe('PeoplePage', () => {
       ...peopleRoutes('Owner', [kat]),
       'POST /api/v1/workspaces/ws-1/invitations': {
         status: 409,
-        body: { detail: 'new@example.com already has an open invitation. Resend it from the list of people waiting to join.' },
+        body: { detail: 'new@example.com already has an open invitation. Resend it from Pending invitations on the People page.' },
       },
     });
     renderApp('/people');
@@ -156,7 +156,9 @@ describe('PeoplePage', () => {
     });
     renderApp('/people');
 
-    expect(await screen.findByText('Only the workspace’s owner and admins can invite people.')).toBeInTheDocument();
+    const ask = await screen.findByRole('link', { name: 'leo@example.com' });
+    expect(ask).toHaveAttribute('href', 'mailto:leo@example.com');
+    expect(ask.closest('p')).toHaveTextContent('To invite someone, ask leo@example.com.');
     expect(screen.queryByRole('form', { name: 'Invite people' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Rename' })).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: /Role of/ })).not.toBeInTheDocument();
@@ -166,6 +168,38 @@ describe('PeoplePage', () => {
     await confirmDialog('Leave workspace');
 
     await waitFor(() => expect(calls.some((c) => c.method === 'DELETE' && c.path === '/api/v1/workspaces/ws-1/members/u-me')).toBe(true));
+  });
+
+  it('shows a name over its email, each on one line with the full text on hover', async () => {
+    const long = 'ux-collab-member-mv76zqhq@acme-ux.test';
+    fakeApi(peopleRoutes('Owner', [kat, { ...mia, name: 'Mia Member', email: long }]));
+    renderApp('/people');
+
+    const members = within(await screen.findByRole('region', { name: 'Members' }));
+    expect(await members.findByText('Mia Member')).toHaveClass('person-line');
+    expect(members.getByText(long)).toHaveAttribute('title', long);
+    expect(members.getByText('kat@example.com')).toHaveAttribute('title', 'kat@example.com');
+    expect(members.getByRole('button', { name: 'Remove Mia Member' })).toBeInTheDocument();
+  });
+
+  it('names every owner and admin a member can ask to invite someone', async () => {
+    const admin: WorkspaceMember = { userId: 'u-ada', email: 'ada@example.com', name: 'Ada Admin', role: 'Admin', joinedAt: '2026-10-02T09:00:00Z' };
+    fakeApi(peopleRoutes('Member', [{ ...kat, name: 'Kat Owner' }, admin, mia]));
+    renderApp('/people');
+
+    const ada = await screen.findByRole('link', { name: 'Ada Admin' });
+    expect(ada).toHaveAttribute('href', 'mailto:ada@example.com');
+    expect(ada.closest('p')).toHaveTextContent('To invite someone, ask Kat Owner or Ada Admin.');
+  });
+
+  it('explains what each role can do', async () => {
+    fakeApi(peopleRoutes('Member', [kat, mia]));
+    renderApp('/people');
+
+    await userEvent.click(await screen.findByText('What can each role do?'));
+
+    expect(screen.getByText(/hand the workspace to someone else or delete it/)).toBeVisible();
+    expect(screen.getByText(/Invite people, answer join requests/)).toBeVisible();
   });
 
   it('lets the owner hand the workspace to someone else', async () => {
@@ -205,6 +239,35 @@ describe('PeoplePage', () => {
     expect(await screen.findByRole('heading', { name: 'Welcome to IdeaVerse' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
     expect(calls.some((c) => c.method === 'DELETE' && c.path === '/api/v1/workspaces/ws-1')).toBe(true);
+  });
+
+  it('opens on the workspace an email links to', async () => {
+    fakeApi({
+      ...peopleRoutes('Owner', [kat]),
+      'GET /api/v1/workspaces': { status: 200, body: [aWorkspace(), aWorkspace({ id: 'ws-2', name: 'Globex', role: 'Admin' })] },
+      'GET /api/v1/workspaces/ws-2/members': { status: 200, body: [kat] },
+      'GET /api/v1/workspaces/ws-2/invitations': { status: 200, body: [] },
+      'GET /api/v1/workspaces/ws-2/join-requests': { status: 200, body: [] },
+    });
+    const router = renderApp('/people?workspace=ws-2');
+
+    expect(await screen.findByRole('heading', { name: 'People in Globex' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveValue('ws-2');
+    await waitFor(() => expect(router.state.location.search).toBe(''));
+  });
+
+  it('marks the phone menu when invitations are waiting inside it', async () => {
+    fakeApi({
+      ...peopleRoutes('Member', [kat, mia]),
+      'GET /api/v1/invitations': {
+        status: 200,
+        body: [{ id: 'inv-9', workspaceId: 'ws-2', workspaceName: 'Globex', role: 'Member', invitedByEmail: 'leo@example.com', invitedByName: null, expiresAt: '2099-01-08T09:00:00Z' }],
+      },
+    });
+    renderApp('/people');
+
+    expect(await screen.findByRole('button', { name: 'Menu, 1 waiting' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Invitations (1)' })).toBeInTheDocument();
   });
 
   it('hides the danger zone from everyone but the owner', async () => {

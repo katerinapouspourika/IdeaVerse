@@ -741,6 +741,33 @@ textarea:focus-visible,
   text-overflow: ellipsis;
 }
 
+/*
+ * A person's name over their email, each on one line cut short with an ellipsis (the full text shows on hover). In a list
+ * row the person takes the room left by the controls, and on narrow screens the controls wrap below them.
+ */
+.person {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.person-line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team li:has(> .person) {
+  flex-wrap: wrap;
+}
+
+.team li > .person + .row {
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
 .bell {
   position: relative;
   display: inline-flex;
@@ -805,6 +832,24 @@ textarea:focus-visible,
   font-weight: 600;
 }
 
+/* The workspace a notification belongs to, for people in more than one. */
+.workspace-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.workspace-tag .workspace-badge {
+  border-radius: 5px;
+}
+
+.mini-list .workspace-tag {
+  display: flex;
+  margin-top: 4px;
+  font-size: 0.8rem;
+}
+
 .badge.kind-tomorrow,
 .badge.kind-today {
   background: var(--warn-soft);
@@ -828,6 +873,35 @@ textarea:focus-visible,
 .nav-link:hover {
   color: var(--accent);
   background: var(--accent-soft);
+}
+
+/* How many requests wait behind a header link, such as people asking to join. */
+.nav-count {
+  display: inline-block;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: var(--surface);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  vertical-align: 1px;
+}
+
+/* Marks the small-screen menu button when something inside the menu waits for the user. */
+.menu-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 0 2px var(--surface);
 }
 
 .switcher {
@@ -971,6 +1045,11 @@ h3 {
 
 .comment p {
   margin: 0;
+}
+
+/* Long addresses in comments wrap rather than widen the card. */
+.comment .description a {
+  overflow-wrap: anywhere;
 }
 
 .activity li {
@@ -1154,6 +1233,7 @@ a.tag:focus-visible {
 }
 
 .menu-button {
+  position: relative;
   display: none;
   align-items: center;
   justify-content: center;
@@ -1970,6 +2050,14 @@ a.tag:focus-visible {
   gap: 8px;
 }
 
+/* The tick sits in its own column, so a line that wraps lines up with the text above it. */
+.check-steps li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: start;
+}
+
 .check-steps li::before {
   content: '✓';
   display: inline-flex;
@@ -1977,7 +2065,7 @@ a.tag:focus-visible {
   justify-content: center;
   width: 22px;
   height: 22px;
-  margin-right: 10px;
+  margin-top: 1px;
   border-radius: 999px;
   background: var(--ok-soft);
   color: var(--ok);
@@ -3357,6 +3445,9 @@ a:focus-visible {
 }
 
 .mention-option {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   padding: 6px 10px;
   border-radius: 8px;
   cursor: pointer;
@@ -3377,6 +3468,10 @@ a:focus-visible {
   width: min(480px, 100%);
 }
 
+.pricing-plan p {
+  margin: 0;
+}
+
 .faq {
   max-width: 760px;
 }
@@ -3385,9 +3480,35 @@ a:focus-visible {
   text-align: center;
 }
 
+/* A chevron on the right in place of the browser's triangle, turned up while the answer is open. */
 .faq-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   cursor: pointer;
   font-weight: 800;
+  list-style: none;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.faq-chevron {
+  flex: none;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+
+.faq-item[open] .faq-chevron {
+  transform: rotate(180deg);
 }
 
 .faq-item p {
@@ -3857,4 +3978,23 @@ legend,
 /* Settings' workspace section, which People links to: clear of the sticky header when scrolled to. */
 #workspace {
   scroll-margin-top: 80px;
+}
+
+/* People: what each workspace role may do. */
+.role-guide summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.role-guide dl {
+  margin: 10px 0 0;
+}
+
+.role-guide dt {
+  font-weight: 800;
+}
+
+.role-guide dd {
+  margin: 2px 0 10px;
 }

@@ -6,6 +6,7 @@ import type { Notification, ReminderKind } from '../api/types';
 import { ErrorMessage, LoadError } from '../components/ErrorMessage';
 import { Skeleton } from '../components/Skeleton';
 import { usePageMeta } from '../seo/usePageMeta';
+import { WorkspaceTag } from '../workspaces/WorkspaceTag';
 
 const kindLabels: Record<ReminderKind, string> = {
   ComingUp: 'Coming up',
@@ -37,7 +38,8 @@ export function NotificationsPage() {
         )}
       </div>
       <p className="muted small">
-        Reminders arrive a week before, the day before, and on an idea’s target date or a task’s due date, and once if it becomes overdue. You also hear when you’re added to a team, given a task, or someone comments. Change what you get in Settings.
+        Reminders come before an idea starts, as target and due dates near, and once when one passes; you also hear about teams, tasks, comments and @mentions. Choose
+        which reminders you get in <Link to="/settings#reminders">Settings → Reminders</Link>.
       </p>
       {notifications.isLoading && <Skeleton variant="cards" />}
       <LoadError queries={notifications} />
@@ -65,7 +67,10 @@ function NotificationItem({ notification }: { notification: Notification }) {
   return (
     <li className={unread ? 'card notification unread' : 'card notification'}>
       <div className="row spread wrap">
-        <span className={`badge kind-${notification.kind.toLowerCase()}`}>{kindLabels[notification.kind]}</span>
+        <span className="row wrap">
+          <span className={`badge kind-${notification.kind.toLowerCase()}`}>{kindLabels[notification.kind]}</span>
+          <WorkspaceTag workspaceId={notification.workspaceId} name={notification.workspaceName} />
+        </span>
         <time className="muted small" dateTime={notification.createdAt}>
           {formatMoment(notification.createdAt)}
         </time>

@@ -22,6 +22,7 @@ describe('Pricing page', () => {
     const first = screen.getByText(faq[0]!.question).closest('details')!;
     await userEvent.click(within(first).getByText(faq[0]!.question));
     expect(first).toHaveAttribute('open');
+    expect(first.querySelector('summary svg')).toHaveAttribute('aria-hidden', 'true');
 
     await userEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Get started free' }));
     expect(router.state.location.pathname).toBe('/register');
