@@ -1,7 +1,7 @@
 import { Lightbulb, PartyPopper } from 'lucide-react';
 import { Link } from 'react-router';
 
-import { daysUntil, describeDue, formatDate } from '../api/dates';
+import { daysUntil, describeDue, formatDate, hourIn } from '../api/dates';
 import { useAssignments, useIdeas, useNotifications } from '../api/queries';
 import { notificationLink, type Assignment, type Idea, type Workspace } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -47,13 +47,15 @@ function WorkspaceDashboard({ workspace }: { workspace: Workspace }) {
   const attention = [...overdue, ...dueThisWeek].slice(0, listSize);
   // A new workspace has nothing to count or catch up on yet, so it gets one way to add its first idea instead.
   const empty = ideas.data?.length === 0;
+  // Until the ideas load, or if they fail to, the counts show a placeholder rather than a misleading zero.
+  const count = (value: number) => (ideas.data ? value : ideas.isLoading ? 'loading' : 'failed');
 
   return (
     <div className="stack dashboard">
       <section className="hero-card">
         <div className="stack tight">
           <p className="eyebrow">{workspace.name}</p>
-          <h1>{greeting(new Date().getHours())}{name ? `, ${name}` : ''}</h1>
+          <h1>{greeting(hourIn())}{name ? `, ${name}` : ''}</h1>
           <p className="hero-sub">
             {empty
               ? 'Your workspace is ready. Add your first idea to get going.'
@@ -72,12 +74,12 @@ function WorkspaceDashboard({ workspace }: { workspace: Workspace }) {
         )}
       </section>
 
-      <LoadError queries={[ideas, assignments]} />
+      <LoadError queries={[ideas, assignments, notifications]} />
 
       {account && ideas.data && <GettingStarted workspace={workspace} ideas={ideas.data} account={account} />}
 
       {empty ? (
-        <section className="card stack center" aria-labelledby="first-idea-heading">
+        <section className="card stack center first-idea" aria-labelledby="first-idea-heading">
           <span className="feature-icon big" aria-hidden="true">
             <Lightbulb size={32} />
           </span>
@@ -92,11 +94,12 @@ function WorkspaceDashboard({ workspace }: { workspace: Workspace }) {
         </section>
       ) : (
         <>
-          <section className="stats" aria-label="At a glance">
-            <Stat label="Active ideas" value={open.length} tone="accent" />
-            <Stat label="Overdue" value={overdue.length} tone="danger" />
-            <Stat label="Due within a week" value={dueThisWeek.length} tone="warn" />
-            <Stat label="Done" value={(ideas.data ?? []).length - open.length} tone="ok" />
+          <section className="stats" aria-label="At a glance" aria-busy={ideas.isLoading}>
+            {ideas.isLoading && <span className="visually-hidden">Loading…</span>}
+            <Stat label="Active ideas" value={count(open.length)} tone="accent" />
+            <Stat label="Overdue" value={count(overdue.length)} tone="danger" />
+            <Stat label="Due within a week" value={count(dueThisWeek.length)} tone="warn" />
+            <Stat label="Done" value={count((ideas.data ?? []).length - open.length)} tone="ok" />
           </section>
 
           <div className="dashboard-grid">
@@ -108,6 +111,7 @@ function WorkspaceDashboard({ workspace }: { workspace: Workspace }) {
                 </Link>
               </div>
               {ideas.isLoading && <Skeleton />}
+              {ideas.error && !ideas.data && <p className="muted">Your ideas couldn’t load.</p>}
               {ideas.data && attention.length === 0 && <p className="muted row">
                   <PartyPopper aria-hidden="true" size={18} /> Nothing overdue or due within a week. Nice work!
                 </p>}
@@ -143,6 +147,7 @@ function WorkspaceDashboard({ workspace }: { workspace: Workspace }) {
                   See all
                 </Link>
               </div>
+              {notifications.isLoading && <Skeleton />}
               {notifications.data?.items.length === 0 && <p className="muted">No notifications yet.</p>}
               {notifications.data && notifications.data.items.length > 0 && (
                 <ul className="mini-list">
@@ -161,11 +166,22 @@ function WorkspaceDashboard({ workspace }: { workspace: Workspace }) {
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: number; tone: 'danger' | 'warn' | 'accent' | 'ok' }) {
+function Stat({ label, value, tone }: { label: string; value: number | 'loading' | 'failed'; tone: 'danger' | 'warn' | 'accent' | 'ok' }) {
   return (
     // A zero is not news, so it stays in the plain text colour.
-    <div className={value > 0 ? `stat ${tone}` : 'stat'}>
-      <span className="stat-value">{value}</span>
+    <div className={typeof value === 'number' && value > 0 ? `stat ${tone}` : 'stat'}>
+      <span className="stat-value">
+        {value === 'loading' ? (
+          <span className="skeleton-line stat-skeleton" aria-hidden="true" />
+        ) : value === 'failed' ? (
+          <>
+            <span aria-hidden="true">–</span>
+            <span className="visually-hidden">Not loaded</span>
+          </>
+        ) : (
+          value
+        )}
+      </span>
       <span className="stat-label">{label}</span>
     </div>
   );
