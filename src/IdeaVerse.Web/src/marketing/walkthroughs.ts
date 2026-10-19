@@ -1,5 +1,5 @@
 /** When the walkthrough videos were last recorded; update it after running `npm run record:walkthroughs`. */
-export const walkthroughsRecordedOn = '2026-10-11';
+export const walkthroughsRecordedOn = '2026-10-19';
 
 /** The recorded walkthroughs on the How it works page; `scripts/record-walkthroughs.mjs` records one video per slug. */
 export interface Walkthrough {
