@@ -160,12 +160,12 @@ describe('Bulk actions on the ideas list', () => {
     expect(within(bar).getByText('1 selected idea is done and isn’t moved a week later.')).toBeInTheDocument();
     await userEvent.click(within(bar).getByRole('button', { name: '+1 week' }));
 
-    expect(await screen.findByText('Moved 1 idea a week later')).toBeInTheDocument();
+    expect(await screen.findByText('Postponed 1 idea by a week')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
     expect(bulkCalls(calls)).toEqual([{ ids: ['a'], operation: 'MoveTargetDate', days: 7 }]);
   });
 
-  it('adds a tag to the selected ideas, and Undo removes it only where it was added', async () => {
+  it('adds a tag to the selected ideas, counting and undoing only those it was added to', async () => {
     const calls = fakeApi({
       ...signedIn,
       [ideasRoute]: { status: 200, body: [launch, podcast] },
@@ -180,7 +180,7 @@ describe('Bulk actions on the ideas list', () => {
     await userEvent.type(within(bar).getByLabelText('Tag'), ' Q4 ');
     await userEvent.click(within(bar).getByRole('button', { name: 'Add tag' }));
 
-    expect(await screen.findByText('Tagged 2 ideas “q4”')).toBeInTheDocument();
+    expect(await screen.findByText('Tagged 1 idea “q4”')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
 
     await waitFor(() => expect(bulkCalls(calls)).toHaveLength(2));
@@ -190,7 +190,7 @@ describe('Bulk actions on the ideas list', () => {
     ]);
   });
 
-  it('removes a tag from the selected ideas', async () => {
+  it('removes a tag from the selected ideas, counting and undoing only those that had it', async () => {
     const calls = fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [launch, podcast] }, 'POST /api/v1/ideas/bulk': bulkRoute([launch, podcast]) });
     renderApp('/ideas');
     await userEvent.click(await screen.findByRole('checkbox', { name: 'Select all' }));
@@ -200,8 +200,36 @@ describe('Bulk actions on the ideas list', () => {
     await userEvent.type(within(bar).getByLabelText('Tag'), 'q4');
     await userEvent.click(within(bar).getByRole('button', { name: 'Remove tag' }));
 
-    expect(await screen.findByText('Removed “q4” from 2 ideas')).toBeInTheDocument();
-    expect(bulkCalls(calls)).toEqual([{ ids: ['a', 'b'], operation: 'RemoveTag', tag: 'q4' }]);
+    expect(await screen.findByText('Removed “q4” from 1 idea')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
+
+    await waitFor(() => expect(bulkCalls(calls)).toHaveLength(2));
+    expect(bulkCalls(calls)).toEqual([
+      { ids: ['a', 'b'], operation: 'RemoveTag', tag: 'q4' },
+      { ids: ['a'], operation: 'AddTag', tag: 'q4' },
+    ]);
+  });
+
+  it('says so, with nothing to undo, when a tag change makes no difference to any selected idea', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [launch, podcast] }, 'POST /api/v1/ideas/bulk': bulkRoute([launch, podcast]) });
+    renderApp('/ideas');
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Select all' }));
+    const bar = screen.getByRole('region', { name: 'Bulk actions' });
+
+    await userEvent.click(within(bar).getByRole('button', { name: 'Tag…' }));
+    await userEvent.type(within(bar).getByLabelText('Tag'), 'ops');
+    await userEvent.click(within(bar).getByRole('button', { name: 'Remove tag' }));
+
+    expect(await screen.findByText('None of the 2 ideas had “ops”')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Select Spring launch' }));
+    const again = screen.getByRole('region', { name: 'Bulk actions' });
+    await userEvent.click(within(again).getByRole('button', { name: 'Tag…' }));
+    await userEvent.type(within(again).getByLabelText('Tag'), 'q4');
+    await userEvent.click(within(again).getByRole('button', { name: 'Add tag' }));
+
+    expect(await screen.findByText('The idea already had “q4”')).toBeInTheDocument();
   });
 
   it('archives only the selected ideas the user may archive, saying which it leaves, and Undo restores them', async () => {
