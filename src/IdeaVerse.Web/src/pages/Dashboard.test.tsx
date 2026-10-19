@@ -133,7 +133,7 @@ describe('Dashboard', () => {
 
     expect(await screen.findByText('We couldn’t load this. Check your connection and try again.')).toBeInTheDocument();
     const stats = screen.getByRole('region', { name: 'At a glance' });
-    for (const label of ['Active ideas', 'Overdue', 'Due this week', 'Done']) {
+    for (const label of ['Active ideas', 'Overdue', 'Due within a week', 'Done']) {
       expect(within(stats).getByText(label).previousSibling).toHaveTextContent('–Not loaded');
     }
     expect(within(screen.getByRole('region', { name: 'Needs attention' })).getByText('Your ideas couldn’t load.')).toBeInTheDocument();
