@@ -547,7 +547,12 @@ function IdeaList({ workspaceId, ideas, filtered, archived, compact, onClearFilt
                 <div className="idea-row-details small">
                   <span className={idea.isOverdue ? 'overdue-text' : undefined}>{formatDate(idea.targetDate)}</span>
                   <span className="muted">{describeTeam(idea)}</span>
-                  <Progress done={idea.completedComponentCount} total={idea.componentCount} />
+                  {/* Shorter than the card's "No components yet", to fit its column on one line. */}
+                  {idea.componentCount === 0 ? (
+                    <span className="muted">No components</span>
+                  ) : (
+                    <Progress done={idea.completedComponentCount} total={idea.componentCount} />
+                  )}
                 </div>
               </div>
             ) : (
