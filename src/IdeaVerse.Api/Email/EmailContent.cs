@@ -7,4 +7,10 @@ namespace Pouspourika.IdeaVerse.Api.Email;
 /// <param name="Paragraphs">The message, one paragraph each.</param>
 /// <param name="Action">The one thing the email asks the reader to do, shown as a button.</param>
 /// <param name="Footnote">Why the reader got the email, or what to do if they didn't expect it.</param>
-public sealed record EmailContent(string Heading, IReadOnlyList<string> Paragraphs, EmailAction? Action = null, string? Footnote = null);
+/// <param name="Sections">Titled groups of linked items after the paragraphs, such as the updates on each idea.</param>
+public sealed record EmailContent(
+  string Heading,
+  IReadOnlyList<string> Paragraphs,
+  EmailAction? Action = null,
+  string? Footnote = null,
+  IReadOnlyList<EmailSection>? Sections = null);

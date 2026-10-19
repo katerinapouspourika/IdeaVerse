@@ -236,6 +236,9 @@ export interface Notifications {
   unreadCount: number;
 }
 
+/** How often notifications are emailed: right away (several at once share one email) or in one email a day. */
+export type EmailFrequency = 'RightAway' | 'DailyDigest';
+
 export interface Account {
   email: string;
   /** The name others see, or `null` until set. */
@@ -248,12 +251,15 @@ export interface Account {
   reminderKinds: ReminderKind[];
   /** Whether comments on the user's ideas are emailed too (mentions are emailed regardless). */
   emailComments: boolean;
+  /** Whether emails go out right away or in a daily digest at 08:00 local time; mentions always go right away. */
+  emailFrequency: EmailFrequency;
 }
 
 export interface ReminderSettings {
   emailReminders: boolean;
   reminderKinds: ReminderKind[];
   emailComments: boolean;
+  emailFrequency: EmailFrequency;
 }
 
 export const statusLabels: Record<IdeaStatus, string> = {

@@ -10,7 +10,12 @@ using Pouspourika.IdeaVerse.Api.Notifications;
 /// <param name="EmailReminders">Whether reminders are emailed as well as shown in the app.</param>
 /// <param name="ReminderKinds">The reminder kinds to get; an empty list turns reminders off.</param>
 /// <param name="EmailComments">Whether comments on the user's ideas are emailed too; off when left out.</param>
-public sealed record UpdateRemindersRequest(bool EmailReminders, [property: Required] IReadOnlyList<ReminderKind> ReminderKinds, bool EmailComments = false)
+/// <param name="EmailFrequency">Whether notifications are emailed right away (when left out) or in a daily digest.</param>
+public sealed record UpdateRemindersRequest(
+  bool EmailReminders,
+  [property: Required] IReadOnlyList<ReminderKind> ReminderKinds,
+  bool EmailComments = false,
+  EmailFrequency EmailFrequency = EmailFrequency.RightAway)
   : IValidatableObject
 {
   /// <inheritdoc/>
@@ -19,6 +24,11 @@ public sealed record UpdateRemindersRequest(bool EmailReminders, [property: Requ
     if (ReminderKinds?.Any(kind => !ReminderSchedule.Stages.Contains(kind)) == true)
     {
       yield return new ValidationResult("Choose from StartingSoon, ComingUp, Tomorrow, Today, and Overdue.", [nameof(ReminderKinds)]);
+    }
+
+    if (!Enum.IsDefined(EmailFrequency))
+    {
+      yield return new ValidationResult("Choose RightAway or DailyDigest.", [nameof(EmailFrequency)]);
     }
   }
 }
