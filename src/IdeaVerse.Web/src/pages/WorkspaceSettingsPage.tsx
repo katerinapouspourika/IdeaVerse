@@ -129,7 +129,12 @@ function DangerZone({ workspace }: { workspace: Workspace }) {
 
   const deleteWorkspace = (event: FormEvent) => {
     event.preventDefault();
-    remove.mutate(undefined, { onSuccess: () => void navigate('/') });
+    remove.mutate(undefined, {
+      onSuccess: () => {
+        toast({ message: `Deleted ${workspace.name}` });
+        void navigate('/');
+      },
+    });
   };
 
   return (
