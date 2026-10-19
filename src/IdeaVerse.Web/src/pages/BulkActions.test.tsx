@@ -51,6 +51,20 @@ describe('Bulk actions on the ideas list', () => {
     expect(screen.queryByRole('region', { name: 'Bulk actions' })).not.toBeInTheDocument();
   });
 
+  it('lifts toasts above the bar while it is shown, so they do not cover its actions', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [launch, podcast] } });
+    renderApp('/ideas');
+    expect(document.documentElement).not.toHaveClass('has-bulk-bar');
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Select Podcast' }));
+    expect(document.documentElement).toHaveClass('has-bulk-bar');
+    expect(document.documentElement.style.getPropertyValue('--bulk-bar-height')).toMatch(/^\d+px$/);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Clear selection' }));
+    expect(document.documentElement).not.toHaveClass('has-bulk-bar');
+    expect(document.documentElement.style.getPropertyValue('--bulk-bar-height')).toBe('');
+  });
+
   it('offers no selection on the archive, where ideas are read-only', async () => {
     fakeApi({
       ...signedIn,

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router';
 
-import { formatDate } from '../api/dates';
+import { formatDayOf } from '../api/dates';
 import { useAcceptInvitation, useDeclineInvitation, useReceivedInvitations } from '../api/queries';
 import { personLabel, type ReceivedInvitation } from '../api/types';
 import { ErrorMessage, LoadError } from '../components/ErrorMessage';
@@ -60,7 +60,7 @@ export function ReceivedInvitations({ emptyText }: { emptyText?: string }) {
               <strong>{invitation.workspaceName}</strong>
               <span className="muted small block">
                 {personLabel(invitation.invitedByName, invitation.invitedByEmail)} invited you as {invitation.role === 'Admin' ? 'an admin' : 'a member'} · until{' '}
-                {formatDate(invitation.expiresAt.slice(0, 10))}
+                {formatDayOf(invitation.expiresAt)}
               </span>
             </span>
             <span className="row">

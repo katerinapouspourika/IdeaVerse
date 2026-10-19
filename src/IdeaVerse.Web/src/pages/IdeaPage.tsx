@@ -5,7 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { ImproveIdea } from '../ai/ImproveIdea';
 import { useRecentIdea } from '../commands/recentIdeas';
 import { ApiError } from '../api/client';
-import { addDays, addMonths, describeDue, formatDate, formatStart, todayIso } from '../api/dates';
+import { addDays, addMonths, describeDue, formatDate, formatDayOf, formatStart, todayIso } from '../api/dates';
 import { useArchiveIdea, useDeleteIdea, useIdea, useMoveIdea, usePostponeIdea, useSetStart, useUndoPostpone, useUpdateIdea } from '../api/queries';
 import { canChange, personLabel, statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
 import { useConfirm, useToast } from '../components/Feedback';
@@ -228,7 +228,7 @@ function ScheduleCard({ idea }: { idea: Idea }) {
         <dt>Owner</dt>
         <dd>{personLabel(idea.ownerName, idea.ownerEmail)}</dd>
         <dt>Created</dt>
-        <dd>{formatDate(idea.createdAt.slice(0, 10))}</dd>
+        <dd>{formatDayOf(idea.createdAt)}</dd>
       </dl>
       {canPostpone && <StartForm idea={idea} />}
       {canPostpone && <Postpone idea={idea} />}
@@ -400,11 +400,10 @@ function StartForm({ idea }: { idea: Idea }) {
   return (
     <form className="stack tight" onSubmit={save} aria-label="Plan the start">
       <p className="muted small">The team is reminded before it starts, from 10 days ahead.</p>
-      <div className="row wrap">
+      <div className="row wrap top">
         <Field label="Start date" error={fieldError(setStart.error, 'startDate')}>
-          {(props) => (
-            <input {...props} type="date" required min={today} max={idea.targetDate} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          )}
+          {/* No max, as in the New idea form: with both ends in one year, Chrome shows that year in the empty field. The API keeps it on or before the target date. */}
+          {(props) => <input {...props} type="date" required min={today} value={startDate} onChange={(e) => setStartDate(e.target.value)} />}
         </Field>
         <Field label=<>Time <span className="muted">(optional)</span></> error={fieldError(setStart.error, 'startTime')}>
           {(props) => <input {...props} type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />}
@@ -542,7 +541,7 @@ function ArchivedBanner({ idea }: { idea: Idea }) {
     <div className="archived-banner stack" role="status">
       <div className="row spread wrap">
         <span>
-          This idea is archived and read-only: it’s hidden from the list and sends no reminders, but you can still discuss it and vote for it.{' '}
+          This idea is archived and read-only: it’s hidden from the list and sends no reminders, but you can still discuss it.{' '}
           {idea.canManage ? 'Restore it to make changes.' : 'Its owner or a workspace admin can restore it.'}
         </span>
         {idea.canManage && (

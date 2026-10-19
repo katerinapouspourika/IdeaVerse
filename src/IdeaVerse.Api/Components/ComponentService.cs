@@ -133,7 +133,7 @@ public sealed class ComponentService(IdeaVerseDbContext context, TimeProvider ti
       var workspaceId = await context.Ideas.Where(i => i.Id == ideaId).Select(i => i.WorkspaceId).SingleAsync(cancellationToken).ConfigureAwait(false);
       if (await context.RoleInAsync(assigneeId, workspaceId, cancellationToken).ConfigureAwait(false) is null)
       {
-        return new ComponentChangeResult(ChangeOutcome.Invalid, Field: nameof(UpdateComponentRequest.AssigneeId), Message: "Choose someone in this idea's workspace.");
+        return new ComponentChangeResult(ChangeOutcome.Invalid, Field: nameof(UpdateComponentRequest.AssigneeId), Message: "Choose someone in this idea’s workspace.");
       }
 
       if (assigneeId != userId)

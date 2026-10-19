@@ -89,6 +89,26 @@ describe('AuthPage', () => {
     expect(rules.getByText('At least 12 characters')).toHaveTextContent('(done)');
   });
 
+  it('clears the short-password message as the password is corrected, so one click creates the account', async () => {
+    const calls = fakeApi({ ...signedOut, 'POST /api/v1/auth/register': { status: 200 } });
+    renderApp('/register');
+
+    await userEvent.type(await screen.findByLabelText('Email'), 'kat@example.com');
+    const password = screen.getByLabelText('Password');
+    await userEvent.type(password, 'Passw0rd!');
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    expect(password).toHaveAccessibleDescription(expect.stringContaining('Your password needs at least 12 characters.'));
+
+    await userEvent.type(password, '-long');
+    expect(password).toHaveFocus();
+    expect(password).not.toHaveAccessibleDescription(expect.stringContaining('Your password needs'));
+    expect(password).toBeValid();
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(await screen.findByRole('heading', { name: 'Check your inbox' })).toBeInTheDocument();
+    expect(calls.filter((c) => c.method === 'POST' && c.path === '/api/v1/auth/register')).toHaveLength(1);
+  });
+
   it('shows and hides the password with the button inside the field', async () => {
     fakeApi(signedOut);
     renderApp('/register');

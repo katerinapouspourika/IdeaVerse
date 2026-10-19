@@ -134,7 +134,7 @@ internal static class CommentEndpoints
       ChangeOutcome.Changed => TypedResults.NoContent(),
       ChangeOutcome.NotFound => TypedResults.NotFound(),
       ChangeOutcome.Forbidden => TypedResults.Problem(
-        detail: "Only the comment's author and the workspace's admins can delete it.",
+        detail: "Only the comment’s author and the workspace’s admins can delete it.",
         statusCode: StatusCodes.Status403Forbidden),
       ChangeOutcome.Invalid or ChangeOutcome.Conflict or _ => throw new UnreachableException("Deleting a comment is never invalid or conflicting."),
     };

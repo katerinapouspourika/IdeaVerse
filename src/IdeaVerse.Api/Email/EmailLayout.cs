@@ -93,7 +93,7 @@ public static class EmailLayout
       }
       </style>
       </head>
-      <body style="margin:0;padding:0;background:#f6f1e7;">
+      <body class="page" style="margin:0;padding:0;background:#f6f1e7;">
       <table role="presentation" class="page" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f1e7;">
       <tr><td align="center" style="padding:24px 12px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
@@ -143,9 +143,9 @@ public static class EmailLayout
 
     var footer = $"""
       </td></tr>
-      <tr><td align="center" style="padding:18px 28px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#5b6585;">
+      <tr><td class="muted" align="center" style="padding:18px 28px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#5b6585;">
       IdeaVerse · Plan ideas, together, on time.<br>
-      <a href="{E(app.Link("/settings"))}" style="color:#5b6585;">Choose which emails you get</a>
+      <a class="muted" href="{E(app.Link("/settings"))}" style="color:#5b6585;">Choose which emails you get</a>
       </td></tr>
       </table>
       </td></tr>
