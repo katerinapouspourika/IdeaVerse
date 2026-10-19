@@ -72,6 +72,20 @@ describe('Dashboard', () => {
     expect(within(screen.getByRole('region', { name: 'Latest notifications' })).getByRole('link', { name: '“Late launch” is overdue' })).toBeInTheDocument();
   });
 
+  it('greets the user by the time in their account’s time zone, not the browser’s', async () => {
+    // Noon in UTC is two in the morning in Honolulu.
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-19T12:00:00Z') });
+    fakeApi({
+      ...signedIn,
+      'GET /api/v1/account': { status: 200, body: { ...signedInAccount, displayName: 'Kat Smith', timeZone: 'Pacific/Honolulu' } },
+      [ideasRoute]: { status: 200, body: [anIdea()] },
+    });
+    renderApp('/');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Good morning, Kat' })).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
   it('celebrates when nothing needs attention', async () => {
     fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [anIdea()] } });
     renderApp('/');

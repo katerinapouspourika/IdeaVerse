@@ -1,7 +1,7 @@
 import { Lightbulb, PartyPopper } from 'lucide-react';
 import { Link } from 'react-router';
 
-import { daysUntil, describeDue, formatDate } from '../api/dates';
+import { daysUntil, describeDue, formatDate, hourIn } from '../api/dates';
 import { useAssignments, useIdeas, useNotifications } from '../api/queries';
 import { notificationLink, type Assignment, type Idea, type Workspace } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -53,7 +53,7 @@ function WorkspaceDashboard({ workspace }: { workspace: Workspace }) {
       <section className="hero-card">
         <div className="stack tight">
           <p className="eyebrow">{workspace.name}</p>
-          <h1>{greeting(new Date().getHours())}{name ? `, ${name}` : ''}</h1>
+          <h1>{greeting(hourIn())}{name ? `, ${name}` : ''}</h1>
           <p className="hero-sub">
             {empty
               ? 'Your workspace is ready. Add your first idea to get going.'
