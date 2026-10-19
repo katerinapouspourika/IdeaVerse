@@ -376,11 +376,13 @@ function useListChoices(workspaceId: string, paused: boolean) {
   const [search, setSearchText] = useState(() => params.get(searchParam) ?? '');
   const debouncedSearch = useDebounced(search, 250);
 
-  // The address shows every choice that differs from the default, including remembered ones it arrived without.
-  const address = (next: Choices, query: string) => {
+  // The address shows every choice that differs from the default, including remembered ones it arrived without. The
+  // view falls back to the remembered one rather than the default, so a default view is left out only when that is the
+  // remembered one too: otherwise a link's `view=list` would give way to the viewer's remembered board once tidied away.
+  const address = (next: Choices, query: string, remembered: Choices = saved) => {
     const result = new URLSearchParams(params);
     for (const [name, param] of Object.entries(choiceParams) as [keyof typeof choiceParams, string][]) {
-      if (next[name] === defaultChoices[name]) {
+      if (next[name] === defaultChoices[name] && (name !== 'view' || remembered.view === defaultChoices.view)) {
         result.delete(param);
       } else {
         result.set(param, next[name]);
@@ -414,9 +416,10 @@ function useListChoices(workspaceId: string, paused: boolean) {
   };
   const choose = (changes: Partial<Choices>) => {
     const next = { ...choices, ...changes };
-    remember('tab' in changes || 'tag' in changes || 'sort' in changes ? next : { ...saved, ...changes });
+    const remembered = 'tab' in changes || 'tag' in changes || 'sort' in changes ? next : { ...saved, ...changes };
+    remember(remembered);
     // All at once: changes made one after another in the same event would each start from the same address.
-    setParams(new URLSearchParams(address(next, debouncedSearch)), { replace: true, state: location.state, preventScrollReset: true });
+    setParams(new URLSearchParams(address(next, debouncedSearch, remembered)), { replace: true, state: location.state, preventScrollReset: true });
   };
   const setSearch = (query: string) => {
     if (fromAddress) {

@@ -306,9 +306,11 @@ describe('IdeasPage', () => {
         [`${ideasRoute}?status=Done&search=spring&tag=marketing&sort=Votes`]: { status: 200, body: [anIdea({ title: 'Spring launch', status: 'Done' })] },
         'GET /api/v1/workspaces/ws-1/tags': { status: 200, body: ['marketing', 'ops'] },
       });
-      renderApp('/ideas?status=Done&tag=marketing&q=spring&sort=Votes&view=list');
+      const router = renderApp('/ideas?status=Done&tag=marketing&q=spring&sort=Votes&view=list');
 
       expect(await screen.findByRole('link', { name: 'Spring launch' })).toBeInTheDocument();
+      // The link's List stays in the address, rather than giving way to the remembered board once the address is tidied.
+      await waitFor(() => expect(Object.fromEntries(new URLSearchParams(router.state.location.search))).toEqual({ status: 'Done', tag: 'marketing', q: 'spring', sort: 'Votes', view: 'list' }));
       expect(screen.getByRole('button', { name: 'Done' })).toHaveAttribute('aria-pressed', 'true');
       expect(screen.getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'true');
       expect(screen.getByLabelText('Search')).toHaveValue('spring');
