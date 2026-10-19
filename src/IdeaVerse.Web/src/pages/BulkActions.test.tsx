@@ -120,6 +120,36 @@ describe('Bulk actions on the ideas list', () => {
     expect(screen.getByRole('checkbox', { name: 'Select Spring launch' })).not.toBeChecked();
   });
 
+  it('keeps only the reasons, with nothing to act on, once the ideas left unchanged can no longer be selected', async () => {
+    let refused = false;
+    const calls = fakeApi({
+      ...signedIn,
+      // Taken off the user's team meanwhile: the idea is now read-only.
+      [ideasRoute]: () => ({ status: 200, body: [refused ? { ...podcast, role: 'Viewer', canEdit: false } : podcast] }),
+      'POST /api/v1/ideas/bulk': () => {
+        refused = true;
+        return { status: 200, body: [{ id: 'b', outcome: 'Forbidden', idea: null, message: 'You can no longer change this idea.' }] };
+      },
+    });
+    renderApp('/ideas');
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Select Podcast' }));
+
+    await userEvent.selectOptions(screen.getByLabelText('Change status'), 'Done');
+
+    await waitFor(() => expect(screen.queryByRole('checkbox', { name: 'Select Podcast' })).not.toBeInTheDocument());
+    const bar = screen.getByRole('region', { name: 'Bulk actions' });
+    expect(within(bar).getByRole('alert')).toHaveTextContent('“Podcast”: You can no longer change this idea.');
+    expect(within(bar).queryByText('0 selected')).not.toBeInTheDocument();
+    expect(within(bar).queryByLabelText('Change status')).not.toBeInTheDocument();
+    expect(within(bar).queryByRole('button', { name: 'Tag…' })).not.toBeInTheDocument();
+    expect(within(bar).queryByRole('button', { name: 'Target date…' })).not.toBeInTheDocument();
+    expect(within(bar).queryByRole('button', { name: 'Archive' })).not.toBeInTheDocument();
+
+    await userEvent.click(within(bar).getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByRole('region', { name: 'Bulk actions' })).not.toBeInTheDocument();
+    expect(bulkCalls(calls)).toHaveLength(1);
+  });
+
   it('moves the selected ideas a week later, leaving out finished ones and saying so', async () => {
     const calls = fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [launch, webinar] }, 'POST /api/v1/ideas/bulk': bulkRoute([launch, webinar]) });
     renderApp('/ideas');
