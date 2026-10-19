@@ -5,7 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { ImproveIdea } from '../ai/ImproveIdea';
 import { useRecentIdea } from '../commands/recentIdeas';
 import { ApiError } from '../api/client';
-import { addDays, addMonths, describeDue, formatDate, formatStart, todayIso } from '../api/dates';
+import { addDays, addMonths, describeDue, formatDate, formatDayOf, formatStart, todayIso } from '../api/dates';
 import { useArchiveIdea, useDeleteIdea, useIdea, useMoveIdea, usePostponeIdea, useSetStart, useUndoPostpone, useUpdateIdea } from '../api/queries';
 import { canChange, personLabel, statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
 import { useConfirm, useToast } from '../components/Feedback';
@@ -228,7 +228,7 @@ function ScheduleCard({ idea }: { idea: Idea }) {
         <dt>Owner</dt>
         <dd>{personLabel(idea.ownerName, idea.ownerEmail)}</dd>
         <dt>Created</dt>
-        <dd>{formatDate(idea.createdAt.slice(0, 10))}</dd>
+        <dd>{formatDayOf(idea.createdAt)}</dd>
       </dl>
       {canPostpone && <StartForm idea={idea} />}
       {canPostpone && <Postpone idea={idea} />}

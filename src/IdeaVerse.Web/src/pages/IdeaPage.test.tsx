@@ -1,9 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { addDays, todayIso } from '../api/dates';
+import { addDays, formatDate, todayIso } from '../api/dates';
 import type { Component, Idea, Member, WorkspaceMember } from '../api/types';
-import { anIdea, aWorkspace, fakeApi, signedIn } from '../test/fakeApi';
+import { anIdea, aWorkspace, fakeApi, signedIn, signedInAccount } from '../test/fakeApi';
 import { confirmDialog } from '../test/dialog';
 import { renderApp } from '../test/render';
 
@@ -43,6 +43,20 @@ function ideaRoutes(access: Partial<Idea>, team: Member[]) {
 }
 
 describe('IdeaPage', () => {
+  it('shows the day the idea was created by the account’s own calendar, not UTC’s', async () => {
+    fakeApi({
+      ...ideaRoutes({}, [owner]),
+      'GET /api/v1/account': { status: 200, body: { ...signedInAccount, timeZone: 'Pacific/Kiritimati' } },
+      // 20:00 UTC on the 19th is already 10:00 on the 20th in Kiritimati (UTC+14).
+      'GET /api/v1/ideas/idea-1': { status: 200, body: anIdea({ componentCount: 1, createdAt: '2026-10-19T20:00:00Z' }) },
+    });
+
+    renderApp('/ideas/idea-1');
+
+    const created = await screen.findByText('Created');
+    expect(created.nextElementSibling).toHaveTextContent(formatDate('2026-10-20'));
+  });
+
   it('lets the owner manage the team and delete the idea', async () => {
     fakeApi(ideaRoutes({}, [owner, mia]));
 
