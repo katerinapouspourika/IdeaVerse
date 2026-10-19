@@ -65,6 +65,23 @@ describe('Idea start', () => {
     await waitFor(() => expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({ title: 'Launch', startDate: start, startTime: null }));
   });
 
+  it('keeps a new idea’s start on or before its target date without capping the date field', async () => {
+    const calls = fakeApi({ ...signedIn, 'GET /api/v1/workspaces/ws-1/ideas': { status: 200, body: [] } });
+    renderApp('/ideas');
+    await userEvent.click(await screen.findByRole('button', { name: 'New idea' }));
+
+    const form = screen.getByRole('form', { name: 'New idea' });
+    const starts = within(form).getByLabelText(/^Starts/);
+    // A max in the same year as the min makes Chrome show that year in the empty field, as "mm/dd/2026".
+    expect(starts).not.toHaveAttribute('max');
+    await userEvent.type(within(form).getByLabelText('Title'), 'Launch');
+    fireEvent.change(starts, { target: { value: addDays(todayIso(), 60) } });
+    await userEvent.click(within(form).getByRole('button', { name: 'Add idea' }));
+
+    expect(await within(form).findByText('Start on or before the target date.')).toBeInTheDocument();
+    expect(calls.some((c) => c.method === 'POST')).toBe(false);
+  });
+
   it('keeps the edited target date from the past and from before the start', async () => {
     const start = addDays(todayIso(), 5);
     fakeApi(ideaRoutes({ targetDate: addDays(todayIso(), 30), startDate: start, startTime: null, startsAt: `${start}T09:00:00Z` }));

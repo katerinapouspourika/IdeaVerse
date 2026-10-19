@@ -49,6 +49,9 @@ describe('WorkspaceSettingsPage', () => {
 
     expect(await within(form).findByRole('status')).toHaveTextContent('Saved.');
     expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ name: 'Acme Growth' });
+
+    await userEvent.type(within(form).getByLabelText('Workspace name'), ' Team');
+    expect(within(form).queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('shows the danger zone to the owner only', async () => {
@@ -82,6 +85,8 @@ describe('WorkspaceSettingsPage', () => {
     await confirmDialog('Hand over');
 
     await waitFor(() => expect(calls.find((c) => c.path.endsWith('/transfer'))?.body).toEqual({ userId: 'u-mia' }));
+    // Still in the workspace, now as an admin: its people are read again rather than dropped.
+    await waitFor(() => expect(calls.filter((c) => c.path === '/api/v1/workspaces/ws-1/members')).toHaveLength(2));
   });
 
   it('deletes the workspace only after its name is typed', async () => {
@@ -104,8 +109,11 @@ describe('WorkspaceSettingsPage', () => {
     await userEvent.click(button);
 
     expect(await screen.findByRole('heading', { name: 'Welcome to IdeaVerse' })).toBeInTheDocument();
+    expect(screen.getByText('Deleted Acme Marketing')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
-    expect(calls.some((c) => c.method === 'DELETE' && c.path === '/api/v1/workspaces/ws-1')).toBe(true);
+    const deletedAt = calls.findIndex((c) => c.method === 'DELETE' && c.path === '/api/v1/workspaces/ws-1');
+    expect(deletedAt).toBeGreaterThan(-1);
+    expect(calls.slice(deletedAt + 1).filter((c) => c.path.startsWith('/api/v1/workspaces/ws-1'))).toEqual([]);
   });
 
 });

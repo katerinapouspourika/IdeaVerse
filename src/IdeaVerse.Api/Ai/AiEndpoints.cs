@@ -118,16 +118,16 @@ internal static class AiEndpoints
       { Outcome: AiOutcome.Answered, Value: { } value } => TypedResults.Ok(value),
       { Outcome: AiOutcome.NotFound } => TypedResults.NotFound(),
       { Outcome: AiOutcome.Forbidden } => TypedResults.Problem(
-        detail: "Only the idea's team and the workspace's admins can use AI help on it.",
+        detail: "Only the idea’s team and the workspace’s admins can use AI help on it.",
         statusCode: StatusCodes.Status403Forbidden),
       { Outcome: AiOutcome.Unavailable } => TypedResults.Problem(
-        detail: "AI help isn't set up on this server.",
+        detail: "AI help isn’t set up on this server.",
         statusCode: StatusCodes.Status503ServiceUnavailable),
       { Outcome: AiOutcome.LimitReached } => TypedResults.Problem(
         detail: $"Your workspace has used its {options.DailyLimitPerWorkspace} AI requests for today. More are available after midnight UTC.",
         statusCode: StatusCodes.Status429TooManyRequests),
       { Outcome: AiOutcome.Failed } => TypedResults.Problem(
-        detail: "AI help couldn't answer just now. Please try again in a moment.",
+        detail: "AI help couldn’t answer just now. Please try again in a moment.",
         statusCode: StatusCodes.Status502BadGateway),
       _ => throw new UnreachableException($"Unhandled outcome {result.Outcome}."),
     };

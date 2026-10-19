@@ -429,6 +429,11 @@ a {
   align-items: flex-end;
 }
 
+/* Fields side by side, lined up by their labels and inputs whatever hint or error sits under one of them. */
+.row.top {
+  align-items: flex-start;
+}
+
 .grow {
   flex: 1 1 200px;
   min-width: 0;
@@ -678,6 +683,37 @@ textarea:focus-visible,
   color: var(--accent-text);
 }
 
+/*
+ * A lighter control for a setting of how things look, such as the list's density, so it doesn't read as one more of the
+ * filled view or filter pills beside it: its options share one outline, the chosen one tinted.
+ */
+.tabs.segmented {
+  flex: none;
+  gap: 0;
+  overflow: visible;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.filter-sheet > .tabs.segmented {
+  align-self: flex-start;
+}
+
+.segmented .tab {
+  border-color: transparent;
+  background: transparent;
+  padding: 4px 12px;
+}
+
+.segmented .tab.active {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent);
+}
+
 .idea-list {
   list-style: none;
   margin: 0;
@@ -708,6 +744,8 @@ textarea:focus-visible,
 
 .idea-card.is-overdue {
   border-left: 4px solid var(--danger);
+  /* Takes the wider border out of the padding, so the content lines up with the other cards'. */
+  padding-left: 17px;
 }
 
 .idea-title {
@@ -861,11 +899,13 @@ textarea:focus-visible,
   cursor: pointer;
 }
 
+/* The box lines up with the label's first line; the whole label is the tap target, so it skips the phones' 44px minimum. */
 .check input {
   flex-shrink: 0;
   margin-top: 4px;
   width: 18px;
   height: 18px;
+  min-height: 0;
   accent-color: var(--ok);
 }
 
@@ -1657,13 +1697,16 @@ a.tag:focus-visible {
   position: relative;
 }
 
+/* Takes the page's font but keeps the weight of the nav links beside it. */
 .nav-group-toggle {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   border: 0;
   background: transparent;
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
   cursor: pointer;
 }
 
@@ -1947,7 +1990,8 @@ a.tag:focus-visible {
     min-height: 44px;
   }
 
-  .button {
+  .button,
+  .check {
     min-height: 44px;
   }
 
@@ -2746,16 +2790,29 @@ textarea:disabled {
   outline: none;
 }
 
+.tag-input .tags {
+  max-width: 100%;
+}
+
 .tag.removable {
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  max-width: 100%;
   padding-right: 2px;
   font-size: 0.85rem;
 }
 
+.tag-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .tag-remove {
   display: inline-flex;
+  flex: none;
   align-items: center;
   justify-content: center;
   width: 22px;
@@ -2791,6 +2848,14 @@ textarea:disabled {
 .invite-problems {
   margin: 0;
   padding-left: 20px;
+  overflow-wrap: anywhere;
+}
+
+/* On a phone the address box takes the whole width, with the role and the button on the line below. */
+@media (max-width: 600px) {
+  .invite-fields > .grow {
+    flex-basis: 100%;
+  }
 }
 
 .not-found {
@@ -3163,6 +3228,13 @@ a:focus-visible {
 
   .toast {
     animation-name: toast-in-top;
+  }
+}
+
+/* Above the ideas list's bulk bar while it is shown (it sets its height), clear of its actions. */
+@media (min-width: 701px) {
+  .has-bulk-bar .toasts {
+    bottom: calc(24px + var(--bulk-bar-height) + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -3716,13 +3788,18 @@ a:focus-visible {
   gap: 6px;
 }
 
+/* The details take only the room they need (the status above "Overdue", and the team over two lines at most), so the title gets the most. */
 .idea-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 11.5rem 8.5rem 10rem 9rem;
+  grid-template-columns: minmax(0, 1fr) 6.5rem 8.25rem 7rem 7.25rem;
   align-items: center;
-  gap: 4px 16px;
-  padding: 10px 84px 10px 16px;
+  gap: 4px 12px;
+  padding: 10px 76px 10px 16px;
   border-radius: var(--radius-small);
+}
+
+.idea-row.is-overdue {
+  padding-left: 13px;
 }
 
 .idea-row-main {
@@ -3740,6 +3817,9 @@ a:focus-visible {
 }
 
 .idea-row .badges {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   white-space: nowrap;
 }
 
@@ -3748,7 +3828,13 @@ a:focus-visible {
 }
 
 .idea-row .progress-track {
-  width: 56px;
+  width: 36px;
+  flex: none;
+}
+
+.idea-row .progress,
+.idea-row-details > :first-child {
+  white-space: nowrap;
 }
 
 .idea-list.compact .idea-item-vote {
@@ -3762,6 +3848,12 @@ a:focus-visible {
   .idea-row {
     grid-template-columns: minmax(0, 1fr) auto;
     padding-right: 16px;
+  }
+
+  .idea-row .badges {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
   }
 
   .idea-row-details {
@@ -4396,6 +4488,37 @@ button.chip:focus-visible {
 
 .palette-hint {
   border-top: 1px solid var(--border);
+}
+
+.palette-detail {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  white-space: nowrap;
+}
+
+/* A touch screen has no arrow keys or Tab to hint at. */
+@media (hover: none) and (pointer: coarse) {
+  .palette-hint {
+    display: none;
+  }
+}
+
+/* On a phone an idea's title takes the line, with its status and date on the line under it, in line with the title. */
+@media (max-width: 600px) {
+  .palette-option {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .palette-option > .grow {
+    flex-basis: calc(100% - 26px);
+  }
+
+  .palette-detail {
+    margin-left: 26px;
+  }
 }
 
 .modal.shortcuts {

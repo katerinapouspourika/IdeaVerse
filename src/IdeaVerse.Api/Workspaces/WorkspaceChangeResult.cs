@@ -18,7 +18,7 @@ public sealed record WorkspaceChangeResult(
   /// <summary>
   /// Why a member may not manage the workspace.
   /// </summary>
-  public const string AdminsOnlyMessage = "Only the workspace's owner and admins can do this.";
+  public const string AdminsOnlyMessage = "Only the workspace’s owner and admins can do this.";
 
   /// <summary>
   /// Creates a result for a workspace the user is not in, or a person who is not in it.

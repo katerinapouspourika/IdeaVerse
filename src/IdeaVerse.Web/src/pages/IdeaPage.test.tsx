@@ -1,9 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { addDays, todayIso } from '../api/dates';
+import { addDays, formatDate, todayIso } from '../api/dates';
 import type { Component, Idea, Member, WorkspaceMember } from '../api/types';
-import { anIdea, aWorkspace, fakeApi, signedIn } from '../test/fakeApi';
+import { anIdea, aWorkspace, fakeApi, signedIn, signedInAccount } from '../test/fakeApi';
 import { confirmDialog } from '../test/dialog';
 import { renderApp } from '../test/render';
 
@@ -43,6 +43,20 @@ function ideaRoutes(access: Partial<Idea>, team: Member[]) {
 }
 
 describe('IdeaPage', () => {
+  it('shows the day the idea was created by the account’s own calendar, not UTC’s', async () => {
+    fakeApi({
+      ...ideaRoutes({}, [owner]),
+      'GET /api/v1/account': { status: 200, body: { ...signedInAccount, timeZone: 'Pacific/Kiritimati' } },
+      // 20:00 UTC on the 19th is already 10:00 on the 20th in Kiritimati (UTC+14).
+      'GET /api/v1/ideas/idea-1': { status: 200, body: anIdea({ componentCount: 1, createdAt: '2026-10-19T20:00:00Z' }) },
+    });
+
+    renderApp('/ideas/idea-1');
+
+    const created = await screen.findByText('Created');
+    expect(created.nextElementSibling).toHaveTextContent(formatDate('2026-10-20'));
+  });
+
   it('lets the owner manage the team and delete the idea', async () => {
     fakeApi(ideaRoutes({}, [owner, mia]));
 
@@ -314,7 +328,7 @@ describe('IdeaPage', () => {
     expect(await screen.findByText(/doesn’t exist or isn’t in one of your workspaces/)).toBeInTheDocument();
   });
 
-  it('adds someone from the workspace who is not on the team yet', async () => {
+  it('adds someone from the workspace who is not on the team yet, confirming it in a toast', async () => {
     const calls = fakeApi({
       ...ideaRoutes({}, [owner, mia]),
       'POST /api/v1/ideas/idea-1/members': { status: 201, body: { ...mia, userId: 'u-leo', email: 'leo@example.com' } },
@@ -328,6 +342,7 @@ describe('IdeaPage', () => {
     await userEvent.click(within(form).getByRole('button', { name: 'Add' }));
 
     await waitFor(() => expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ email: 'leo@example.com' }));
+    expect(await screen.findByText('Added leo@example.com to the team')).toBeInTheDocument();
   });
 });
 
@@ -351,7 +366,9 @@ describe('Archived idea', () => {
     renderApp('/ideas/idea-1');
 
     const banner = await screen.findByText(/This idea is archived and read-only/);
-    expect(banner).toHaveTextContent('Restore it to make changes.');
+    expect(banner).toHaveTextContent('but you can still discuss it. Restore it to make changes.');
+    // Voting on an archived idea is closed, so the banner doesn't offer it.
+    expect(banner).not.toHaveTextContent(/vote/i);
     expect(await screen.findByText('Budget sign-off')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit details' })).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Status' })).not.toBeInTheDocument();

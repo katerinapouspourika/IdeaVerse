@@ -88,9 +88,9 @@ public class EmailDigestTests
     await factory.RunRemindersAsync();
 
     var mail = factory.Mail.Sent.Single();
-    await Assert.That(mail.Subject).IsEqualTo("You're on the team: Launch");
+    await Assert.That(mail.Subject).IsEqualTo("You’re on the team: “Launch”");
     await Assert.That(mail.Body).StartsWith("owner@example.com added you to the team of “Launch”.\n\nOpen the idea:\n")
-      .And.EndsWith("You get this because you are on this idea's team in IdeaVerse.");
+      .And.EndsWith("You get this because you are on this idea’s team in IdeaVerse.");
   }
 
   [Test]
@@ -148,7 +148,7 @@ public class EmailDigestTests
     await Assert.That(emptyMorning.Emailed).IsEqualTo(0);
     await Assert.That(sameDay.Emailed).IsEqualTo(0);
     await Assert.That(nextMorning.Emailed).IsEqualTo(1);
-    await Assert.That(factory.Mail.Sent.Single().Subject).IsEqualTo("You're on the team: Launch");
+    await Assert.That(factory.Mail.Sent.Single().Subject).IsEqualTo("You’re on the team: “Launch”");
   }
 
   [Test]
@@ -174,7 +174,7 @@ public class EmailDigestTests
 
     await Assert.That(tooSoon.Emailed).IsEqualTo(0);
     await Assert.That(retry.Emailed).IsEqualTo(1);
-    await Assert.That(factory.Mail.Sent.Single().Subject).IsEqualTo("You're on the team: Launch");
+    await Assert.That(factory.Mail.Sent.Single().Subject).IsEqualTo("You’re on the team: “Launch”");
   }
 
   [Test]
@@ -196,9 +196,36 @@ public class EmailDigestTests
     var morning = await factory.RunRemindersAsync();
 
     await Assert.That(night.Emailed).IsEqualTo(1);
-    await Assert.That(mention.Subject).IsEqualTo("You were mentioned on Launch");
+    await Assert.That(mention.Subject).IsEqualTo("You were mentioned on “Launch”");
     await Assert.That(morning.Emailed).IsEqualTo(1);
-    await Assert.That(factory.Mail.Sent.Select(m => m.Subject)).IsEquivalentTo(["You were mentioned on Launch", "You're on the team: Launch"]);
+    await Assert.That(factory.Mail.Sent.Select(m => m.Subject)).IsEquivalentTo(["You were mentioned on “Launch”", "You’re on the team: “Launch”"]);
+  }
+
+  [Test]
+  public async Task RunAsync_MentionPendingWhenDigestIsDue_SendsItApartFromTheDigest()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync();
+    using var member = await factory.CreateSignedInClientAsync("member@example.com");
+    await factory.JoinAsync(owner, member, "member@example.com");
+    await member.SetTimeZoneAsync("America/Phoenix");
+    await SetRemindersAsync(member, EmailFrequency.DailyDigest, emailComments: true);
+    var idea = await (await owner.CreateIdeaAsync("Launch", Today.AddDays(30))).ReadIdeaAsync();
+    (await owner.AddMemberAsync(idea.Id, "member@example.com")).Dispose();
+    factory.Time.Advance(new TimeSpan(5, 58, 0));
+    (await owner.PostAsJsonAsync($"/api/v1/ideas/{idea.Id}/comments", new CommentRequest("Budget is in"), Json.Options)).Dispose();
+    (await owner.PostAsJsonAsync($"/api/v1/ideas/{idea.Id}/comments", new CommentRequest($"Over to you @[Member]({await MemberIdAsync(owner)})"), Json.Options)).Dispose();
+    factory.Time.Advance(TimeSpan.FromMinutes(2));
+
+    var atEight = await factory.RunRemindersAsync();
+
+    await Assert.That(atEight.Emailed).IsEqualTo(2);
+    var mention = factory.Mail.Sent.Single(m => m.Subject.StartsWith("You were mentioned", StringComparison.Ordinal));
+    var digest = factory.Mail.Sent.Single(m => m.Subject.StartsWith("Your daily digest", StringComparison.Ordinal));
+    await Assert.That(mention.Body).Contains("mentioned you on “Launch”: “Over to you @member@example.com”");
+    await Assert.That(digest.Subject).IsEqualTo("Your daily digest: 2 updates on “Launch”");
+    await Assert.That(digest.Body).Contains("owner@example.com commented on “Launch”: “Budget is in”")
+      .And.DoesNotContain("mentioned you");
   }
 
   [Test]

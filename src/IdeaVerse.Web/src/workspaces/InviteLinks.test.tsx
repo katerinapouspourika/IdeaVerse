@@ -65,11 +65,14 @@ describe('Joining through an invite link', () => {
   afterEach(() => localStorage.clear());
 
   it('asks someone signed out to sign in, and remembers the link for after', async () => {
+    const warn = vi.spyOn(console, 'warn');
     fakeApi(signedOut);
     renderApp('/join/abc123');
 
     expect(await screen.findByRole('heading', { name: 'You’ve been invited to a workspace' })).toBeInTheDocument();
     await waitFor(() => expect(localStorage.getItem('ideaverse.pendingJoin')).toBe('abc123'));
+    // Opened directly, the page shows the loading placeholder while its code downloads, so the router has nothing to warn about.
+    expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('HydrateFallback'));
   });
 
   it('comes back to the link after signing in', async () => {
