@@ -36,6 +36,15 @@ public class EmailLayoutTests
   }
 
   [Test]
+  public async Task Compose_DarkMode_PaintsTheBodyAsDarkAsThePage()
+  {
+    var mail = EmailLayout.Compose("mia@example.com", "Confirm", Content, App);
+
+    await Assert.That(mail.Html!).Contains(".page { background: #0e1230 !important; }")
+      .And.Contains("<body class=\"page\" style=\"margin:0;padding:0;background:#f6f1e7;\">");
+  }
+
+  [Test]
   public async Task Compose_UserTextWithMarkup_EncodesItInTheHtml()
   {
     var content = new EmailContent("<b>Launch</b>", ["Mia & Leo said \"<script>alert(1)</script>\""]);
