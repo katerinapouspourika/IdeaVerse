@@ -295,8 +295,9 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
             archived={archived}
             compact={density === 'compact'}
             onClearFilters={() => {
-              choose({ tab: 'All', tag: '' });
+              // The search first, so the cleared filters are what is remembered last.
               setSearch('');
+              choose({ tab: 'All', tag: '' });
             }}
           />
         ))}
@@ -330,14 +331,19 @@ const validChoice: { [K in keyof Choices]: (value: unknown) => boolean } = {
 /** The address parameter of each choice that can be shared, as in `/ideas?status=Done&tag=launch&q=spring&sort=Votes&view=board`. */
 const choiceParams = { tab: 'status', tag: 'tag', sort: 'sort', view: 'view' } as const satisfies Partial<Record<keyof Choices, string>>;
 const searchParam = 'q';
+/** The parameters that decide which ideas the list shows; an address with any of them sets them all. */
+const filterParams = [choiceParams.tab, choiceParams.tag, choiceParams.sort, searchParam];
 
 /**
  * The ideas list's view, status tab, tag, order, and density, and its search. Each choice is remembered in the browser
  * per workspace, so a reload or a later visit opens the list as it was left (storage may be unavailable, as in a private
  * window; the list then starts fresh), and all but the density are kept in the address too, so a filtered list can be
- * shared or bookmarked. A choice in the address, as from a shared link or a tag chip's `?tag=`, wins over the remembered
- * one without replacing it. Changes replace the address rather than adding to the history, and leave its other
- * parameters, such as the side panel's `?idea=`, alone, and the page scrolled where it was.
+ * shared or bookmarked. An address with any filter (status, tag, search, or order), as from a shared link or a tag
+ * chip's `?tag=`, sets them all, a filter it leaves out taking its default, so everyone who opens it sees the same list;
+ * only an address with none of them opens the remembered filters. The view, which changes only how the list is shown,
+ * falls back to the remembered one either way. Opening a link never replaces what the user remembered: changing a
+ * filter remembers the list as it is then shown. Changes replace the address rather than adding to the history, and
+ * leave its other parameters, such as the side panel's `?idea=`, alone, and the page scrolled where it was.
  */
 function useListChoices(workspaceId: string, paused: boolean) {
   const key = `ideaverse.ideas.${workspaceId}`;
@@ -358,21 +364,25 @@ function useListChoices(workspaceId: string, paused: boolean) {
     const value = params.get(choiceParams[name]);
     return value !== null && validChoice[name](value) ? value : undefined;
   };
+  const fromAddress = filterParams.some((param) => params.has(param));
+  const fallback = fromAddress ? defaultChoices : saved;
   const choices: Choices = {
-    tab: (linked('tab') as Tab | undefined) ?? saved.tab,
-    tag: linked('tag') ?? saved.tag,
-    sort: (linked('sort') as IdeaSort | undefined) ?? saved.sort,
+    tab: (linked('tab') as Tab | undefined) ?? fallback.tab,
+    tag: linked('tag') ?? fallback.tag,
+    sort: (linked('sort') as IdeaSort | undefined) ?? fallback.sort,
     view: (linked('view') as View | undefined) ?? saved.view,
     density: saved.density,
   };
-  const [search, setSearch] = useState(() => params.get(searchParam) ?? '');
+  const [search, setSearchText] = useState(() => params.get(searchParam) ?? '');
   const debouncedSearch = useDebounced(search, 250);
 
-  // The address shows every choice that differs from the default, including remembered ones it arrived without.
-  const address = (next: Choices, query: string) => {
+  // The address shows every choice that differs from the default, including remembered ones it arrived without. The
+  // view falls back to the remembered one rather than the default, so a default view is left out only when that is the
+  // remembered one too: otherwise a link's `view=list` would give way to the viewer's remembered board once tidied away.
+  const address = (next: Choices, query: string, remembered: Choices = saved) => {
     const result = new URLSearchParams(params);
     for (const [name, param] of Object.entries(choiceParams) as [keyof typeof choiceParams, string][]) {
-      if (next[name] === defaultChoices[name]) {
+      if (next[name] === defaultChoices[name] && (name !== 'view' || remembered.view === defaultChoices.view)) {
         result.delete(param);
       } else {
         result.set(param, next[name]);
@@ -394,15 +404,28 @@ function useListChoices(workspaceId: string, paused: boolean) {
     }
   }, [paused, wanted, current, setParams, location.state]);
 
-  const choose = (changes: Partial<Choices>) => {
-    setSaved((previous) => ({ ...previous, ...changes }));
+  // A filter change remembers the list as shown, so one opened from a link stays as it is once its address no longer
+  // carries the filters; a change of view or density alone leaves the remembered filters alone.
+  const remember = (next: Choices) => {
+    setSaved(next);
     try {
-      localStorage.setItem(key, JSON.stringify({ ...readChoices(key), ...changes }));
+      localStorage.setItem(key, JSON.stringify({ ...readChoices(key), ...next }));
     } catch {
       // Not remembered this time; the choice still applies.
     }
+  };
+  const choose = (changes: Partial<Choices>) => {
+    const next = { ...choices, ...changes };
+    const remembered = 'tab' in changes || 'tag' in changes || 'sort' in changes ? next : { ...saved, ...changes };
+    remember(remembered);
     // All at once: changes made one after another in the same event would each start from the same address.
-    setParams(new URLSearchParams(address({ ...choices, ...changes }, debouncedSearch)), { replace: true, state: location.state, preventScrollReset: true });
+    setParams(new URLSearchParams(address(next, debouncedSearch, remembered)), { replace: true, state: location.state, preventScrollReset: true });
+  };
+  const setSearch = (query: string) => {
+    if (fromAddress) {
+      remember(choices);
+    }
+    setSearchText(query);
   };
 
   return { choices, choose, search, setSearch, debouncedSearch };
