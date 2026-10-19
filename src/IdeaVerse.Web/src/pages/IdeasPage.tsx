@@ -23,6 +23,7 @@ import { usePageMeta } from '../seo/usePageMeta';
 import { forgetPendingTemplate, pendingTemplate } from '../templates/pendingTemplate';
 import { StarterTemplates } from '../templates/StarterTemplates';
 import { useWorkspace } from '../workspaces/WorkspaceContext';
+import { BulkBar, selectable, useBulkSelection } from './BulkActions';
 import { IdeaBoard } from './IdeaBoard';
 import { IdeaCalendar } from './IdeaCalendar';
 import { IdeaTimeline } from './IdeaTimeline';
@@ -300,6 +301,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
           <IdeaMatrix ideas={ideas.data} />
         ) : (
           <IdeaList
+            workspaceId={workspace.id}
             ideas={ideas.data}
             filtered={filtered}
             archived={archived}
@@ -360,14 +362,16 @@ function FirstIdea({ onAdd }: { onAdd: () => void }) {
 }
 
 interface IdeaListProps {
+  workspaceId: string;
   ideas: Idea[];
   filtered: boolean;
   archived: boolean;
   onClearFilters: () => void;
 }
 
-function IdeaList({ ideas, filtered, archived, onClearFilters }: IdeaListProps) {
+function IdeaList({ workspaceId, ideas, filtered, archived, onClearFilters }: IdeaListProps) {
   const { linkProps } = useIdeaPanel();
+  const selection = useBulkSelection(ideas);
   if (ideas.length === 0) {
     return (
       <div className="card empty stack center">
@@ -392,6 +396,9 @@ function IdeaList({ ideas, filtered, archived, onClearFilters }: IdeaListProps) 
 
   const overdue = ideas.filter((i) => i.isOverdue).length;
   const dueSoon = archived ? 0 : ideas.filter((i) => i.status !== 'Done' && !i.isOverdue && daysUntil(i.targetDate) <= 7).length;
+  // Ideas the user can change get a checkbox beside them, for changing several at once; the others keep the space, so rows line up.
+  const choosable = ideas.filter(selectable);
+  const allChosen = choosable.length > 0 && selection.selected.length === choosable.length;
 
   return (
     <>
@@ -402,9 +409,36 @@ function IdeaList({ ideas, filtered, archived, onClearFilters }: IdeaListProps) 
           {dueSoon > 0 && <span>{dueSoon} due within a week</span>}
         </p>
       )}
-      <ul className="idea-list">
+      {choosable.length > 0 && (
+        <label className="select-all">
+          <input
+            type="checkbox"
+            checked={allChosen}
+            ref={(input) => {
+              if (input) {
+                input.indeterminate = selection.selected.length > 0 && !allChosen;
+              }
+            }}
+            onChange={() => (allChosen ? selection.clear() : selection.selectAll(choosable))}
+          />
+          Select all
+        </label>
+      )}
+      <ul className={choosable.length > 0 ? 'idea-list selectable' : 'idea-list'}>
         {ideas.map((idea) => (
           <li key={idea.id} className="idea-item">
+            {choosable.length > 0 &&
+              (selectable(idea) ? (
+                <input
+                  type="checkbox"
+                  className="idea-select"
+                  aria-label={`Select ${idea.title}`}
+                  checked={selection.isSelected(idea.id)}
+                  onChange={() => selection.toggle(idea.id)}
+                />
+              ) : (
+                <span className="idea-select" aria-hidden="true" />
+              ))}
             {/* The title link is stretched over the card, so a click anywhere opens the idea while its tags stay links of their own. */}
             <div className={idea.isOverdue ? 'card idea-card is-overdue' : 'card idea-card'}>
               <div className="row spread">
@@ -435,6 +469,7 @@ function IdeaList({ ideas, filtered, archived, onClearFilters }: IdeaListProps) 
           </li>
         ))}
       </ul>
+      {(selection.selected.length > 0 || selection.problems.length > 0) && <BulkBar workspaceId={workspaceId} selection={selection} />}
     </>
   );
 }

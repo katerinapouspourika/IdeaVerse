@@ -151,6 +151,36 @@ export interface UndoPostpone {
   status: IdeaStatus;
 }
 
+/** What a bulk change does to each idea it names. */
+export type BulkIdeaOperation = 'SetStatus' | 'AddTag' | 'RemoveTag' | 'MoveTargetDate' | 'Archive' | 'Restore';
+
+/** One change to several ideas at once (`POST /api/v1/ideas/bulk`), at most 100. */
+export interface BulkIdeaRequest {
+  ids: string[];
+  operation: BulkIdeaOperation;
+  /** For `SetStatus`. */
+  status?: IdeaStatus;
+  /** For `AddTag` and `RemoveTag`. */
+  tag?: string;
+  /** For `MoveTargetDate`: the new ISO date, `YYYY-MM-DD`; or give `days`. */
+  targetDate?: string;
+  /** For `MoveTargetDate`: how many days later each idea's own target date moves, 1–366; or give `targetDate`. */
+  days?: number;
+}
+
+/** How a change to one idea went, as its own endpoint would have answered. */
+export type ChangeOutcome = 'Changed' | 'NotFound' | 'Invalid' | 'Conflict' | 'Forbidden';
+
+/** What a bulk change did to one idea, in the order asked; an idea named twice appears once. */
+export interface BulkIdeaResult {
+  id: string;
+  outcome: ChangeOutcome;
+  /** The idea after the change, when it applied. */
+  idea: Idea | null;
+  /** Why the change did not apply, when it did not. */
+  message: string | null;
+}
+
 export interface Component {
   id: string;
   title: string;

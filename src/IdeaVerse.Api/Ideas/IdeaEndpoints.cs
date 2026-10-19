@@ -33,6 +33,7 @@ internal static class IdeaEndpoints
 
     var group = endpoints.MapGroup("/api/v1/ideas").WithTags("Ideas").RequireAuthorization();
     group.MapGet("/{id:guid}", GetAsync).WithName(GetIdeaRouteName);
+    group.MapPost("/bulk", BulkAsync).WithValidation<BulkIdeaRequest>();
     group.MapPut("/{id:guid}", UpdateAsync).WithValidation<UpdateIdeaRequest>().RejectWhenArchived();
     group.MapPost("/{id:guid}/postpone", PostponeAsync).WithValidation<PostponeIdeaRequest>().RejectWhenArchived();
     group.MapPost("/{id:guid}/postpone/undo", UndoPostponeAsync).WithValidation<UndoPostponeRequest>().RejectWhenArchived();
@@ -131,6 +132,21 @@ internal static class IdeaEndpoints
       ChangeOutcome.Conflict or ChangeOutcome.Forbidden or _ => throw new UnreachableException($"Unhandled outcome {result.Outcome}."),
     };
   }
+
+  /// <summary>
+  /// Applies one change to several ideas, each as its own endpoint would.
+  /// </summary>
+  /// <param name="request">The validated request.</param>
+  /// <param name="user">The signed-in user.</param>
+  /// <param name="service">The bulk idea service.</param>
+  /// <param name="cancellationToken">Token to cancel the request.</param>
+  /// <returns>A result per idea, saying whether the change applied and why not when it did not.</returns>
+  private static async Task<Ok<BulkIdeaResult[]>> BulkAsync(
+    BulkIdeaRequest request,
+    ClaimsPrincipal user,
+    BulkIdeaService service,
+    CancellationToken cancellationToken)
+    => TypedResults.Ok((await service.ApplyAsync(user.GetUserId(), request, cancellationToken).ConfigureAwait(false)).ToArray());
 
   /// <summary>
   /// Replaces an idea's editable fields.

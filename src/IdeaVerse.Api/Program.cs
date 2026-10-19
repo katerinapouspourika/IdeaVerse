@@ -65,6 +65,7 @@ builder.Services.AddScoped<InviteLinkService>();
 builder.Services.AddScoped<DiscoveryService>();
 builder.Services.AddScoped<BrandingService>();
 builder.Services.AddScoped<IdeaService>();
+builder.Services.AddScoped<BulkIdeaService>();
 builder.Services.AddScoped<ComponentService>();
 builder.Services.AddScoped<MemberService>();
 builder.Services.AddScoped<CommentService>();

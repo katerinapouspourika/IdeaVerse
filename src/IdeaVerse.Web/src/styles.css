@@ -3474,6 +3474,76 @@ a:focus-visible {
   bottom: 16px;
 }
 
+/* Picking ideas for a bulk change: a checkbox in a gutter beside each idea the user can change, whatever the card's layout. */
+.idea-list.selectable .idea-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.idea-select {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  align-self: flex-start;
+  font-weight: 700;
+}
+
+.select-all input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+/* Stays at the bottom of the screen, above the phone's tab bar, while the list scrolls beneath it. */
+.bulk-bar {
+  position: sticky;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  padding: 12px 16px;
+  border-color: var(--accent);
+  box-shadow: var(--shadow-lift);
+}
+
+.shell.has-tab-bar .bulk-bar {
+  bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+}
+
+.bulk-row {
+  gap: 8px;
+  align-items: center;
+}
+
+.bulk-row select,
+.bulk-row input {
+  width: auto;
+  min-height: 36px;
+  padding: 4px 10px;
+}
+
+.bulk-count {
+  margin-right: 4px;
+}
+
+.bulk-notes,
+.bulk-problems ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.bulk-problems {
+  color: var(--danger);
+}
+
 .vote-button {
   gap: 4px;
   font-variant-numeric: tabular-nums;
