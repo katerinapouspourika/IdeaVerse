@@ -95,6 +95,19 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
       void navigate('.', { replace: true, state: null });
     }
   }, [openForm, navigate]);
+  // Closing the form brings back "New idea", which takes the focus the form had.
+  const newIdeaButton = useRef<HTMLButtonElement>(null);
+  const formClosed = useRef(false);
+  const closeForm = () => {
+    formClosed.current = true;
+    setAdding(null);
+  };
+  useEffect(() => {
+    if (!adding && formClosed.current) {
+      formClosed.current = false;
+      newIdeaButton.current?.focus();
+    }
+  }, [adding]);
   const [brainstorming, setBrainstorming] = useState(false);
   const archived = tab === 'Archived';
   // The board shows every status in its own column, so it ignores the status tabs.
@@ -185,7 +198,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
               </button>
             )}
             {ai.data?.enabled === false && <UnavailableAiButton label="Brainstorm with AI" compact />}
-            <button type="button" className="button primary" onClick={() => setAdding({ title: '', description: '' })}>
+            <button ref={newIdeaButton} type="button" className="button primary" onClick={() => setAdding({ title: '', description: '' })}>
               New idea
             </button>
           </div>
@@ -198,7 +211,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
           workspaceId={workspace.id}
           initial={adding}
           template={adding.template}
-          onDone={() => setAdding(null)}
+          onDone={closeForm}
         />
       )}
       {brainstorming && (

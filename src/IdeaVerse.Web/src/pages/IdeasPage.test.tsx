@@ -244,13 +244,31 @@ describe('IdeasPage', () => {
     expect(router.state.location.pathname).toBe('/ideas');
   });
 
+  it('moves focus to the title when the New idea form opens, and back to New idea when it closes', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [anIdea()] } });
+    renderApp('/ideas');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'New idea' }));
+    await waitFor(() => expect(within(screen.getByRole('form', { name: 'New idea' })).getByLabelText('Title')).toHaveFocus());
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('button', { name: 'New idea' })).toHaveFocus();
+
+    // The N shortcut opens it the same way.
+    await userEvent.click(document.body);
+    await userEvent.keyboard('n');
+    const again = await screen.findByRole('form', { name: 'New idea' });
+    await waitFor(() => expect(within(again).getByLabelText('Title')).toHaveFocus());
+  });
+
   it('opens the new idea form only once when asked from the dashboard', async () => {
     fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [anIdea()] } });
     const router = renderApp('/');
 
     await userEvent.click(await screen.findByRole('link', { name: 'New idea' }));
 
-    expect(await screen.findByRole('form', { name: 'New idea' })).toBeInTheDocument();
+    const form = await screen.findByRole('form', { name: 'New idea' });
+    await waitFor(() => expect(within(form).getByLabelText('Title')).toHaveFocus());
     await waitFor(() => expect(router.state.location.state).toBeNull());
   });
 
