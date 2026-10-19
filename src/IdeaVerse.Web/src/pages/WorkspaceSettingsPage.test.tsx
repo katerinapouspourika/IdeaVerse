@@ -104,6 +104,7 @@ describe('WorkspaceSettingsPage', () => {
     await userEvent.click(button);
 
     expect(await screen.findByRole('heading', { name: 'Welcome to IdeaVerse' })).toBeInTheDocument();
+    expect(screen.getByText('Deleted Acme Marketing')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
     expect(calls.some((c) => c.method === 'DELETE' && c.path === '/api/v1/workspaces/ws-1')).toBe(true);
   });
