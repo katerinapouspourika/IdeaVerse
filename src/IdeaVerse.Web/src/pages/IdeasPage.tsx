@@ -276,7 +276,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
         </>
       )}
 
-      {ideas.isLoading && <Skeleton variant="cards" />}
+      {ideas.isLoading && <Skeleton variant={view === 'list' ? 'cards' : view} />}
       <LoadError queries={ideas} />
       {ideas.data &&
         (noIdeas ? (
