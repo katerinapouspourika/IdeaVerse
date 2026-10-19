@@ -49,6 +49,9 @@ describe('WorkspaceSettingsPage', () => {
 
     expect(await within(form).findByRole('status')).toHaveTextContent('Saved.');
     expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ name: 'Acme Growth' });
+
+    await userEvent.type(within(form).getByLabelText('Workspace name'), ' Team');
+    expect(within(form).queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('shows the danger zone to the owner only', async () => {

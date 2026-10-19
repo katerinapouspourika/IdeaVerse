@@ -84,7 +84,18 @@ function WorkspaceName({ workspace }: { workspace: Workspace }) {
     <form className="card stack" onSubmit={submit} aria-label="Rename workspace">
       <h2>Name</h2>
       <Field label="Workspace name" error={fieldError(rename.error, 'name')}>
-        {(props) => <input {...props} required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} />}
+        {(props) => (
+          <input
+            {...props}
+            required
+            maxLength={100}
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setSaved(false);
+            }}
+          />
+        )}
       </Field>
       <ErrorMessage error={rename.error} />
       {saved && (
