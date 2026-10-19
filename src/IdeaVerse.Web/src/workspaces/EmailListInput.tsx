@@ -25,7 +25,8 @@ interface EmailListInputProps {
 /**
  * Edits a list of email addresses as chips: a pasted list, or a comma, semicolon, space, or Enter after an address, turns
  * the text into chips without submitting the form; Backspace in the empty field removes the last one. Text still in the
- * field becomes chips when it loses focus. Chips with a problem are marked; the form lists why.
+ * field becomes chips when it loses focus. Chips with a problem are marked; the form lists why. A chip wider than the
+ * box is cut short with an ellipsis, its whole address still read out and shown on hover.
  */
 export function EmailListInput({ chips, onAdd, onRemove, text, onTextChange, ...field }: EmailListInputProps) {
   const commit = (raw: string) => {
@@ -69,8 +70,12 @@ export function EmailListInput({ chips, onAdd, onRemove, text, onTextChange, ...
       {chips.length > 0 && (
         <ul className="tags" aria-label="Addresses to invite">
           {chips.map((chip) => (
-            <li key={chip.email} className={chip.problem ? 'tag removable flagged' : 'tag removable'} title={chip.problem}>
-              {chip.email}
+            <li
+              key={chip.email}
+              className={chip.problem ? 'tag removable flagged' : 'tag removable'}
+              title={chip.problem ? `${chip.email} — ${chip.problem}` : chip.email}
+            >
+              <span className="tag-text">{chip.email}</span>
               <button type="button" className="tag-remove" aria-label={`Remove ${chip.email}`} onClick={() => onRemove(chip.email)}>
                 ×
               </button>

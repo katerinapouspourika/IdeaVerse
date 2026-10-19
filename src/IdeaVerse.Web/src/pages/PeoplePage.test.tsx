@@ -77,6 +77,9 @@ describe('PeoplePage', () => {
       'MIA@example.com',
       'new@example.com',
     ]);
+    // A long address is cut short on screen, so the chip carries it whole on hover, with any problem.
+    expect(chips.getAllByRole('listitem')[0]).toHaveAttribute('title', 'leo@example.com');
+    expect(chips.getAllByRole('listitem')[2]).toHaveAttribute('title', 'not-an-email — Not a valid email address.');
     expect(within(form).getByRole('note')).toHaveTextContent('Already in the list, so left out: leo@example.com.');
     const problems = within(within(form).getByRole('list', { name: 'Addresses not invited' }));
     expect(problems.getAllByRole('listitem').map((item) => item.textContent)).toEqual([

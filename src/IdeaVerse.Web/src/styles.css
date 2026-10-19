@@ -2746,16 +2746,29 @@ textarea:disabled {
   outline: none;
 }
 
+.tag-input .tags {
+  max-width: 100%;
+}
+
 .tag.removable {
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  max-width: 100%;
   padding-right: 2px;
   font-size: 0.85rem;
 }
 
+.tag-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .tag-remove {
   display: inline-flex;
+  flex: none;
   align-items: center;
   justify-content: center;
   width: 22px;
@@ -2791,6 +2804,14 @@ textarea:disabled {
 .invite-problems {
   margin: 0;
   padding-left: 20px;
+  overflow-wrap: anywhere;
+}
+
+/* On a phone the address box takes the whole width, with the role and the button on the line below. */
+@media (max-width: 600px) {
+  .invite-fields > .grow {
+    flex-basis: 100%;
+  }
 }
 
 .not-found {
