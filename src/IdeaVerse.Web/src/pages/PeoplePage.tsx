@@ -329,7 +329,7 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
     <form className="card stack" onSubmit={(event) => void submit(event)} aria-label="Invite people" noValidate>
       <h2>Invite people</h2>
       <p className="muted small">They get an email with a link. People without an account sign up with that address and find the invitation waiting.</p>
-      <div className="row wrap end">
+      <div className="row wrap end invite-fields">
         <Field
           label="Email addresses"
           hint="Paste a list, or separate addresses with commas, spaces, or new lines."
