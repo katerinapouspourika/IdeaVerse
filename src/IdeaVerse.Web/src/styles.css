@@ -2925,7 +2925,7 @@ a:focus-visible {
   padding: 14px 16px;
 }
 
-/* The bell's drop-down: a header with Mark all read, the latest few notifications, and a link to the rest. */
+/* The bell's drop-down: a header with Mark all as read, the latest few notifications, and a link to the rest. */
 .notification-popover {
   gap: 6px;
   padding: 12px 8px 8px;

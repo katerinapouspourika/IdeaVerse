@@ -19,6 +19,7 @@ const tomorrow: Notification = {
   readAt: null,
   commentId: null,
   componentId: null,
+  componentTitle: null,
 };
 
 const comingUp: Notification = {
@@ -96,12 +97,25 @@ describe('Notifications', () => {
     expect(read).toHaveAccessibleName(/^Coming up: Black Friday teaser, /);
   });
 
+  it('names the component a notification is about in the drop-down', async () => {
+    const due = { ...tomorrow, id: 'n-3', componentId: 'k-1', componentTitle: 'Book the venue', message: '“Book the venue” for “Black Friday teaser” is due tomorrow.' };
+    fakeApi({ ...routes([due, tomorrow], 2), [ideasRoute]: { status: 200, body: [] } });
+
+    renderApp('/');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Notifications, 2 unread' }));
+    const [component, idea] = within(screen.getByRole('region', { name: 'Latest notifications' })).getAllByRole('link');
+    expect(component).toHaveTextContent('Book the venue · Black Friday teaser');
+    expect(component).toHaveAccessibleName(/^Due tomorrow, unread: Book the venue for Black Friday teaser, /);
+    expect(idea).toHaveAccessibleName(/^Due tomorrow, unread: Black Friday teaser, /);
+  });
+
   it('marks all read from the drop-down', async () => {
     const calls = fakeApi({ ...routes([tomorrow], 1), [ideasRoute]: { status: 200, body: [] }, 'POST /api/v1/notifications/read-all': { status: 204 } });
     renderApp('/');
 
     await userEvent.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }));
-    await userEvent.click(within(screen.getByRole('region', { name: 'Latest notifications' })).getByRole('button', { name: 'Mark all read' }));
+    await userEvent.click(within(screen.getByRole('region', { name: 'Latest notifications' })).getByRole('button', { name: 'Mark all as read' }));
 
     await waitFor(() => expect(calls.some((c) => c.path === '/api/v1/notifications/read-all')).toBe(true));
   });
@@ -114,7 +128,7 @@ describe('Notifications', () => {
     bell.focus();
     await userEvent.keyboard('{Enter}');
     await userEvent.tab();
-    expect(screen.getByRole('button', { name: 'Mark all read' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Mark all as read' })).toHaveFocus();
     await userEvent.tab();
     expect(screen.getAllByRole('link', { name: /Due tomorrow/ })[0]).toHaveFocus();
     await userEvent.keyboard('{Escape}');
@@ -232,7 +246,7 @@ describe('Notifications', () => {
   });
 
   it('opens an assignment at its component', async () => {
-    const assigned: Notification = { ...tomorrow, kind: 'Assigned', message: 'Mia assigned “Budget” to you.', componentId: 'k-1' };
+    const assigned: Notification = { ...tomorrow, kind: 'Assigned', message: 'Mia assigned “Budget” to you.', componentId: 'k-1', componentTitle: 'Budget' };
     fakeApi({ ...routes([assigned], 1), ...ideaRoutes([], [aComponent]), 'POST /api/v1/notifications/n-2/read': { status: 204 } });
     renderApp('/notifications');
 
