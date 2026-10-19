@@ -325,8 +325,16 @@ namespace Pouspourika.IdeaVerse.Api.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("EmailFrequency")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<bool>("EmailReminders")
                         .HasColumnType("boolean");
+
+                    b.Property<DateOnly?>("LastDigestDate")
+                        .HasColumnType("date");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");

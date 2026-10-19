@@ -54,4 +54,19 @@ public class EmailLayoutTests
     await Assert.That(mail.Body).IsEqualTo("Just this.");
     await Assert.That(mail.Html!).DoesNotContain("Button not working?");
   }
+
+  [Test]
+  public async Task Compose_Sections_ListsEachItemWithItsLink()
+  {
+    var item = new EmailItem("Mia commented: “<b>Go</b>”", new EmailAction("View the comment", new Uri($"{IdeaVerseApiFactory.AppUrl}/ideas/1#comment-2")));
+    var content = new EmailContent("Updates", ["Here’s what’s new."], Sections: [new EmailSection("Launch", [item])]);
+
+    var mail = EmailLayout.Compose("mia@example.com", "Hi", content, App);
+
+    await Assert.That(mail.Body).IsEqualTo("Here’s what’s new.\n\nLaunch\n\n- Mia commented: “<b>Go</b>”\n  https://app.example.com/ideas/1#comment-2");
+    await Assert.That(mail.Html!).Contains(">Launch</h2>")
+      .And.Contains("&lt;b&gt;Go&lt;/b&gt;")
+      .And.Contains("href=\"https://app.example.com/ideas/1#comment-2\"")
+      .And.Contains(">View the comment</a>");
+  }
 }
