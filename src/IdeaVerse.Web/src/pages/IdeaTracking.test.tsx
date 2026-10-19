@@ -127,6 +127,29 @@ describe('Idea tracking', () => {
     expect(within(screen.getByRole('table')).getByRole('link', { name: 'Spring launch' })).toBeInTheDocument();
   });
 
+  it('opens an idea in the side panel from its calendar chips, which name it in full on hover', async () => {
+    const today = todayIso();
+    const planned = { ...launch, startDate: `${today.slice(0, 7)}-01`, targetDate: `${today.slice(0, 7)}-28` };
+    fakeApi({
+      ...signedIn,
+      [ideasRoute]: { status: 200, body: [planned] },
+      'GET /api/v1/ideas/idea-1': { status: 200, body: planned },
+      'GET /api/v1/ideas/idea-1/components': { status: 200, body: [] },
+      'GET /api/v1/workspaces/ws-1/members': { status: 200, body: [] },
+    });
+    renderApp('/ideas');
+    await userEvent.click(await screen.findByRole('button', { name: 'Calendar' }));
+
+    const table = screen.getByRole('table');
+    expect(within(table).getByRole('link', { name: 'Starts: Spring launch' })).toHaveAttribute('title', 'Starts: Spring launch');
+    const chip = within(table).getByRole('link', { name: 'Spring launch' });
+    expect(chip).toHaveAttribute('title', 'Spring launch');
+    expect(chip).toHaveAttribute('href', '/ideas/idea-1');
+    await userEvent.click(chip);
+
+    expect(await screen.findByRole('dialog', { name: 'Spring launch' })).toBeInTheDocument();
+  });
+
   it('shows a planned span in the calendar from its start day to its target date', async () => {
     const month = todayIso().slice(0, 7);
     const span = (id: string, title: string) => anIdea({ id, title, startDate: `${month}-01`, targetDate: `${month}-28` });
