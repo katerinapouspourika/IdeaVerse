@@ -56,7 +56,7 @@ describe('Dashboard', () => {
     const stats = screen.getByRole('region', { name: 'At a glance' });
     expect(within(stats).getByText('Active ideas').previousSibling).toHaveTextContent('3');
     expect(within(stats).getByText('Overdue').previousSibling).toHaveTextContent('1');
-    expect(within(stats).getByText('Due this week').previousSibling).toHaveTextContent('1');
+    expect(within(stats).getByText('Due within a week').previousSibling).toHaveTextContent('1');
     expect(within(stats).getByText('Done').previousSibling).toHaveTextContent('1');
 
     const attention = screen.getByRole('region', { name: 'Needs attention' });
@@ -90,7 +90,7 @@ describe('Dashboard', () => {
     fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [anIdea()] } });
     renderApp('/');
 
-    expect(await screen.findByText(/Nothing overdue or due this week/)).toBeInTheDocument();
+    expect(await screen.findByText(/Nothing overdue or due within a week/)).toBeInTheDocument();
     expect(screen.getByText('You’re all caught up. Time to capture a new idea?')).toBeInTheDocument();
   });
 
@@ -133,7 +133,7 @@ describe('Dashboard', () => {
 
     expect(await screen.findByText('We couldn’t load this. Check your connection and try again.')).toBeInTheDocument();
     const stats = screen.getByRole('region', { name: 'At a glance' });
-    for (const label of ['Active ideas', 'Overdue', 'Due this week', 'Done']) {
+    for (const label of ['Active ideas', 'Overdue', 'Due within a week', 'Done']) {
       expect(within(stats).getByText(label).previousSibling).toHaveTextContent('–Not loaded');
     }
     expect(within(screen.getByRole('region', { name: 'Needs attention' })).getByText('Your ideas couldn’t load.')).toBeInTheDocument();
