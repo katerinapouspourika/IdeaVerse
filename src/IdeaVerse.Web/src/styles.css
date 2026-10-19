@@ -3589,6 +3589,114 @@ a:focus-visible {
   bottom: 16px;
 }
 
+/* Finished ideas step back, in both densities, so the open ones stand out. */
+.idea-card.is-done {
+  background: color-mix(in srgb, var(--surface) 55%, var(--bg));
+  box-shadow: none;
+}
+
+.idea-card.is-done .idea-title {
+  color: var(--muted);
+}
+
+/*
+ * The compact list: one row per idea, its details in fixed columns so they line up from row to row. On narrower screens
+ * the details wrap onto a line under the title.
+ */
+.idea-list.compact {
+  gap: 6px;
+}
+
+.idea-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 11.5rem 8.5rem 10rem 9rem;
+  align-items: center;
+  gap: 4px 16px;
+  padding: 10px 84px 10px 16px;
+  border-radius: var(--radius-small);
+}
+
+.idea-row-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+}
+
+.idea-row .idea-title {
+  margin: 0;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.idea-row .badges {
+  white-space: nowrap;
+}
+
+.idea-row-details {
+  display: contents;
+}
+
+.idea-row .progress-track {
+  width: 56px;
+}
+
+.idea-list.compact .idea-item-vote {
+  top: 50%;
+  right: 14px;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+
+@media (max-width: 860px) {
+  .idea-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-right: 16px;
+  }
+
+  .idea-row-details {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 14px;
+    grid-column: 1 / -1;
+    padding-right: 68px;
+  }
+
+  .idea-list.compact .idea-item-vote {
+    top: auto;
+    bottom: 8px;
+    transform: none;
+  }
+}
+
+/* On a phone the title gets a line to itself, with the status and the details flowing on the lines under it. */
+@media (max-width: 600px) {
+  .idea-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    padding-right: 76px;
+  }
+
+  .idea-row-main {
+    flex-basis: 100%;
+  }
+
+  .idea-row-details {
+    display: contents;
+  }
+
+  .idea-list.compact .idea-item-vote {
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+  }
+}
+
 /* Picking ideas for a bulk change: a checkbox in a gutter beside each idea the user can change, whatever the card's layout. */
 .idea-list.selectable .idea-item {
   display: grid;

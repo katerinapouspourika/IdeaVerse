@@ -72,32 +72,12 @@ const viewIcons: Record<View, ReactNode> = {
 const tabs: readonly Tab[] = ['All', ...statuses, 'Archived'];
 
 function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
-  const remembered = `ideaverse.ideas.${workspace.id}`;
-  const [tab, setTab] = useRemembered<Tab>(remembered, 'tab', 'All', (value) => tabs.includes(value as Tab));
-  const [search, setSearch] = useState('');
-  const [rememberedTag, setTag] = useRemembered(remembered, 'tag', '', (value) => typeof value === 'string');
-  // A tag clicked on an idea arrives as `?tag=`; it becomes the list's tag filter, and leaves the address.
-  const [params, setParams] = useSearchParams();
-  const linkedTag = params.get('tag');
-  const tag = linkedTag ?? rememberedTag;
-  useEffect(() => {
-    if (linkedTag !== null) {
-      setTag(linkedTag);
-      setParams(
-        (current) => {
-          current.delete('tag');
-          return current;
-        },
-        { replace: true },
-      );
-    }
-  }, [linkedTag, setTag, setParams]);
-  const [sort, setSort] = useRemembered<IdeaSort>(remembered, 'sort', 'TargetDate', (value) => typeof value === 'string' && value in sortLabels);
-  const [view, setView] = useRemembered<View>(remembered, 'view', 'list', (value) => views.includes(value as View));
   const location = useLocation();
   const navigate = useNavigate();
   const request = location.state as { adding?: boolean; template?: string } | null;
   const openForm = request?.adding === true;
+  const { choices, choose, search, setSearch, debouncedSearch } = useListChoices(workspace.id, openForm);
+  const { tab, tag, sort, view, density } = choices;
   const requested = { title: '', description: '', template: request?.template };
   const [adding, setAdding] = useState<{ title: string; description: string; template?: string } | null>(openForm ? requested : null);
   const [handledRequest, setHandledRequest] = useState(openForm ? location.key : null);
@@ -116,7 +96,6 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
     }
   }, [openForm, navigate]);
   const [brainstorming, setBrainstorming] = useState(false);
-  const debouncedSearch = useDebounced(search, 250);
   const archived = tab === 'Archived';
   // The board shows every status in its own column, so it ignores the status tabs.
   const status = tab === 'All' || archived || view === 'board' ? undefined : tab;
@@ -144,9 +123,9 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
 
   const statusFilter = (
     <>
-      <FilterTab label="All" active={tab === 'All' || (view === 'board' && !archived)} onClick={() => setTab('All')} />
-      {view !== 'board' && statuses.map((s) => <FilterTab key={s} label={statusLabels[s]} active={tab === s} onClick={() => setTab(s)} />)}
-      <FilterTab label="Archived" active={archived} onClick={() => setTab('Archived')} />
+      <FilterTab label="All" active={tab === 'All' || (view === 'board' && !archived)} onClick={() => choose({ tab: 'All' })} />
+      {view !== 'board' && statuses.map((s) => <FilterTab key={s} label={statusLabels[s]} active={tab === s} onClick={() => choose({ tab: s })} />)}
+      <FilterTab label="Archived" active={archived} onClick={() => choose({ tab: 'Archived' })} />
     </>
   );
   const searchField = (
@@ -157,7 +136,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const tagField = tags.data && tags.data.length > 0 && (
     <Field label="Tag">
       {(props) => (
-        <select {...props} value={tag} onChange={(e) => setTag(e.target.value)}>
+        <select {...props} value={tag} onChange={(e) => choose({ tag: e.target.value })}>
           <option value="">All tags</option>
           {tags.data.map((t) => (
             <option key={t} value={t}>
@@ -171,7 +150,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   const sortField = (
     <Field label="Sort by">
       {(props) => (
-        <select {...props} value={sort} onChange={(e) => setSort(e.target.value as IdeaSort)}>
+        <select {...props} value={sort} onChange={(e) => choose({ sort: e.target.value as IdeaSort })}>
           {(Object.keys(sortLabels) as IdeaSort[]).map((s) => (
             <option key={s} value={s}>
               {sortLabels[s]}
@@ -184,8 +163,15 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
   // On a phone the views are icons, named for screen readers and in a tooltip, so all five fit on one row.
   const viewChoice = (icons = false) =>
     views.map((v) => (
-      <FilterTab key={v} label={viewLabels[v]} icon={icons ? viewIcons[v] : undefined} active={view === v} onClick={() => setView(v)} />
+      <FilterTab key={v} label={viewLabels[v]} icon={icons ? viewIcons[v] : undefined} active={view === v} onClick={() => choose({ view: v })} />
     ));
+  const densityChoice = view === 'list' && (
+    <div className="tabs" role="group" aria-label="Density">
+      {densities.map((d) => (
+        <FilterTab key={d} label={densityLabels[d]} active={density === d} onClick={() => choose({ density: d })} />
+      ))}
+    </div>
+  );
 
   return (
     <div className="stack">
@@ -236,6 +222,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
             <div ref={viewTabs} className="tabs" role="group" aria-label="View">
               {viewChoice()}
             </div>
+            {densityChoice}
           </div>
         </>
       )}
@@ -274,6 +261,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
               </nav>
               {tagField}
               {sortField}
+              {densityChoice}
               {/* Not "Done", which is a status above. */}
               <button type="button" className="button" onClick={closeFilters}>
                 Close filters
@@ -305,16 +293,119 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
             ideas={ideas.data}
             filtered={filtered}
             archived={archived}
+            compact={density === 'compact'}
             onClearFilters={() => {
-              setTab('All');
+              choose({ tab: 'All', tag: '' });
               setSearch('');
-              setTag('');
             }}
           />
         ))}
       {panel.openId && <IdeaPanel key={panel.openId} id={panel.openId} onClose={panel.close} />}
     </div>
   );
+}
+
+/** How much room each idea takes on the List view: a card, or a single row with its details in columns. */
+const densities = ['comfortable', 'compact'] as const;
+type Density = (typeof densities)[number];
+const densityLabels: Record<Density, string> = { comfortable: 'Comfortable', compact: 'Compact' };
+
+/** The list's choices, kept per workspace in the browser. All but the density also live in the address. */
+interface Choices {
+  tab: Tab;
+  tag: string;
+  sort: IdeaSort;
+  view: View;
+  density: Density;
+}
+
+const defaultChoices: Choices = { tab: 'All', tag: '', sort: 'TargetDate', view: 'list', density: 'comfortable' };
+const validChoice: { [K in keyof Choices]: (value: unknown) => boolean } = {
+  tab: (value) => tabs.includes(value as Tab),
+  tag: (value) => typeof value === 'string',
+  sort: (value) => typeof value === 'string' && Object.hasOwn(sortLabels, value),
+  view: (value) => views.includes(value as View),
+  density: (value) => densities.includes(value as Density),
+};
+/** The address parameter of each choice that can be shared, as in `/ideas?status=Done&tag=launch&q=spring&sort=Votes&view=board`. */
+const choiceParams = { tab: 'status', tag: 'tag', sort: 'sort', view: 'view' } as const satisfies Partial<Record<keyof Choices, string>>;
+const searchParam = 'q';
+
+/**
+ * The ideas list's view, status tab, tag, order, and density, and its search. Each choice is remembered in the browser
+ * per workspace, so a reload or a later visit opens the list as it was left (storage may be unavailable, as in a private
+ * window; the list then starts fresh), and all but the density are kept in the address too, so a filtered list can be
+ * shared or bookmarked. A choice in the address, as from a shared link or a tag chip's `?tag=`, wins over the remembered
+ * one without replacing it. Changes replace the address rather than adding to the history, and leave its other
+ * parameters, such as the side panel's `?idea=`, alone, and the page scrolled where it was.
+ */
+function useListChoices(workspaceId: string, paused: boolean) {
+  const key = `ideaverse.ideas.${workspaceId}`;
+  const [params, setParams] = useSearchParams();
+  const location = useLocation();
+  const [saved, setSaved] = useState<Choices>(() => {
+    const stored = readChoices(key);
+    const valid = (name: keyof Choices) => stored[name] !== undefined && validChoice[name](stored[name]);
+    return {
+      tab: valid('tab') ? (stored.tab as Tab) : defaultChoices.tab,
+      tag: valid('tag') ? (stored.tag as string) : defaultChoices.tag,
+      sort: valid('sort') ? (stored.sort as IdeaSort) : defaultChoices.sort,
+      view: valid('view') ? (stored.view as View) : defaultChoices.view,
+      density: valid('density') ? (stored.density as Density) : defaultChoices.density,
+    };
+  });
+  const linked = (name: keyof typeof choiceParams) => {
+    const value = params.get(choiceParams[name]);
+    return value !== null && validChoice[name](value) ? value : undefined;
+  };
+  const choices: Choices = {
+    tab: (linked('tab') as Tab | undefined) ?? saved.tab,
+    tag: linked('tag') ?? saved.tag,
+    sort: (linked('sort') as IdeaSort | undefined) ?? saved.sort,
+    view: (linked('view') as View | undefined) ?? saved.view,
+    density: saved.density,
+  };
+  const [search, setSearch] = useState(() => params.get(searchParam) ?? '');
+  const debouncedSearch = useDebounced(search, 250);
+
+  // The address shows every choice that differs from the default, including remembered ones it arrived without.
+  const address = (next: Choices, query: string) => {
+    const result = new URLSearchParams(params);
+    for (const [name, param] of Object.entries(choiceParams) as [keyof typeof choiceParams, string][]) {
+      if (next[name] === defaultChoices[name]) {
+        result.delete(param);
+      } else {
+        result.set(param, next[name]);
+      }
+    }
+    if (query.trim() === '') {
+      result.delete(searchParam);
+    } else {
+      result.set(searchParam, query);
+    }
+    return result.toString();
+  };
+  const wanted = address(choices, debouncedSearch);
+  const current = params.toString();
+  useEffect(() => {
+    // While "New idea" from elsewhere clears its request from the address, which this would put back.
+    if (!paused && wanted !== current) {
+      setParams(new URLSearchParams(wanted), { replace: true, state: location.state, preventScrollReset: true });
+    }
+  }, [paused, wanted, current, setParams, location.state]);
+
+  const choose = (changes: Partial<Choices>) => {
+    setSaved((previous) => ({ ...previous, ...changes }));
+    try {
+      localStorage.setItem(key, JSON.stringify({ ...readChoices(key), ...changes }));
+    } catch {
+      // Not remembered this time; the choice still applies.
+    }
+    // All at once: changes made one after another in the same event would each start from the same address.
+    setParams(new URLSearchParams(address({ ...choices, ...changes }, debouncedSearch)), { replace: true, state: location.state, preventScrollReset: true });
+  };
+
+  return { choices, choose, search, setSearch, debouncedSearch };
 }
 
 /** `value`, once it has stopped changing for `delay` milliseconds. */
@@ -366,10 +457,11 @@ interface IdeaListProps {
   ideas: Idea[];
   filtered: boolean;
   archived: boolean;
+  compact: boolean;
   onClearFilters: () => void;
 }
 
-function IdeaList({ workspaceId, ideas, filtered, archived, onClearFilters }: IdeaListProps) {
+function IdeaList({ workspaceId, ideas, filtered, archived, compact, onClearFilters }: IdeaListProps) {
   const { linkProps } = useIdeaPanel();
   const selection = useBulkSelection(ideas);
   if (ideas.length === 0) {
@@ -424,7 +516,7 @@ function IdeaList({ workspaceId, ideas, filtered, archived, onClearFilters }: Id
           Select all
         </label>
       )}
-      <ul className={choosable.length > 0 ? 'idea-list selectable' : 'idea-list'}>
+      <ul className={['idea-list', compact && 'compact', choosable.length > 0 && 'selectable'].filter(Boolean).join(' ')}>
         {ideas.map((idea) => (
           <li key={idea.id} className="idea-item">
             {choosable.length > 0 &&
@@ -440,28 +532,48 @@ function IdeaList({ workspaceId, ideas, filtered, archived, onClearFilters }: Id
                 <span className="idea-select" aria-hidden="true" />
               ))}
             {/* The title link is stretched over the card, so a click anywhere opens the idea while its tags stay links of their own. */}
-            <div className={idea.isOverdue ? 'card idea-card is-overdue' : 'card idea-card'}>
-              <div className="row spread">
-                <h2 className="idea-title">
-                  <Link {...linkProps(idea.id)} className="stretched-link">
-                    {idea.title}
-                  </Link>
-                </h2>
+            {compact ? (
+              <div className={cardClass(idea, 'card idea-card idea-row')}>
+                <div className="idea-row-main">
+                  <h2 className="idea-title">
+                    <Link {...linkProps(idea.id)} className="stretched-link">
+                      {idea.title}
+                    </Link>
+                  </h2>
+                  <Tags tags={idea.tags} />
+                </div>
                 <StatusBadge idea={idea} />
+                {/* Separate columns on a wide screen; one wrapped line under the title on a narrower one. */}
+                <div className="idea-row-details small">
+                  <span className={idea.isOverdue ? 'overdue-text' : undefined}>{formatDate(idea.targetDate)}</span>
+                  <span className="muted">{describeTeam(idea)}</span>
+                  <Progress done={idea.completedComponentCount} total={idea.componentCount} />
+                </div>
               </div>
-              <div className="row spread wrap">
-                <span>
-                  <strong>{formatDate(idea.targetDate)}</strong>{' '}
-                  <span className={idea.isOverdue ? 'overdue-text' : 'muted'}>({describeDue(idea.targetDate)})</span>
-                </span>
-                <Progress done={idea.completedComponentCount} total={idea.componentCount} />
+            ) : (
+              <div className={cardClass(idea, 'card idea-card')}>
+                <div className="row spread">
+                  <h2 className="idea-title">
+                    <Link {...linkProps(idea.id)} className="stretched-link">
+                      {idea.title}
+                    </Link>
+                  </h2>
+                  <StatusBadge idea={idea} />
+                </div>
+                <div className="row spread wrap">
+                  <span>
+                    <strong>{formatDate(idea.targetDate)}</strong>{' '}
+                    <span className={idea.isOverdue ? 'overdue-text' : 'muted'}>({describeDue(idea.targetDate)})</span>
+                  </span>
+                  <Progress done={idea.completedComponentCount} total={idea.componentCount} />
+                </div>
+                <div className="row small muted wrap">
+                  <span>{describeTeam(idea)}</span>
+                  {idea.postponeCount > 0 && <span>Postponed {idea.postponeCount}×</span>}
+                  <Tags tags={idea.tags} />
+                </div>
               </div>
-              <div className="row small muted wrap">
-                <span>{describeTeam(idea)}</span>
-                {idea.postponeCount > 0 && <span>Postponed {idea.postponeCount}×</span>}
-                <Tags tags={idea.tags} />
-              </div>
-            </div>
+            )}
             {/* Placed over the card's corner, above its stretched link. */}
             <div className="idea-item-vote">
               <VoteButton idea={idea} />
@@ -474,6 +586,11 @@ function IdeaList({ workspaceId, ideas, filtered, archived, onClearFilters }: Id
   );
 }
 
+/** A list card's classes: overdue ideas are marked, and finished ones step back. */
+function cardClass(idea: Idea, base: string): string {
+  return `${base}${idea.isOverdue ? ' is-overdue' : ''}${idea.status === 'Done' ? ' is-done' : ''}`;
+}
+
 /** Who the idea belongs to, from the user's point of view. */
 function describeTeam(idea: Idea): string {
   if (idea.role === 'Owner') {
@@ -481,28 +598,6 @@ function describeTeam(idea: Idea): string {
   }
   const owner = personLabel(idea.ownerName, idea.ownerEmail);
   return idea.role === 'Member' ? `You’re on ${owner}’s team` : `By ${owner}`;
-}
-
-/**
- * A choice on the ideas list (view, status tab, tag, or order) kept in the browser per workspace, so a reload or a later
- * visit opens the list as it was left. Storage may be unavailable, as in a private window; the list then starts fresh.
- */
-function useRemembered<T>(key: string, name: string, initial: T, valid: (value: unknown) => boolean) {
-  const [value, setValue] = useState<T>(() => {
-    const saved = readChoices(key)[name];
-    return saved !== undefined && valid(saved) ? (saved as T) : initial;
-  });
-
-  const update = (next: T) => {
-    setValue(next);
-    try {
-      localStorage.setItem(key, JSON.stringify({ ...readChoices(key), [name]: next }));
-    } catch {
-      // Not remembered this time; the choice still applies.
-    }
-  };
-
-  return [value, update] as const;
 }
 
 function readChoices(key: string): Record<string, unknown> {
