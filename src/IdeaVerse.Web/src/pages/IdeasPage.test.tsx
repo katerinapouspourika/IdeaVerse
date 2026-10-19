@@ -370,7 +370,8 @@ describe('IdeasPage', () => {
 
       await userEvent.click(screen.getByRole('link', { name: 'Black Friday teaser' }));
       expect(await screen.findByRole('dialog', { name: 'Black Friday teaser' })).toBeInTheDocument();
-      expect(router.state.location.search).toBe('?status=Done&q=black&idea=idea-1');
+      // The panel's link can be built before the search reaches the address, so only the parameters are compared, not their order.
+      expect(Object.fromEntries(new URLSearchParams(router.state.location.search))).toEqual({ status: 'Done', q: 'black', idea: 'idea-1' });
 
       await userEvent.click(screen.getByRole('button', { name: 'Close' }));
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
