@@ -42,7 +42,7 @@ public sealed class DiscoveryService(IdeaVerseDbContext context, IMailSender mai
   /// </summary>
   /// <param name="workspaceName">The workspace's name.</param>
   /// <returns>The subject.</returns>
-  public static string ApprovedSubject(string workspaceName) => $"You've joined {workspaceName} on IdeaVerse";
+  public static string ApprovedSubject(string workspaceName) => $"You’ve joined {workspaceName} on IdeaVerse";
 
   /// <summary>
   /// Gets which company's people can find a workspace.
@@ -349,7 +349,7 @@ public sealed class DiscoveryService(IdeaVerseDbContext context, IMailSender mai
       email,
       ApprovedSubject(workspaceName),
       new EmailContent(
-        $"You're in {workspaceName}",
+        $"You’re in {workspaceName}",
         [$"Your request to join {workspaceName} was approved. You can now see and plan its ideas with the team."],
         new EmailAction("Open IdeaVerse", new Uri(app.Value.Link("/ideas")))),
       app.Value);

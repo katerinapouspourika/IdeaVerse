@@ -23,12 +23,12 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
   /// <summary>
   /// Why someone other than the owner may not delete or hand over the workspace.
   /// </summary>
-  private const string OwnerOnlyMessage = "Only the workspace's owner can do this.";
+  private const string OwnerOnlyMessage = "Only the workspace’s owner can do this.";
 
   /// <summary>
   /// Why an owner or admin may not change their own role.
   /// </summary>
-  private const string OwnRoleMessage = "You can't change your own role. Ask the workspace's owner or another admin.";
+  private const string OwnRoleMessage = "You can’t change your own role. Ask the workspace’s owner or another admin.";
 
   /// <summary>
   /// Lists the user's workspaces by name.
@@ -249,7 +249,7 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
 
     if (member.Role == WorkspaceRole.Owner)
     {
-      return WorkspaceChangeResult.Conflict("The workspace owner's role cannot change.");
+      return WorkspaceChangeResult.Conflict("The workspace owner’s role cannot change.");
     }
 
     member.Role = request.Role;
@@ -285,7 +285,7 @@ public sealed class WorkspaceService(IdeaVerseDbContext context, TimeProvider ti
 
     if (userId != memberUserId && !role.Value.CanManage())
     {
-      return WorkspaceChangeResult.Forbidden("Only the workspace's owner and admins can remove other people.");
+      return WorkspaceChangeResult.Forbidden("Only the workspace’s owner and admins can remove other people.");
     }
 
     var memberRole = await context.RoleInAsync(memberUserId, workspaceId, cancellationToken).ConfigureAwait(false);

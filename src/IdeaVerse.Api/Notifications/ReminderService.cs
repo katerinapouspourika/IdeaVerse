@@ -41,13 +41,14 @@ public sealed partial class ReminderService(
   }
 
   /// <summary>
-  /// Writes an email subject for a notification.
+  /// Writes an email subject for a notification, with the idea's title, and the component's, in quotes as grouped subjects have them.
   /// </summary>
   /// <param name="content">What the notification is about.</param>
   /// <returns>The subject line.</returns>
   private static string Subject(NotificationContent content)
   {
-    var about = content.ComponentTitle is { } component ? $"{component} ({content.IdeaTitle})" : content.IdeaTitle;
+    var idea = $"“{content.IdeaTitle}”";
+    var about = content.ComponentTitle is { } component ? $"“{component}” ({idea})" : idea;
     return content.Kind switch
     {
       ReminderKind.ComingUp => $"Coming up: {about}",
@@ -55,11 +56,11 @@ public sealed partial class ReminderService(
       ReminderKind.Today => $"Due today: {about}",
       ReminderKind.Overdue => $"Overdue: {about}",
       ReminderKind.Assigned => $"Assigned to you: {about}",
-      ReminderKind.AddedToTeam => $"You're on the team: {content.IdeaTitle}",
-      ReminderKind.Commented => $"New comment on {content.IdeaTitle}",
-      ReminderKind.Mentioned => $"You were mentioned on {content.IdeaTitle}",
-      ReminderKind.StartingSoon => $"Starting soon: {content.IdeaTitle}",
-      ReminderKind.AddComponents => $"Add components to {content.IdeaTitle}",
+      ReminderKind.AddedToTeam => $"You’re on the team: {idea}",
+      ReminderKind.Commented => $"New comment on {idea}",
+      ReminderKind.Mentioned => $"You were mentioned on {idea}",
+      ReminderKind.StartingSoon => $"Starting soon: {idea}",
+      ReminderKind.AddComponents => $"Add components to {idea}",
       _ => throw new ArgumentOutOfRangeException(nameof(content), content.Kind, "Unknown notification kind."),
     };
   }
@@ -509,7 +510,7 @@ public sealed partial class ReminderService(
     var reason = notification.Kind == ReminderKind.Mentioned
       ? "You get this because someone mentioned you in IdeaVerse."
       : notification.ComponentId is null
-        ? "You get this because you are on this idea's team in IdeaVerse."
+        ? "You get this because you are on this idea’s team in IdeaVerse."
         : "You get this because this is assigned to you in IdeaVerse.";
     var action = new EmailAction(notification.Kind == ReminderKind.AddComponents ? "Add components" : "Open the idea", new Uri(app.Value.Link(PathTo(notification))));
     return EmailLayout.Compose(item.Email!, Subject(content), new EmailContent(item.IdeaTitle, [message], action, reason), app.Value);
@@ -543,7 +544,7 @@ public sealed partial class ReminderService(
     var action = sections.Count == 1 ? new EmailAction("Open the idea", new Uri(app.Value.Link($"/ideas/{items[0].Notification.IdeaId}"))) : null;
     var footnote = digest
       ? "You get one email a day because you chose a daily digest in IdeaVerse; mentions still arrive right away."
-      : "You get this because you are on these ideas' teams, were assigned their work, or were mentioned in IdeaVerse.";
+      : "You get this because you are on these ideas’ teams, were assigned their work, or were mentioned in IdeaVerse.";
     return EmailLayout.Compose(items[0].Email!, subject, new EmailContent(heading, [intro], action, footnote, sections), app.Value);
   }
 }

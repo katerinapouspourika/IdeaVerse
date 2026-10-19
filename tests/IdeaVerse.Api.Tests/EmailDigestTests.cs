@@ -88,9 +88,9 @@ public class EmailDigestTests
     await factory.RunRemindersAsync();
 
     var mail = factory.Mail.Sent.Single();
-    await Assert.That(mail.Subject).IsEqualTo("You're on the team: Launch");
+    await Assert.That(mail.Subject).IsEqualTo("You’re on the team: “Launch”");
     await Assert.That(mail.Body).StartsWith("owner@example.com added you to the team of “Launch”.\n\nOpen the idea:\n")
-      .And.EndsWith("You get this because you are on this idea's team in IdeaVerse.");
+      .And.EndsWith("You get this because you are on this idea’s team in IdeaVerse.");
   }
 
   [Test]
@@ -148,7 +148,7 @@ public class EmailDigestTests
     await Assert.That(emptyMorning.Emailed).IsEqualTo(0);
     await Assert.That(sameDay.Emailed).IsEqualTo(0);
     await Assert.That(nextMorning.Emailed).IsEqualTo(1);
-    await Assert.That(factory.Mail.Sent.Single().Subject).IsEqualTo("You're on the team: Launch");
+    await Assert.That(factory.Mail.Sent.Single().Subject).IsEqualTo("You’re on the team: “Launch”");
   }
 
   [Test]
@@ -174,7 +174,7 @@ public class EmailDigestTests
 
     await Assert.That(tooSoon.Emailed).IsEqualTo(0);
     await Assert.That(retry.Emailed).IsEqualTo(1);
-    await Assert.That(factory.Mail.Sent.Single().Subject).IsEqualTo("You're on the team: Launch");
+    await Assert.That(factory.Mail.Sent.Single().Subject).IsEqualTo("You’re on the team: “Launch”");
   }
 
   [Test]
@@ -196,9 +196,9 @@ public class EmailDigestTests
     var morning = await factory.RunRemindersAsync();
 
     await Assert.That(night.Emailed).IsEqualTo(1);
-    await Assert.That(mention.Subject).IsEqualTo("You were mentioned on Launch");
+    await Assert.That(mention.Subject).IsEqualTo("You were mentioned on “Launch”");
     await Assert.That(morning.Emailed).IsEqualTo(1);
-    await Assert.That(factory.Mail.Sent.Select(m => m.Subject)).IsEquivalentTo(["You were mentioned on Launch", "You're on the team: Launch"]);
+    await Assert.That(factory.Mail.Sent.Select(m => m.Subject)).IsEquivalentTo(["You were mentioned on “Launch”", "You’re on the team: “Launch”"]);
   }
 
   [Test]

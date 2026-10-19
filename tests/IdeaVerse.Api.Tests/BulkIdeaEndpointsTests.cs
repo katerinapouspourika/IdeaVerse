@@ -227,7 +227,7 @@ public class BulkIdeaEndpointsTests
     var after = await (await owner.GetAsync($"/api/v1/ideas/{offTeam.Id}")).ReadIdeaAsync();
 
     await Assert.That(status.Select(r => r.Outcome)).IsEquivalentTo([ChangeOutcome.Forbidden, ChangeOutcome.Changed], CollectionOrdering.Matching);
-    await Assert.That(status[0].Message).IsEqualTo("Only the idea's team and the workspace's admins can change this idea.");
+    await Assert.That(status[0].Message).IsEqualTo("Only the idea’s team and the workspace’s admins can change this idea.");
     await Assert.That(archive[0].Outcome).IsEqualTo(ChangeOutcome.Forbidden);
     await Assert.That(after.Status).IsEqualTo(IdeaStatus.Planned);
   }

@@ -37,7 +37,7 @@ public sealed class AccountService(IdeaVerseDbContext context, UserManager<User>
 
     if (!await userManager.CheckPasswordAsync(user, request.Password).ConfigureAwait(false))
     {
-      return WorkspaceChangeResult.Invalid(nameof(DeleteAccountRequest.Password), "That password isn't right.");
+      return WorkspaceChangeResult.Invalid(nameof(DeleteAccountRequest.Password), "That isn’t your password.");
     }
 
     var shared = await context.WorkspaceMembers
