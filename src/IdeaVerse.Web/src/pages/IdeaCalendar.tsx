@@ -6,6 +6,7 @@ import { formatDate, todayIso } from '../api/dates';
 import type { Idea } from '../api/types';
 import { StatusBadge } from '../components/StatusBadge';
 import { useNarrowScreen } from '../components/useNarrowScreen';
+import { useIdeaPanel } from '../panel/useIdeaPanel';
 
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -15,10 +16,12 @@ const maxSpans = 3;
 /**
  * A month grid with each idea on its target date, starting on the user's current month. An idea with a start date also
  * shows on its start day, as an outlined chip, with a thin line on each day in between. On a phone, where a grid's cells
- * are too small to read, the month's ideas are a list grouped by target date instead.
+ * are too small to read, the month's ideas are a list grouped by target date instead. Either way an idea opens in the
+ * side panel, as on the other views.
  */
 export function IdeaCalendar({ ideas }: { ideas: Idea[] }) {
   const narrow = useNarrowScreen();
+  const { linkProps } = useIdeaPanel();
   const today = todayIso();
   const [month, setMonth] = useState(today.slice(0, 7));
   const [year, monthIndex] = month.split('-').map(Number) as [number, number];
@@ -85,15 +88,16 @@ export function IdeaCalendar({ ideas }: { ideas: Idea[] }) {
                   <td key={date} className={date === today ? 'today' : undefined}>
                     <span className="day">{Number(date.slice(8))}</span>
                     {byDate.get(date)?.map((idea) => (
-                      <Link key={idea.id} to={`/ideas/${idea.id}`} className={`calendar-idea ${chipClass(idea)}`}>
+                      <Link key={idea.id} {...linkProps(idea.id)} className={`calendar-idea ${chipClass(idea)}`} title={idea.title}>
                         {idea.title}
                       </Link>
                     ))}
                     {byStart.get(date)?.map((idea) => (
                       <Link
                         key={`start-${idea.id}`}
-                        to={`/ideas/${idea.id}`}
+                        {...linkProps(idea.id)}
                         aria-label={`Starts: ${idea.title}`}
+                        title={`Starts: ${idea.title}`}
                         className={`calendar-idea calendar-start ${chipClass(idea)}`}
                       >
                         {idea.title}
@@ -126,6 +130,7 @@ interface CalendarAgendaProps {
 
 /** The month's ideas as a list grouped by target date, each noting when work starts, for screens too narrow for a grid. */
 function CalendarAgenda({ month, title, byDate, today }: CalendarAgendaProps) {
+  const { linkProps } = useIdeaPanel();
   const days = [...byDate.keys()].filter((date) => date.startsWith(month)).sort();
   if (days.length === 0) {
     return <p className="muted">No ideas due in {title}.</p>;
@@ -142,7 +147,7 @@ function CalendarAgenda({ month, title, byDate, today }: CalendarAgendaProps) {
           <ul className="agenda-ideas">
             {byDate.get(date)!.map((idea) => (
               <li key={idea.id} className={`agenda-idea status-${idea.status.toLowerCase()}${idea.isOverdue ? ' is-overdue' : ''}`}>
-                <Link to={`/ideas/${idea.id}`} className="agenda-title stretched-link">
+                <Link {...linkProps(idea.id)} className="agenda-title stretched-link">
                   {idea.title}
                 </Link>
                 <span className="row small muted wrap">

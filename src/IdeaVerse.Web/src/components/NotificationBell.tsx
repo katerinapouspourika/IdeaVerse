@@ -99,7 +99,7 @@ export function NotificationBell({ hidden = false }: { hidden?: boolean }) {
             <strong>Notifications</strong>
             {unread > 0 && (
               <button type="button" className="link-button small" onClick={() => markAll.mutate()} disabled={markAll.isPending}>
-                Mark all read
+                Mark all as read
               </button>
             )}
           </div>
@@ -122,22 +122,25 @@ export function NotificationBell({ hidden = false }: { hidden?: boolean }) {
 }
 
 /**
- * One notification in the drop-down: what happened, to which idea, how long ago, and a dot while it is unread. Its parts
- * are laid out apart, so the link names them in a sentence for screen readers.
+ * One notification in the drop-down: what happened, to which idea (and which of its components, for an assignment or a
+ * component's due date), how long ago, and a dot while it is unread. Its parts are laid out apart, so the link names them
+ * in a sentence for screen readers.
  */
 function NotificationMenuItem({ notification, onOpen }: { notification: Notification; onOpen: () => void }) {
   const { all } = useWorkspace();
   const unread = notification.readAt === null;
   const ago = formatAgo(notification.createdAt);
   const workspace = all.length > 1 ? `, ${all.find((w) => w.id === notification.workspaceId)?.name ?? notification.workspaceName}` : '';
-  const label = `${titles[notification.kind]}${unread ? ', unread' : ''}: ${notification.ideaTitle}, ${ago}${workspace}`;
+  const component = notification.componentTitle;
+  const subject = component ? `${component} for ${notification.ideaTitle}` : notification.ideaTitle;
+  const label = `${titles[notification.kind]}${unread ? ', unread' : ''}: ${subject}, ${ago}${workspace}`;
 
   return (
     <li className={unread ? 'unread' : undefined}>
       <Link to={notificationLink(notification)} className="notification-menu-item" aria-label={label} title={notification.message} onClick={onOpen}>
         <span className="unread-dot" aria-hidden="true" />
         <span className="notification-menu-title">{titles[notification.kind]}</span>
-        <span className="notification-menu-idea">{notification.ideaTitle}</span>
+        <span className="notification-menu-idea">{component ? `${component} · ${notification.ideaTitle}` : notification.ideaTitle}</span>
         <time className="notification-menu-time" dateTime={notification.createdAt} title={formatMoment(notification.createdAt)}>
           {ago}
         </time>
