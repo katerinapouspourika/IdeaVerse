@@ -73,7 +73,14 @@ export function useBulkSelection(ideas: Idea[]) {
           setChosen((current) => new Set([...current].filter((id) => !changed.has(id))));
           setProblems(failed.map((r) => ({ id: r.id, title: targets.find((idea) => idea.id === r.id)?.title ?? 'An idea', message: r.message ?? 'It couldn’t be changed.' })));
           toast({
-            message: failed.length === 0 ? message : `${message}. ${countIdeas(failed.length)} couldn’t be changed.`,
+            message:
+              failed.length === 0
+                ? message
+                : changed.size === 0
+                  ? failed.length === 1
+                    ? 'The idea couldn’t be changed.'
+                    : `None of the ${failed.length} ideas could be changed.`
+                  : `${message}. ${countIdeas(failed.length)} couldn’t be changed.`,
             tone: failed.length > 0 ? 'error' : undefined,
             undo: undo && before.length > 0 ? () => undo(before) : undefined,
           });
