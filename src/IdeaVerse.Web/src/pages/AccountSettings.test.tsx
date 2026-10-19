@@ -19,6 +19,10 @@ describe('Account settings', () => {
 
     expect(await screen.findByRole('button', { name: 'Account: Katerina' })).toBeInTheDocument();
     expect(calls.find((c) => c.path === '/api/v1/account/profile')?.body).toEqual({ displayName: 'Katerina' });
+    expect(within(form).getByRole('status')).toHaveTextContent('Saved.');
+
+    await userEvent.type(within(form).getByLabelText('Your name'), ' P.');
+    expect(within(form).queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('changes the password, and says when the current one is wrong', async () => {
