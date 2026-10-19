@@ -38,7 +38,7 @@ const signedIn: RouteObject[] = [
   { path: '/settings', lazy: async () => ({ Component: (await import('./pages/SettingsPage')).SettingsPage }) },
 ];
 
-/** Shown while a signed-in page's code downloads on first load. */
+/** Shown while a lazily loaded page's code downloads on first load: the signed-in pages, and joining by invite link. */
 function Loading() {
   return <Skeleton variant="page" lines={4} />;
 }
@@ -53,7 +53,7 @@ export const routes: RouteObject[] = [
       { path: '/confirm-email', element: <ConfirmEmailPage /> },
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
-      { path: '/join/:token', lazy: async () => ({ Component: (await import('./pages/JoinPage')).JoinPage }) },
+      { path: '/join/:token', HydrateFallback: Loading, lazy: async () => ({ Component: (await import('./pages/JoinPage')).JoinPage }) },
       { path: '/', element: <HomePage /> },
       { path: '/how-it-works', handle: fullWidth, element: <HowItWorksPage /> },
       { path: '/contact', handle: fullWidth, element: <ContactPage /> },
