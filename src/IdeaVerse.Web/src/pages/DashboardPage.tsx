@@ -95,7 +95,7 @@ function WorkspaceDashboard({ workspace }: { workspace: Workspace }) {
           <section className="stats" aria-label="At a glance">
             <Stat label="Active ideas" value={open.length} tone="accent" />
             <Stat label="Overdue" value={overdue.length} tone="danger" />
-            <Stat label="Due this week" value={dueThisWeek.length} tone="warn" />
+            <Stat label="Due within a week" value={dueThisWeek.length} tone="warn" />
             <Stat label="Done" value={(ideas.data ?? []).length - open.length} tone="ok" />
           </section>
 
@@ -109,7 +109,7 @@ function WorkspaceDashboard({ workspace }: { workspace: Workspace }) {
               </div>
               {ideas.isLoading && <Skeleton />}
               {ideas.data && attention.length === 0 && <p className="muted row">
-                  <PartyPopper aria-hidden="true" size={18} /> Nothing overdue or due this week. Nice work!
+                  <PartyPopper aria-hidden="true" size={18} /> Nothing overdue or due within a week. Nice work!
                 </p>}
               {attention.length > 0 && (
                 <ul className="mini-list">
@@ -219,7 +219,7 @@ function summary(overdue: number, dueThisWeek: number, tasks: number): string {
   }
   const parts = [
     overdue > 0 && `${overdue} overdue`,
-    dueThisWeek > 0 && `${dueThisWeek} due this week`,
+    dueThisWeek > 0 && `${dueThisWeek} due within a week`,
     tasks > 0 && `${tasks} ${tasks === 1 ? 'task' : 'tasks'} for you`,
   ].filter(Boolean);
   return `Here’s your day: ${parts.join(', ')}.`;
