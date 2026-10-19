@@ -314,7 +314,7 @@ describe('IdeaPage', () => {
     expect(await screen.findByText(/doesn’t exist or isn’t in one of your workspaces/)).toBeInTheDocument();
   });
 
-  it('adds someone from the workspace who is not on the team yet', async () => {
+  it('adds someone from the workspace who is not on the team yet, confirming it in a toast', async () => {
     const calls = fakeApi({
       ...ideaRoutes({}, [owner, mia]),
       'POST /api/v1/ideas/idea-1/members': { status: 201, body: { ...mia, userId: 'u-leo', email: 'leo@example.com' } },
@@ -328,6 +328,7 @@ describe('IdeaPage', () => {
     await userEvent.click(within(form).getByRole('button', { name: 'Add' }));
 
     await waitFor(() => expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ email: 'leo@example.com' }));
+    expect(await screen.findByText('Added leo@example.com to the team')).toBeInTheDocument();
   });
 });
 
