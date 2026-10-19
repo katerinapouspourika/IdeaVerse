@@ -121,7 +121,7 @@ public class CommentMentionTests
 
     await factory.RunRemindersAsync();
 
-    var mail = factory.Mail.Take("mia@example.com", "You were mentioned on Launch");
+    var mail = factory.Mail.Take("mia@example.com", "You were mentioned on “Launch”");
     await Assert.That(mail.Body).StartsWith("owner@example.com mentioned you on “Launch”: “Over to @mia@example.com”");
     await Assert.That(mail.Body).EndsWith("You get this because someone mentioned you in IdeaVerse.");
   }

@@ -44,7 +44,7 @@ public sealed class InvitationService(
   /// </summary>
   /// <param name="workspaceName">The workspace's name.</param>
   /// <returns>The subject.</returns>
-  public static string Subject(string workspaceName) => $"You're invited to {workspaceName} on IdeaVerse";
+  public static string Subject(string workspaceName) => $"You’re invited to {workspaceName} on IdeaVerse";
 
   /// <summary>
   /// Lists a workspace's open invitations, newest first.
@@ -352,10 +352,10 @@ public sealed class InvitationService(
         $"{inviter} invited you to join {workspaceName} as {role} on IdeaVerse, where the team plans its ideas together.",
         hasAccount
           ? $"Sign in with this email address ({invitation.Email}) to accept it."
-          : $"You're new to IdeaVerse: create your account with this email address ({invitation.Email}), confirm it, and the invitation will be waiting for you.",
+          : $"You’re new to IdeaVerse: create your account with this email address ({invitation.Email}), confirm it, and the invitation will be waiting for you.",
       ],
       new EmailAction("Accept invitation", new Uri(link)),
-      $"The invitation expires on {expires}. If you weren't expecting it, you can ignore this email.");
+      $"The invitation expires on {expires}. If you weren’t expecting it, you can ignore this email.");
     return EmailLayout.Compose(invitation.Email, Subject(workspaceName), content, app.Value);
   }
 }
