@@ -72,6 +72,20 @@ describe('Dashboard', () => {
     expect(within(screen.getByRole('region', { name: 'Latest notifications' })).getByRole('link', { name: '“Late launch” is overdue' })).toBeInTheDocument();
   });
 
+  it('greets the user by the time in their account’s time zone, not the browser’s', async () => {
+    // Noon in UTC is two in the morning in Honolulu.
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-19T12:00:00Z') });
+    fakeApi({
+      ...signedIn,
+      'GET /api/v1/account': { status: 200, body: { ...signedInAccount, displayName: 'Kat Smith', timeZone: 'Pacific/Honolulu' } },
+      [ideasRoute]: { status: 200, body: [anIdea()] },
+    });
+    renderApp('/');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Good morning, Kat' })).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
   it('celebrates when nothing needs attention', async () => {
     fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [anIdea()] } });
     renderApp('/');
@@ -95,6 +109,34 @@ describe('Dashboard', () => {
 
     const form = await screen.findByRole('form', { name: 'New idea' });
     expect(within(form).getByLabelText('Start from')).toHaveValue('product-launch');
+  });
+
+  it('shows placeholders, not zeros, while the ideas and notifications load', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [anIdea()] } });
+    // The ideas and notifications never arrive.
+    const answer = fetch;
+    vi.stubGlobal('fetch', (input: string, init?: RequestInit) =>
+      input === '/api/v1/workspaces/ws-1/ideas' || input === '/api/v1/notifications' ? new Promise(() => {}) : answer(input, init),
+    );
+    renderApp('/');
+
+    const stats = await screen.findByRole('region', { name: 'At a glance' });
+    expect(stats).toHaveAttribute('aria-busy', 'true');
+    expect(within(stats).getByText('Loading…')).toBeInTheDocument();
+    expect(within(stats).getByText('Active ideas').previousSibling).toHaveTextContent(/^$/);
+    expect(within(screen.getByRole('region', { name: 'Latest notifications' })).getByText('Loading…')).toBeInTheDocument();
+  });
+
+  it('shows that the counts could not load, not zeros, when the ideas fail', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 500 } });
+    renderApp('/');
+
+    expect(await screen.findByText('We couldn’t load this. Check your connection and try again.')).toBeInTheDocument();
+    const stats = screen.getByRole('region', { name: 'At a glance' });
+    for (const label of ['Active ideas', 'Overdue', 'Due this week', 'Done']) {
+      expect(within(stats).getByText(label).previousSibling).toHaveTextContent('–Not loaded');
+    }
+    expect(within(screen.getByRole('region', { name: 'Needs attention' })).getByText('Your ideas couldn’t load.')).toBeInTheDocument();
   });
 
   it('counts a workspace’s first planned idea', async () => {
