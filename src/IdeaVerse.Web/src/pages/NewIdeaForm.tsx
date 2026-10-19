@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 
 import { addDays, todayIso } from '../api/dates';
@@ -46,6 +46,13 @@ export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, o
   const [startDate, setStartDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const template = findTemplate(templateSlug);
+  const titleInput = useRef<HTMLInputElement>(null);
+  // Opened from a button that then leaves the page, so focus would otherwise fall back to the page itself. Deferred, as
+  // when the form opens with the page, from "New idea" elsewhere, the layout moves focus to the page's content after.
+  useEffect(() => {
+    const timer = setTimeout(() => titleInput.current?.focus());
+    return () => clearTimeout(timer);
+  }, []);
   const suggestion = template && hasPlaceholder(template.title) ? template.title : undefined;
   const validation = useInlineValidation({
     title: () => requiredProblem(title, 'Give your idea a title.'),
@@ -119,6 +126,7 @@ export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, o
         {(props) => (
           <input
             {...props}
+            ref={titleInput}
             required
             maxLength={200}
             value={title}
