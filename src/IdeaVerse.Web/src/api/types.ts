@@ -251,6 +251,8 @@ export interface Notification {
   commentId: string | null;
   /** The component an assignment or a component's due date is about. */
   componentId: string | null;
+  /** That component's current title, or `null` when there is none. */
+  componentTitle: string | null;
 }
 
 /** Where a notification leads: its idea, at the comment or component it is about when there is one. */
