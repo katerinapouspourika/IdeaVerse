@@ -2176,7 +2176,7 @@ a.tag:focus-visible {
 
 .hero-grid {
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
   align-items: center;
   gap: 48px;
 }
@@ -2327,14 +2327,6 @@ a.tag:focus-visible {
   box-shadow: var(--shadow-lift);
 }
 
-.hero-preview {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 24px;
-}
-
 .preview-card {
   display: flex;
   flex-direction: column;
@@ -2346,23 +2338,6 @@ a.tag:focus-visible {
   box-shadow: var(--shadow-lift);
 }
 
-.preview-card.offset {
-  margin-left: 36px;
-  margin-right: -12px;
-}
-
-.preview-logo {
-  position: absolute;
-  width: 64px;
-  height: 64px;
-  bottom: -52px;
-  right: 40px;
-  padding: 10px;
-  border-radius: 24px;
-  background: #ffffff;
-  box-shadow: var(--shadow-lift);
-  transform: rotate(8deg);
-}
 
 .walkthroughs {
   list-style: none;
@@ -2419,6 +2394,100 @@ a.tag:focus-visible {
 
 .video-play:hover {
   transform: translate(-50%, -50%) scale(1.08);
+}
+
+/* The home page's product clip, framed as a browser window. */
+.browser-frame {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-lift);
+}
+
+.browser-bar {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-tint);
+}
+
+.browser-bar span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.browser-screen {
+  position: relative;
+}
+
+.browser-screen video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  background: var(--bg-tint);
+}
+
+.video-pause {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(15 20 50 / 0.6);
+  color: #ffffff;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+
+.video-pause:hover,
+.video-pause:focus-visible {
+  opacity: 1;
+}
+
+.trust-strip {
+  padding: 18px 0;
+  border-block: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.trust-strip ul {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 32px;
+  font-weight: 700;
+}
+
+.trust-strip li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trust-strip li::before {
+  content: '✓';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-weight: 900;
+  font-size: 0.8rem;
 }
 
 .check-steps {
@@ -2483,10 +2552,6 @@ a.tag:focus-visible {
   .landing-section {
     padding: 44px 0;
   }
-
-  .preview-logo {
-    display: none;
-  }
 }
 
 @media (max-width: 560px) {
@@ -2495,16 +2560,14 @@ a.tag:focus-visible {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .preview-card.offset {
-    margin: 0;
-  }
-
-  .hero-preview {
-    padding: 0;
-  }
-
   .cta-band {
     padding: 36px 18px;
+  }
+
+  /* One tick per line, lined up, with the list centred as a whole. */
+  .trust-strip ul {
+    display: grid;
+    justify-content: center;
   }
 }
 
@@ -3316,15 +3379,24 @@ a:focus-visible {
   overflow-wrap: anywhere;
 }
 
-/* Board view: a column per status, scrolling sideways on narrow screens. */
+/* Board view: a column per status across the whole window, scrolling sideways when they don't fit. */
+.content.wide:has(> .stack > .board) {
+  max-width: none;
+}
+
 .board {
   /* Positioned, so the cards' visually hidden labels scroll with the board instead of widening the page. */
   position: relative;
   display: grid;
-  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, minmax(260px, 1fr));
   gap: 14px;
   overflow-x: auto;
   padding-bottom: 6px;
+}
+
+.board.is-dragging {
+  cursor: grabbing;
+  user-select: none;
 }
 
 .board-column {
@@ -3369,12 +3441,36 @@ a:focus-visible {
   padding: 14px;
 }
 
-.board-card[draggable='true'] {
+/* A card that can be dragged: a long press picks it up on a touch screen, without the browser's link callout. */
+.board-card.movable {
   cursor: grab;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .board-card.dragging {
-  opacity: 0.5;
+  opacity: 0.4;
+}
+
+/* The copy of the dragged card that follows the pointer. */
+.board-card.board-drag-preview {
+  position: fixed;
+  z-index: 40;
+  pointer-events: none;
+  border-color: var(--accent);
+  box-shadow: var(--shadow-lift);
+  transform: rotate(2deg);
+  cursor: grabbing;
+}
+
+/* Where the dragged card will land, in the column under the pointer. */
+.board-drop-slot {
+  padding: 14px;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-weight: 700;
+  text-align: center;
 }
 
 .board-card.is-overdue {
@@ -3391,8 +3487,9 @@ a:focus-visible {
   color: var(--accent);
 }
 
-.grip {
+.board-grip {
   flex: none;
+  margin: -6px -8px -6px 0;
   color: var(--muted);
 }
 
@@ -3440,10 +3537,15 @@ a:focus-visible {
   z-index: 2;
 }
 
-.board-move select {
-  width: 100%;
-  min-height: 34px;
-  padding: 4px 8px;
+/* An open menu sits above the card's tags and the cards below it. */
+.board-move:has(.menu-list) {
+  z-index: 3;
+}
+
+/* The last card of a longer column opens its menu upwards, so it stays inside the board's scrolling area. */
+.board-cards > li:last-child:not(:first-child) .menu-list {
+  top: auto;
+  bottom: calc(100% + 6px);
 }
 
 .board-empty {
@@ -3451,9 +3553,22 @@ a:focus-visible {
   text-align: center;
 }
 
-@media (max-width: 860px) {
+/* On a phone, a column fills most of the screen and a swipe settles on the next one, except while dragging. */
+@media (max-width: 600px) {
   .board {
-    grid-template-columns: repeat(4, minmax(240px, 80vw));
+    grid-template-columns: repeat(4, 84vw);
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 16px;
+    margin-inline: -16px;
+    padding-inline: 16px;
+  }
+
+  .board.is-dragging {
+    scroll-snap-type: none;
+  }
+
+  .board-column {
+    scroll-snap-align: start;
   }
 }
 

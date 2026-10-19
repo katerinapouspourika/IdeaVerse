@@ -3,9 +3,30 @@ import userEvent from '@testing-library/user-event';
 
 import { fakeApi, signedIn, signedInAccount, signedOut } from '../test/fakeApi';
 import { renderApp } from '../test/render';
+import { heroClip } from './HeroClip';
 import { walkthroughs } from './walkthroughs';
 
+/** Stubs the "reduce motion" setting, and `play` and `pause`, which jsdom does not implement. */
+function motionPreference(reduce: boolean) {
+  vi.stubGlobal('matchMedia', (media: string) => ({
+    matches: media === `(prefers-reduced-motion: ${reduce ? 'reduce' : 'no-preference'})`,
+    media,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }));
+  const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(function (this: HTMLMediaElement) {
+    this.dispatchEvent(new Event('play'));
+    return Promise.resolve();
+  });
+  const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(function (this: HTMLMediaElement) {
+    this.dispatchEvent(new Event('pause'));
+  });
+  return { play, pause };
+}
+
 describe('Public pages', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it('shows the home page to visitors, with ways to sign up and sign in', async () => {
     fakeApi(signedOut);
     const router = renderApp('/');
@@ -15,6 +36,58 @@ describe('Public pages', () => {
 
     expect(await screen.findByRole('heading', { name: 'Create your account' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/register');
+  });
+
+  it('shows a muted, looping product clip in the hero, with a poster and a description', async () => {
+    fakeApi(signedOut);
+    renderApp('/');
+
+    const video = await screen.findByLabelText(heroClip.label);
+    expect(video).toHaveAccessibleDescription(heroClip.description);
+    expect(video).toHaveAttribute('poster', `${heroClip.src}.webp`);
+    expect(video).toHaveAttribute('loop');
+    expect((video as HTMLVideoElement).muted).toBe(true);
+    expect(video).toHaveAttribute('preload', 'none');
+    expect([...video.querySelectorAll('source')].map((source) => source.getAttribute('src'))).toEqual([`${heroClip.src}.mp4`, `${heroClip.src}.webm`]);
+  });
+
+  it('plays the hero clip on its own, with a pause button, unless the visitor asked for reduced motion', async () => {
+    const { play, pause } = motionPreference(false);
+    fakeApi(signedOut);
+    renderApp('/');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Pause video' }));
+
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(pause).toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Play video' })).toBeInTheDocument();
+  });
+
+  it('shows the hero clip’s poster with a play button when the visitor asked for reduced motion', async () => {
+    const { play } = motionPreference(true);
+    fakeApi(signedOut);
+    renderApp('/');
+
+    const button = await screen.findByRole('button', { name: 'Play video' });
+    expect(play).not.toHaveBeenCalled();
+
+    await userEvent.click(button);
+
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Pause video' })).toBeInTheDocument();
+  });
+
+  it('lists only promises the app keeps under the hero', async () => {
+    fakeApi(signedOut);
+    renderApp('/');
+
+    const strip = await screen.findByRole('region', { name: 'The small print, up front' });
+    expect(within(strip).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Free in early access',
+      'No credit card needed',
+      'Your data is never sold',
+      'Delete your account any time',
+    ]);
   });
 
   it('names prioritising among the home page’s features, and the same steps as How it works', async () => {
