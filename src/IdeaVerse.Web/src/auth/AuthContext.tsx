@@ -106,6 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (result.signedIn) {
       forgetOtherData();
       client.setQueryData(accountKey, await fetchAccount());
+    } else if (params.get('changedEmail')) {
+      await client.invalidateQueries({ queryKey: accountKey });
     }
     return result;
   };
