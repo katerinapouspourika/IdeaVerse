@@ -15,6 +15,7 @@ namespace Pouspourika.IdeaVerse.Api.Notifications;
 /// <param name="ReadAt">When the user marked it read, if they have.</param>
 /// <param name="CommentId">The comment a comment or mention notification is about, while it exists.</param>
 /// <param name="ComponentId">The component an assignment or a component's countdown is about.</param>
+/// <param name="ComponentTitle">That component's current title, or <see langword="null"/> when there is none.</param>
 public sealed record NotificationResponse(
   Guid Id,
   Guid IdeaId,
@@ -27,4 +28,5 @@ public sealed record NotificationResponse(
   DateTimeOffset CreatedAt,
   DateTimeOffset? ReadAt,
   Guid? CommentId,
-  Guid? ComponentId);
+  Guid? ComponentId,
+  string? ComponentTitle);
