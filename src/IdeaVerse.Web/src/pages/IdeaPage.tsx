@@ -400,11 +400,10 @@ function StartForm({ idea }: { idea: Idea }) {
   return (
     <form className="stack tight" onSubmit={save} aria-label="Plan the start">
       <p className="muted small">The team is reminded before it starts, from 10 days ahead.</p>
-      <div className="row wrap">
+      <div className="row wrap top">
         <Field label="Start date" error={fieldError(setStart.error, 'startDate')}>
-          {(props) => (
-            <input {...props} type="date" required min={today} max={idea.targetDate} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          )}
+          {/* No max, as in the New idea form: with both ends in one year, Chrome shows that year in the empty field. The API keeps it on or before the target date. */}
+          {(props) => <input {...props} type="date" required min={today} value={startDate} onChange={(e) => setStartDate(e.target.value)} />}
         </Field>
         <Field label=<>Time <span className="muted">(optional)</span></> error={fieldError(setStart.error, 'startTime')}>
           {(props) => <input {...props} type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />}

@@ -429,6 +429,11 @@ a {
   align-items: flex-end;
 }
 
+/* Fields side by side, lined up by their labels and inputs whatever hint or error sits under one of them. */
+.row.top {
+  align-items: flex-start;
+}
+
 .grow {
   flex: 1 1 200px;
   min-width: 0;
