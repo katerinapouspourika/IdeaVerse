@@ -57,7 +57,8 @@ describe('Idea tracking', () => {
     await waitFor(() => expect(screen.queryByText('Spring launch')).not.toBeInTheDocument());
     expect(screen.getByText('Hiring plan')).toBeInTheDocument();
     expect(screen.getByLabelText('Tag')).toHaveValue('ops');
-    expect(router.state.location.search).toBe('');
+    // The tag stays in the address, so the filtered list can be shared.
+    expect(router.state.location.search).toBe('?tag=ops');
   });
 
   it('opens the ideas with a tag clicked on an idea’s page', async () => {

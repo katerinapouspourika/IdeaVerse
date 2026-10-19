@@ -220,10 +220,10 @@ describe('Board view', () => {
     dragTo(title, 'InProgress');
     fireEvent.click(title);
     await waitFor(() => expect(calls.find((c) => c.method === 'PUT')?.body).toMatchObject({ status: 'InProgress' }));
-    expect(router.state.location.search).toBe('');
+    expect(router.state.location.search).toBe('?view=board');
 
     await userEvent.click(screen.getByRole('link', { name: 'Spring launch' }));
     expect(await screen.findByRole('dialog', { name: 'Spring launch' })).toBeInTheDocument();
-    expect(router.state.location.search).toBe('?idea=idea-1');
+    expect(router.state.location.search).toBe('?view=board&idea=idea-1');
   });
 });
