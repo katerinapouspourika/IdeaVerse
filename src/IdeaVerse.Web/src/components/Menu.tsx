@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import { Fragment, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 
 export interface MenuItem {
   /** Tells apart items whose labels may repeat, such as two workspaces of the same name. */
@@ -19,7 +19,9 @@ export interface MenuItem {
 /**
  * A button that opens a short list of actions. Arrow keys, Home and End move between them, Escape or a click elsewhere
  * closes it, and focus returns to the button. `listLabel` names the list when the button's label describes the choice
- * made rather than the list, and `listClassName` styles it.
+ * made rather than the list, and `listClassName` styles it. A `floating` menu is placed against the window rather than
+ * its button's box, below the button or above it when there is more room there, so a scrolling container around it,
+ * such as the board, cannot cut it off.
  */
 export function Menu({
   label,
@@ -28,6 +30,7 @@ export function Menu({
   triggerClassName = 'button ghost small icon-button',
   listLabel = label,
   listClassName,
+  floating = false,
 }: {
   label: string;
   trigger: ReactNode;
@@ -35,11 +38,43 @@ export function Menu({
   triggerClassName?: string;
   listLabel?: string;
   listClassName?: string;
+  floating?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
+  const list = useRef<HTMLDivElement>(null);
+
+  // Placed before it is painted, and again as the page or a container around it scrolls or the window resizes.
+  useLayoutEffect(() => {
+    if (!open || !floating) {
+      return;
+    }
+    const place = () => {
+      const anchor = button.current?.getBoundingClientRect();
+      const style = list.current?.style;
+      if (!anchor || !style) {
+        return;
+      }
+      const gap = 6;
+      // On a phone, the tab bar along the bottom of the window covers what is under it.
+      const floor = document.querySelector('.tab-bar')?.getBoundingClientRect().top ?? window.innerHeight;
+      const below = floor - anchor.bottom;
+      const upwards = below < (list.current?.offsetHeight ?? 0) + gap && anchor.top > below;
+      style.position = 'fixed';
+      style.right = `${document.documentElement.clientWidth - anchor.right}px`;
+      style.top = upwards ? 'auto' : `${anchor.bottom + gap}px`;
+      style.bottom = upwards ? `${window.innerHeight - anchor.top + gap}px` : 'auto';
+    };
+    place();
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+    return () => {
+      window.removeEventListener('scroll', place, true);
+      window.removeEventListener('resize', place);
+    };
+  }, [open, floating]);
 
   useEffect(() => {
     if (!open) {
@@ -96,7 +131,13 @@ export function Menu({
         {trigger}
       </button>
       {open && (
-        <div id={menuId} className={listClassName ? `menu-list ${listClassName}` : 'menu-list'} role="menu" aria-label={listLabel}>
+        <div
+          ref={list}
+          id={menuId}
+          className={listClassName ? `menu-list ${listClassName}` : 'menu-list'}
+          role="menu"
+          aria-label={listLabel}
+        >
           {items.map((item) => (
             <Fragment key={item.id ?? item.label}>
               {item.separated && <div role="separator" className="menu-separator" />}
