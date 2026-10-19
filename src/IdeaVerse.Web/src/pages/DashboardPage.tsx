@@ -77,7 +77,7 @@ function WorkspaceDashboard({ workspace }: { workspace: Workspace }) {
       {account && ideas.data && <GettingStarted workspace={workspace} ideas={ideas.data} account={account} />}
 
       {empty ? (
-        <section className="card stack center" aria-labelledby="first-idea-heading">
+        <section className="card stack center first-idea" aria-labelledby="first-idea-heading">
           <span className="feature-icon big" aria-hidden="true">
             <Lightbulb size={32} />
           </span>

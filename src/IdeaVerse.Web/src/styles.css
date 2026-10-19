@@ -3312,6 +3312,17 @@ a:focus-visible {
 }
 
 /* Getting started checklist */
+/* Its close button sits beside the heading, overlapping the padding so the heading's line keeps its height. */
+.getting-started .header-icon {
+  margin: -8px -8px -8px 0;
+}
+
+/* The checklist's count and the first idea's text sit close under their headings, without a paragraph's margins. */
+.getting-started p,
+.first-idea p {
+  margin: 0;
+}
+
 .progress-track.wide {
   width: 100%;
   height: 8px;
