@@ -37,6 +37,7 @@ public class AssignmentTests
     await Assert.That(inbox.Items.Single().Kind).IsEqualTo(ReminderKind.Assigned);
     await Assert.That(inbox.Items.Single().Message).IsEqualTo("owner@example.com assigned “Budget” for “Launch” to you.");
     await Assert.That(inbox.Items.Single().ComponentId).IsEqualTo(component.Id);
+    await Assert.That(inbox.Items.Single().ComponentTitle).IsEqualTo("Budget");
     await Assert.That(inbox.Items.Single().CommentId).IsNull();
   }
 
