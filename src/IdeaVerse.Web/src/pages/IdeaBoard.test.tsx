@@ -154,6 +154,8 @@ describe('Board view', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Undo' }));
 
     await waitFor(() => expect(calls.filter((c) => c.method === 'PUT').map((c) => (c.body as { status: string }).status)).toEqual(['InProgress', 'Planned']));
+    // Focus goes back with the card, to its grip, rather than being lost with the toast.
+    expect(within(screen.getByRole('region', { name: /Planned/ })).getByRole('button', { name: 'Move Spring launch' })).toHaveFocus();
   });
 
   it('moves an idea from the keyboard with the menu on its grip', async () => {
@@ -170,6 +172,26 @@ describe('Board view', () => {
     // Focus follows the card to its new column, ready for another move.
     expect(within(screen.getByRole('region', { name: /Postponed/ })).getByRole('button', { name: 'Move Spring launch' })).toHaveFocus();
     await waitFor(() => expect(calls.find((c) => c.method === 'PUT')?.body).toMatchObject({ status: 'Postponed' }));
+  });
+
+  it('opens the move menu below its grip, or above it when the window has no room below', async () => {
+    fakeApi(routes());
+    renderApp('/ideas');
+    await userEvent.click(await screen.findByRole('button', { name: 'Board' }));
+    // The menu is 200 pixels tall; the window, 768.
+    const height = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(200);
+    const grip = screen.getByRole('button', { name: 'Move Spring launch' });
+    const at = (top: number) => (grip.getBoundingClientRect = () => ({ left: 200, right: 240, top, bottom: top + 40, width: 40, height: 40 }) as DOMRect);
+
+    at(100);
+    await userEvent.click(grip);
+    expect(screen.getByRole('menu', { name: 'Move to' })).toHaveStyle({ position: 'fixed', top: '146px', bottom: 'auto' });
+    await userEvent.keyboard('{Escape}');
+
+    at(600);
+    await userEvent.click(grip);
+    expect(screen.getByRole('menu', { name: 'Move to' })).toHaveStyle({ position: 'fixed', top: 'auto', bottom: `${window.innerHeight - 600 + 6}px` });
+    height.mockRestore();
   });
 
   it('puts an idea back when the move fails', async () => {
