@@ -10,15 +10,17 @@ type State = 'confirming' | 'signedIn' | 'confirmed' | 'failed' | 'incomplete';
 
 /**
  * Opened from the confirmation email; confirms the account with the link's code. A new account is signed in and taken
- * to its ideas; a link for an address already confirmed, or a change of address, asks them to sign in as usual.
+ * to its ideas. A link for an address already confirmed, or a change of address, says so: someone signed in carries on
+ * into the app, anyone else is asked to sign in as usual.
  */
 export function ConfirmEmailPage() {
   usePageMeta('Confirm your email', { index: false });
   const { search } = useLocation();
-  const { confirmEmail } = useAuth();
+  const { account, confirmEmail } = useAuth();
   const toast = useToast();
   const params = new URLSearchParams(search);
   const complete = Boolean(params.get('userId') && params.get('code'));
+  const changedEmail = params.get('changedEmail');
   const [state, setState] = useState<State>(complete ? 'confirming' : 'incomplete');
   const started = useRef(false);
 
@@ -48,10 +50,16 @@ export function ConfirmEmailPage() {
       {state === 'confirmed' && (
         <>
           <h1>Email confirmed</h1>
-          <p>Your account is ready.</p>
-          <Link to="/login" className="button primary">
-            Sign in
-          </Link>
+          {changedEmail ? <p>Your new email address is confirmed.</p> : <p>{account ? 'Your email address is confirmed.' : 'Your account is ready.'}</p>}
+          {account ? (
+            <Link to={changedEmail ? '/settings' : afterSignIn()} className="button primary">
+              {changedEmail ? 'Back to settings' : 'Continue to IdeaVerse'}
+            </Link>
+          ) : (
+            <Link to="/login" className="button primary">
+              Sign in
+            </Link>
+          )}
         </>
       )}
       {state === 'failed' && (

@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { fakeApi, ideasRoute, signedIn, signedOut } from '../test/fakeApi';
@@ -81,6 +81,43 @@ describe('Registration and confirmation', () => {
 
     expect(await screen.findByRole('heading', { name: 'Email confirmed' })).toBeInTheDocument();
     expect(within(screen.getByRole('main')).getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
+  });
+
+  it('confirms a change of address for someone signed in, and leads back into the app', async () => {
+    let email = 'kat@example.com';
+    const account = signedIn['GET /api/v1/account'];
+    const calls = fakeApi({
+      ...signedIn,
+      'GET /api/v1/account': () => ({ ...account, body: { ...account.body, email } }),
+      'POST /api/v1/auth/confirm': () => {
+        email = 'kat@new.example.com';
+        return { status: 200, body: { signedIn: false } };
+      },
+    });
+
+    const router = renderApp('/settings');
+    await screen.findByRole('form', { name: 'Reminders' });
+    await act(() => router.navigate('/confirm-email?userId=u1&code=abc&changedEmail=kat%40new.example.com'));
+
+    expect(await screen.findByRole('heading', { name: 'Email confirmed' })).toBeInTheDocument();
+    const main = within(screen.getByRole('main'));
+    expect(main.getByText('Your new email address is confirmed.')).toBeInTheDocument();
+    expect(main.getByRole('link', { name: 'Back to settings' })).toHaveAttribute('href', '/settings');
+    expect(main.queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument();
+    // The account is read again after the change, so the new address shows wherever the old one did.
+    expect(calls.filter((c) => c.path === '/api/v1/account')).toHaveLength(2);
+  });
+
+  it('tells someone signed in who reopens their sign-up link that their email is confirmed', async () => {
+    fakeApi({ ...signedIn, 'POST /api/v1/auth/confirm': { status: 200, body: { signedIn: false } } });
+
+    renderApp('/confirm-email?userId=u1&code=abc');
+
+    expect(await screen.findByRole('heading', { name: 'Email confirmed' })).toBeInTheDocument();
+    const main = within(screen.getByRole('main'));
+    expect(main.getByText('Your email address is confirmed.')).toBeInTheDocument();
+    expect(main.getByRole('link', { name: 'Continue to IdeaVerse' })).toHaveAttribute('href', '/');
+    expect(main.queryByText('Your account is ready.')).not.toBeInTheDocument();
   });
 
   it('says a link without its code is incomplete, without calling the API', async () => {
