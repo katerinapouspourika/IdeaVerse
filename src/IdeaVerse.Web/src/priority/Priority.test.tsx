@@ -216,7 +216,7 @@ describe('Matrix view', () => {
     await userEvent.click(screen.getByRole('link', { name: 'Newsletter' }));
 
     expect(await screen.findByRole('dialog', { name: 'Newsletter' })).toBeInTheDocument();
-    expect(router.state.location.search).toBe('?idea=idea-1');
+    expect(router.state.location.search).toBe('?view=matrix&idea=idea-1');
   });
 
   it('lists the ideas by quadrant with their scores on a phone, the centre ones as balanced', async () => {
