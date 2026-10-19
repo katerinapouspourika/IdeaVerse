@@ -7,6 +7,7 @@ import {
   useChangeRole,
   useInvitations,
   useInvite,
+  useLeaveWorkspace,
   useRemoveWorkspaceMember,
   useResendInvitation,
   useRevokeInvitation,
@@ -150,6 +151,7 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
   const members = useWorkspaceMembers(workspace.id);
   const changeRole = useChangeRole(workspace.id);
   const remove = useRemoveWorkspaceMember(workspace.id);
+  const leave = useLeaveWorkspace(workspace.id);
   const { account } = useAuth();
   const navigate = useNavigate();
   const confirm = useConfirm();
@@ -186,7 +188,7 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
         : { title: `Remove ${name}?`, message: `They will lose access to ${workspace.name} and be taken off the teams of its ideas.`, confirmLabel: 'Remove', danger: true },
     );
     if (ok) {
-      remove.mutate(member.userId, {
+      (leaving ? leave : remove).mutate(member.userId, {
         onSuccess: () => {
           toast({ message: leaving ? `You left ${workspace.name}` : `Removed ${name}` });
           if (leaving) {
@@ -241,7 +243,7 @@ function MemberList({ workspace, canManage }: { workspace: Workspace; canManage:
       )}
       <RoleGuide />
       <LoadError queries={members} />
-      <ErrorMessage error={changeRole.error ?? remove.error} />
+      <ErrorMessage error={changeRole.error ?? remove.error ?? leave.error} />
     </section>
   );
 }

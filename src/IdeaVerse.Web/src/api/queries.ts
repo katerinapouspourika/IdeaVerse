@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import { request } from './client';
 import type {
@@ -120,6 +120,30 @@ export function useRemoveWorkspaceMember(workspaceId: string) {
     mutationFn: (userId: string) => request<void>('DELETE', `/api/v1/workspaces/${workspaceId}/members/${userId}`),
     onSuccess: invalidate,
   });
+}
+
+/** Takes the signed-in user out of the workspace, then forgets it (see `forgetWorkspace`). */
+export function useLeaveWorkspace(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => request<void>('DELETE', `/api/v1/workspaces/${workspaceId}/members/${userId}`),
+    onSuccess: () => forgetWorkspace(client, workspaceId),
+  });
+}
+
+/**
+ * Drops a workspace the user is no longer in: out of the list of workspaces at once, so the app moves on from it, and its
+ * people, invitations, and ideas are never asked for again, since that would only be refused. What is still loading is
+ * cancelled and what is cached is removed; a query still on screen is left to go once its page closes, as removing it would
+ * make the page ask again. Then the list is refreshed.
+ */
+function forgetWorkspace(client: QueryClient, workspaceId: string) {
+  client.setQueryData<Workspace[]>(keys.workspaces, (workspaces) => workspaces?.filter((w) => w.id !== workspaceId));
+  for (const queryKey of [['workspaces', workspaceId], ['ideas', workspaceId], ['tags', workspaceId], ['assignments', workspaceId]]) {
+    void client.cancelQueries({ queryKey });
+    client.removeQueries({ queryKey, type: 'inactive' });
+  }
+  void client.invalidateQueries({ queryKey: keys.workspaces, exact: true });
 }
 
 export function useInvitations(workspaceId: string, enabled: boolean) {
@@ -626,10 +650,7 @@ export function useDeleteWorkspace(workspaceId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: () => request<void>('DELETE', `/api/v1/workspaces/${workspaceId}`),
-    onSuccess: () => {
-      client.removeQueries({ queryKey: ['ideas', workspaceId] });
-      void client.invalidateQueries({ queryKey: keys.workspaces });
-    },
+    onSuccess: () => forgetWorkspace(client, workspaceId),
   });
 }
 
@@ -637,7 +658,10 @@ export function useTransferOwnership(workspaceId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (userId: string) => request<Workspace>('POST', `/api/v1/workspaces/${workspaceId}/transfer`, { userId }),
-    onSuccess: () => void client.invalidateQueries({ queryKey: keys.workspaces }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.workspaces, exact: true });
+      void client.invalidateQueries({ queryKey: ['workspaces', workspaceId] });
+    },
   });
 }
 
