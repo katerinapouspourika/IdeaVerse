@@ -3616,31 +3616,36 @@ a:focus-visible {
 }
 
 .quadrant-tag.QuickWin,
-.matrix-cell.QuickWin {
+.matrix-region.QuickWin,
+.matrix-group.QuickWin {
   --quadrant: var(--ok);
   --quadrant-soft: var(--ok-soft);
 }
 
 .quadrant-tag.BigBet,
-.matrix-cell.BigBet {
+.matrix-region.BigBet,
+.matrix-group.BigBet {
   --quadrant: var(--accent);
   --quadrant-soft: var(--accent-soft);
 }
 
 .quadrant-tag.NiceToHave,
-.matrix-cell.NiceToHave {
+.matrix-region.NiceToHave,
+.matrix-group.NiceToHave {
   --quadrant: var(--muted);
   --quadrant-soft: var(--bg-tint);
 }
 
 .quadrant-tag.TimeSink,
-.matrix-cell.TimeSink {
+.matrix-region.TimeSink,
+.matrix-group.TimeSink {
   --quadrant: var(--warn);
   --quadrant-soft: var(--warn-soft);
 }
 
 .quadrant-tag.Balanced,
-.matrix-cell.Balanced {
+.matrix-region.Balanced,
+.matrix-group.Balanced {
   --quadrant: var(--text);
   --quadrant-soft: var(--bg-tint);
 }
@@ -3650,44 +3655,121 @@ a:focus-visible {
   color: var(--quadrant);
 }
 
-.matrix {
+/*
+ * The matrix: a 5×5 grid of effort (across) against impact (up) with the quadrants shaded behind the cells. Columns
+ * are the impact axis title, the impact scores, then effort 1–5; rows are the top quadrants' labels, impact 5–1, the
+ * bottom quadrants' labels, the effort scores, and the effort axis title.
+ */
+.matrix-grid {
   display: grid;
-  grid-template-columns: auto 1fr 1fr;
-  grid-template-rows: auto auto auto;
-  grid-template-areas:
-    'impact quick big'
-    'impact nice sink'
-    '. effort effort';
-  gap: 12px;
+  grid-template-columns: auto auto repeat(5, minmax(0, 1fr));
+  grid-template-rows: 2rem repeat(5, minmax(76px, auto)) 2rem auto auto;
+  gap: 4px;
 }
 
-.matrix-cell {
-  border-top: 4px solid var(--quadrant);
-  min-height: 160px;
+.matrix-region {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  background: var(--quadrant-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--quadrant) 30%, transparent);
 }
 
-.matrix-cell h2 {
-  font-size: 1.05rem;
+/* The bottom quadrants carry their labels below their cells. */
+.matrix-region.NiceToHave,
+.matrix-region.TimeSink {
+  justify-content: flex-end;
 }
 
-.matrix-cell.QuickWin {
-  grid-area: quick;
+.matrix-region-label {
+  color: var(--quadrant);
+  font-weight: 800;
+  font-size: 0.9rem;
 }
 
-.matrix-cell.BigBet {
-  grid-area: big;
+.matrix-region-label .count {
+  opacity: 0.75;
 }
 
-.matrix-cell.NiceToHave {
-  grid-area: nice;
+.matrix-region.NiceToHave .matrix-region-label {
+  color: var(--text);
 }
 
-.matrix-cell.TimeSink {
-  grid-area: sink;
+/* Cells sit over the regions; the centre row and column, scored 3, are plain and dashed, between the quadrants. */
+.matrix-square {
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px;
+  margin: 4px;
+  border-radius: var(--radius-small);
 }
 
-.matrix-cell.Balanced {
-  min-height: 0;
+.matrix-square.centre {
+  margin: 0;
+  border: 1px dashed var(--border);
+  background: var(--surface);
+}
+
+.matrix-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.matrix-chip {
+  display: block;
+  max-width: 100%;
+  padding: 3px 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.matrix-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.matrix-more {
+  padding: 2px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.matrix-more:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.matrix-score {
+  align-self: center;
+  justify-self: center;
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
 }
 
 .matrix-axis {
@@ -3697,15 +3779,25 @@ a:focus-visible {
 }
 
 .matrix-axis.impact {
-  grid-area: impact;
+  grid-column: 1;
+  grid-row: 2 / 7;
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   align-self: center;
 }
 
 .matrix-axis.effort {
-  grid-area: effort;
+  grid-column: 3 / 8;
+  grid-row: 9;
   justify-self: center;
+}
+
+.matrix-group {
+  border-top: 4px solid var(--quadrant);
+}
+
+.matrix-group h2 {
+  font-size: 1.05rem;
 }
 
 .matrix-ideas {
@@ -3714,17 +3806,6 @@ a:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-
-@media (max-width: 600px) {
-  .matrix {
-    grid-template-columns: 1fr;
-    grid-template-areas: 'quick' 'big' 'nice' 'sink';
-  }
-
-  .matrix-axis {
-    display: none;
-  }
 }
 
 /* Side panel: an idea's essentials over the list */
