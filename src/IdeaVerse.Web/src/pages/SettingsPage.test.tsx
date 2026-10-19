@@ -131,9 +131,9 @@ describe('SettingsPage', () => {
     expect(await within(form).findByText('Saved')).toBeInTheDocument();
     await waitFor(() => expect(calls.filter((c) => c.method === 'PUT')).toHaveLength(3));
     expect(calls.filter((c) => c.method === 'PUT').map((c) => c.body)).toEqual([
-      { emailReminders: true, reminderKinds: ['Tomorrow', 'Today', 'Overdue'], emailComments: false },
-      { emailReminders: true, reminderKinds: ['Today', 'Overdue'], emailComments: false },
-      { emailReminders: false, reminderKinds: ['Today', 'Overdue'], emailComments: false },
+      { emailReminders: true, reminderKinds: ['Tomorrow', 'Today', 'Overdue'], emailComments: false, emailFrequency: 'RightAway' },
+      { emailReminders: true, reminderKinds: ['Today', 'Overdue'], emailComments: false, emailFrequency: 'RightAway' },
+      { emailReminders: false, reminderKinds: ['Today', 'Overdue'], emailComments: false, emailFrequency: 'RightAway' },
     ]);
   });
 
@@ -155,6 +155,28 @@ describe('SettingsPage', () => {
     await userEvent.click(within(form).getByRole('checkbox', { name: 'Also email me these reminders' }));
     expect(comments).toBeDisabled();
     expect(comments).not.toBeChecked();
+  });
+
+  it('switches emails to a daily digest straight away, only while reminders are emailed', async () => {
+    const calls = fakeApi({
+      ...signedIn,
+      'PUT /api/v1/account/reminders': (body) => ({ status: 200, body: { ...signedInAccount, ...(body as object) } }),
+    });
+    renderApp('/settings');
+
+    const form = await screen.findByRole('form', { name: 'Reminders' });
+    const group = within(form).getByRole('group', { name: 'When to email me' });
+    expect(within(group).getByRole('radio', { name: /Send right away/ })).toBeChecked();
+    const digest = within(group).getByRole('radio', { name: /Daily digest/ });
+    expect(digest).toHaveAccessibleName(expect.stringContaining('Mentions are always sent right away'));
+    await userEvent.click(digest);
+
+    expect(await within(form).findByText('Saved')).toBeInTheDocument();
+    expect(digest).toBeChecked();
+    expect(calls.find((c) => c.method === 'PUT')?.body).toMatchObject({ emailReminders: true, emailFrequency: 'DailyDigest' });
+
+    await userEvent.click(within(form).getByRole('checkbox', { name: 'Also email me these reminders' }));
+    expect(digest).toBeDisabled();
   });
 
   it('warns before turning every reminder off', async () => {

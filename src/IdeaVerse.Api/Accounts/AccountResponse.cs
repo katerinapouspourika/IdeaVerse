@@ -12,13 +12,15 @@ using Pouspourika.IdeaVerse.Api.Notifications;
 /// <param name="EmailReminders">Whether reminders are emailed as well as shown in the app.</param>
 /// <param name="ReminderKinds">The reminder kinds the user gets, in stage order.</param>
 /// <param name="EmailComments">Whether comments on the user's ideas are emailed too.</param>
+/// <param name="EmailFrequency">Whether notifications are emailed right away or in a daily digest.</param>
 public sealed record AccountResponse(
   string Email,
   string? DisplayName,
   string? TimeZone,
   bool EmailReminders,
   IReadOnlyList<ReminderKind> ReminderKinds,
-  bool EmailComments)
+  bool EmailComments,
+  EmailFrequency EmailFrequency)
 {
   /// <summary>
   /// Builds the response for an account.
@@ -28,6 +30,6 @@ public sealed record AccountResponse(
   public static AccountResponse From(User user)
   {
     ArgumentNullException.ThrowIfNull(user);
-    return new AccountResponse(user.Email!, user.DisplayName, user.TimeZone, user.EmailReminders, user.WantedReminderKinds(), user.EmailComments);
+    return new AccountResponse(user.Email!, user.DisplayName, user.TimeZone, user.EmailReminders, user.WantedReminderKinds(), user.EmailComments, user.EmailFrequency);
   }
 }
