@@ -12,6 +12,8 @@
   --sky: #2fb2e6;
   --sun: #ffc94a;
   --coral: #ff7a6b;
+  /* Text on coral in either theme: white on it is too faint to read at small sizes. */
+  --on-coral: #16204a;
   --accent: #2b35b0;
   --accent-text: #ffffff;
   --accent-soft: #e8ebff;
@@ -1461,7 +1463,7 @@ a.tag:focus-visible {
   padding: 0 6px;
   border-radius: 999px;
   background: var(--coral);
-  color: #ffffff;
+  color: var(--on-coral);
   font-size: 0.7rem;
   font-weight: 800;
 }
@@ -3861,13 +3863,14 @@ a:focus-visible {
 }
 
 .matrix-region-label {
-  color: var(--quadrant);
+  /* Leaning towards the text colour, so the label stays readable on its quadrant's tint in both themes. */
+  color: color-mix(in srgb, var(--quadrant) 80%, var(--text));
   font-weight: 800;
   font-size: 0.9rem;
 }
 
 .matrix-region-label .count {
-  opacity: 0.75;
+  font-weight: 600;
 }
 
 .matrix-region.NiceToHave .matrix-region-label {
@@ -4365,7 +4368,7 @@ button.chip:focus-visible {
   padding: 0 6px;
   border-radius: 999px;
   background: var(--coral);
-  color: #ffffff;
+  color: var(--on-coral);
   font-size: 0.7rem;
   font-weight: 800;
 }
