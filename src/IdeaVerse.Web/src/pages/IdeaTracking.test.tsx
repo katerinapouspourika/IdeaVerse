@@ -109,6 +109,23 @@ describe('Idea tracking', () => {
     expect(await screen.findByText(/Nothing archived/)).toBeInTheDocument();
   });
 
+  it.each([
+    ['board', '.skeleton-board .skeleton-column'],
+    ['calendar', '.skeleton-grid.calendar .skeleton-cell'],
+    ['timeline', '.skeleton-timeline-row'],
+    ['matrix', '.skeleton-grid.matrix .skeleton-cell'],
+  ])('shows a placeholder in the %s view’s shape while the ideas load', async (view, shape) => {
+    fakeApi(signedIn);
+    // The ideas never arrive.
+    const answer = fetch;
+    vi.stubGlobal('fetch', (input: string, init?: RequestInit) => (input.startsWith(ideasRoute.slice(4)) ? new Promise(() => {}) : answer(input, init)));
+    renderApp(`/ideas?view=${view}`);
+
+    await waitFor(() => expect(document.querySelectorAll(shape).length).toBeGreaterThan(0));
+    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    expect(document.querySelector('.skeleton-cards')).toBeNull();
+  });
+
   it('shows ideas on their dates in the calendar, month by month', async () => {
     const today = todayIso();
     fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [{ ...launch, targetDate: today }] } });
