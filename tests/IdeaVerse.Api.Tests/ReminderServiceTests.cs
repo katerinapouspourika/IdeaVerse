@@ -25,7 +25,7 @@ public class ReminderServiceTests
     await Assert.That(first.Raised).IsEqualTo(2);
     await Assert.That(first.Emailed).IsEqualTo(2);
     await Assert.That(factory.Mail.Sent.Select(m => (m.To, m.Subject))).IsEquivalentTo(
-      [("owner@example.com", "Coming up: Launch"), ("member@example.com", "2 updates on “Launch”")]);
+      [("owner@example.com", "Coming up: “Launch”"), ("member@example.com", "2 updates on “Launch”")]);
     await Assert.That(factory.Mail.Sent.Single(m => m.To == "member@example.com").Body).Contains("added you to the team").And.Contains("is in 5 days");
     await Assert.That(second).IsEqualTo(new Notifications.ReminderRunResult(0, 0));
   }
@@ -85,7 +85,7 @@ public class ReminderServiceTests
 
     await Assert.That(beforeEight.Raised).IsEqualTo(0);
     await Assert.That(atEight.Raised).IsEqualTo(1);
-    await Assert.That(factory.Mail.Sent.Single().Subject).IsEqualTo("Due tomorrow: Launch");
+    await Assert.That(factory.Mail.Sent.Single().Subject).IsEqualTo("Due tomorrow: “Launch”");
   }
 
   [Test]
@@ -102,7 +102,7 @@ public class ReminderServiceTests
 
     await factory.RunRemindersAsync();
 
-    await Assert.That(factory.Mail.Sent.Single(m => m.To == "owner@example.com").Subject).IsEqualTo("Due tomorrow: Launch");
+    await Assert.That(factory.Mail.Sent.Single(m => m.To == "owner@example.com").Subject).IsEqualTo("Due tomorrow: “Launch”");
     await Assert.That(factory.Mail.Sent.Single(m => m.To == "member@example.com").Body).Contains("The target date for “Launch” is today.");
   }
 
@@ -120,7 +120,7 @@ public class ReminderServiceTests
 
     await Assert.That(tomorrow.Raised).IsEqualTo(0);
     await Assert.That(today.Raised).IsEqualTo(1);
-    await Assert.That(factory.Mail.Sent.Select(m => m.Subject)).IsEquivalentTo(["Due today: Launch"]);
+    await Assert.That(factory.Mail.Sent.Select(m => m.Subject)).IsEquivalentTo(["Due today: “Launch”"]);
   }
 
   [Test]
@@ -155,7 +155,7 @@ public class ReminderServiceTests
 
     await Assert.That(sameDay.Emailed).IsEqualTo(0);
     await Assert.That(nextDay.Emailed).IsEqualTo(1);
-    await Assert.That(factory.Mail.Sent.Select(m => m.Subject)).IsEquivalentTo(["Due today: Launch"]);
+    await Assert.That(factory.Mail.Sent.Select(m => m.Subject)).IsEquivalentTo(["Due today: “Launch”"]);
   }
 
   [Test]
@@ -168,7 +168,7 @@ public class ReminderServiceTests
     await factory.RunRemindersAsync();
 
     var mail = factory.Mail.Sent.Single();
-    await Assert.That(mail.Subject).IsEqualTo("Due tomorrow: Launch");
+    await Assert.That(mail.Subject).IsEqualTo("Due tomorrow: “Launch”");
     await Assert.That(FakeMailSender.IdeaLinkIn(mail)).IsEqualTo($"https://app.example.com/ideas/{idea.Id}");
     await Assert.That(mail.Html).Contains($"href=\"https://app.example.com/ideas/{idea.Id}\"");
   }
@@ -185,7 +185,7 @@ public class ReminderServiceTests
     var result = await factory.RunRemindersAsync();
 
     await Assert.That(result.Raised).IsEqualTo(1);
-    await Assert.That(factory.Mail.Sent.Select(m => m.Subject)).IsEquivalentTo(["Coming up: Launch", "Due tomorrow: Launch"], CollectionOrdering.Matching);
+    await Assert.That(factory.Mail.Sent.Select(m => m.Subject)).IsEquivalentTo(["Coming up: “Launch”", "Due tomorrow: “Launch”"], CollectionOrdering.Matching);
   }
 
   [Test]
@@ -227,7 +227,7 @@ public class ReminderServiceTests
 
     await Assert.That(first.Raised).IsEqualTo(1);
     await Assert.That(second.Raised).IsEqualTo(0);
-    await Assert.That(factory.Mail.Sent.Single().Subject).IsEqualTo("Overdue: Launch");
+    await Assert.That(factory.Mail.Sent.Single().Subject).IsEqualTo("Overdue: “Launch”");
   }
 
   [Test]

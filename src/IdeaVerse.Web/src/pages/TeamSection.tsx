@@ -73,12 +73,18 @@ export function TeamSection({ idea }: { idea: Idea }) {
 function AddMemberForm({ idea, team }: { idea: Idea; team: Member[] }) {
   const add = useAddMember(idea.id);
   const people = useWorkspaceMembers(idea.workspaceId);
+  const toast = useToast();
   const [email, setEmail] = useState('');
   const candidates = (people.data ?? []).filter((person) => !team.some((member) => member.userId === person.userId));
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    add.mutate(email, { onSuccess: () => setEmail('') });
+    add.mutate(email, {
+      onSuccess: (member) => {
+        setEmail('');
+        toast({ message: `Added ${personLabel(member.name, member.email)} to the team` });
+      },
+    });
   };
 
   if (people.data && candidates.length === 0) {

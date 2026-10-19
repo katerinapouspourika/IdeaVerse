@@ -75,7 +75,7 @@ public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> 
     {
       return MemberChangeResult.Denied(
         await context.DenialAsync(userId, ideaId, cancellationToken).ConfigureAwait(false),
-        "Only the idea's owner and the workspace's admins can add team members.");
+        "Only the idea’s owner and the workspace’s admins can add team members.");
     }
 
     var email = userManager.NormalizeEmail(request.Email.Trim());
@@ -146,7 +146,7 @@ public sealed class MemberService(IdeaVerseDbContext context, UserManager<User> 
 
     if (!idea.CanManage && userId != memberUserId)
     {
-      return MemberChangeResult.Forbidden("Only the idea's owner and the workspace's admins can remove other team members.");
+      return MemberChangeResult.Forbidden("Only the idea’s owner and the workspace’s admins can remove other team members.");
     }
 
     var member = await context.IdeaMembers

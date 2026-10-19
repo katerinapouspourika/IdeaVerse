@@ -1,4 +1,4 @@
-import { formatDate } from '../api/dates';
+import { formatDayOf } from '../api/dates';
 import { useAnswerJoinRequest, useJoinRequests } from '../api/queries';
 import { personLabel } from '../api/types';
 import { ErrorMessage, LoadError } from '../components/ErrorMessage';
@@ -23,7 +23,7 @@ export function JoinRequestsCard({ workspaceId }: { workspaceId: string }) {
               <span>
                 {who}
                 {request.name && <span className="muted small block">{request.email}</span>}
-                <span className="muted small block">Asked {formatDate(request.createdAt.slice(0, 10))}</span>
+                <span className="muted small block">Asked {formatDayOf(request.createdAt)}</span>
               </span>
               <span className="row">
                 <button

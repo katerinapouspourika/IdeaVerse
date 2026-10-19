@@ -56,10 +56,15 @@ export function IdeaPanel({ id, onClose }: { id: string; onClose: () => void }) 
     <div className="drawer-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div ref={panel} className="drawer stack" role="dialog" aria-modal="true" aria-labelledby={titleId} onKeyDown={onKeyDown}>
         <div className="row spread drawer-bar">
-          <Link to={`/ideas/${id}`} className="button ghost small">
-            <ExternalLink aria-hidden="true" size={16} />
-            Open full page
-          </Link>
+          {/* An idea that can't be shown here can't be on its page either; the empty span keeps Close on the right. */}
+          {idea.error && !idea.data ? (
+            <span />
+          ) : (
+            <Link to={`/ideas/${id}`} className="button ghost small">
+              <ExternalLink aria-hidden="true" size={16} />
+              Open full page
+            </Link>
+          )}
           <button ref={closeButton} type="button" className="button ghost small icon-button" aria-label="Close" onClick={onClose}>
             <X aria-hidden="true" size={18} />
           </button>

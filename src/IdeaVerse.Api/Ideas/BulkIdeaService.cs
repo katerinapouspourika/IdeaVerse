@@ -21,7 +21,7 @@ public sealed class BulkIdeaService(IdeaVerseDbContext context, IdeaService idea
   /// <summary>
   /// What an idea the user cannot see reports, as its own endpoint's 404 would.
   /// </summary>
-  private const string NotFoundMessage = "This idea doesn't exist or isn't in one of your workspaces.";
+  private const string NotFoundMessage = "This idea doesn’t exist or isn’t in one of your workspaces.";
 
   /// <summary>
   /// Applies <paramref name="request"/> to each of its ideas, in order; an idea listed twice is changed once.

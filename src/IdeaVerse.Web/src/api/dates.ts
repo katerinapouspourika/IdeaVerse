@@ -62,6 +62,11 @@ export function formatDate(isoDate: string): string {
   });
 }
 
+/** Formats the day a moment, such as when an idea was created, fell on in the account's time zone, e.g. "Fri, 23 Oct 2026". */
+export function formatDayOf(isoInstant: string, timeZone: string = currentTimeZone): string {
+  return formatDate(todayIso(new Date(isoInstant), timeZone));
+}
+
 /** Formats a moment, such as when a comment was posted, in the account's time zone, with the hour as the locale writes it, e.g. "Sat, Oct 10, 2026, 9:30 AM" or "Sat, 10 Oct 2026, 09:30". */
 export function formatMoment(isoInstant: string, timeZone: string = currentTimeZone): string {
   return new Date(isoInstant).toLocaleString(undefined, {

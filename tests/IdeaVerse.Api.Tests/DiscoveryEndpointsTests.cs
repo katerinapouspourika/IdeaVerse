@@ -2,6 +2,7 @@ namespace Pouspourika.IdeaVerse.Api.Tests;
 
 using System.Net;
 
+using Pouspourika.IdeaVerse.Api.Accounts;
 using Pouspourika.IdeaVerse.Api.Discovery;
 using Pouspourika.IdeaVerse.Api.Workspaces;
 
@@ -103,6 +104,23 @@ public class DiscoveryEndpointsTests
     await Assert.That(mine!.Single().Role).IsEqualTo(WorkspaceRole.Member);
     await Assert.That(left).IsEmpty();
     await Assert.That(await DiscoverAsync(colleague)).IsEmpty();
+  }
+
+  [Test]
+  public async Task Request_RequesterWithAName_NamesThemWithTheirEmail()
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var owner = await factory.CreateSignedInClientAsync("owner@acme.test");
+    using var colleague = await factory.CreateSignedInClientAsync("mia@acme.test", withWorkspace: false);
+    var workspace = await owner.WorkspaceAsync();
+    await SetAsync(owner, workspace.Id, "acme.test", discoverable: true);
+    (await colleague.PutAsJsonAsync("/api/v1/account/profile", new UpdateProfileRequest("Mia Rossi"), Json.Options)).Dispose();
+
+    using var request = await colleague.PostAsync($"/api/v1/discover/{workspace.Id}/request", content: null);
+
+    var notice = factory.Mail.Take("owner@acme.test", DiscoveryService.RequestSubject(workspace.Name));
+    await Assert.That(notice.Body).StartsWith("Mia Rossi (mia@acme.test) works at your company");
+    await Assert.That(notice.Html!).Contains("Mia Rossi (mia@acme.test) asked to join");
   }
 
   [Test]

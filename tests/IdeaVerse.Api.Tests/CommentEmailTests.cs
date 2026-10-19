@@ -44,7 +44,7 @@ public class CommentEmailTests
     await Assert.That(account.EmailComments).IsTrue();
     await Assert.That(result.Emailed).IsEqualTo(1);
     var mail = factory.Mail.Sent.Single();
-    await Assert.That(mail.Subject).IsEqualTo("New comment on Launch");
+    await Assert.That(mail.Subject).IsEqualTo("New comment on “Launch”");
     await Assert.That(mail.Body).Contains("After");
     await Assert.That(FakeMailSender.IdeaLinkIn(mail)).IsEqualTo($"https://app.example.com/ideas/{idea.Id}#comment-{comment!.Id}");
     await Assert.That(mail.Html).Contains($"href=\"https://app.example.com/ideas/{idea.Id}#comment-{comment.Id}\"");
@@ -66,7 +66,7 @@ public class CommentEmailTests
     await factory.RunRemindersAsync();
 
     var mail = factory.Mail.Sent.Single();
-    await Assert.That(mail.Subject).IsEqualTo("You were mentioned on Launch");
+    await Assert.That(mail.Subject).IsEqualTo("You were mentioned on “Launch”");
     await Assert.That(FakeMailSender.IdeaLinkIn(mail)).IsEqualTo($"https://app.example.com/ideas/{idea.Id}#comment-{comment!.Id}");
     await Assert.That(mail.Html).Contains($"href=\"https://app.example.com/ideas/{idea.Id}#comment-{comment.Id}\"");
   }

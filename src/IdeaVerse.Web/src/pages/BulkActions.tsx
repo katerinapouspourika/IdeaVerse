@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import { formatDate, todayIso } from '../api/dates';
 import { useBulkIdeas, useTags } from '../api/queries';
@@ -174,6 +174,25 @@ export function BulkBar({ workspaceId, selection }: { workspaceId: string; selec
   const unarchivable = selected.filter((idea) => !archivable(idea)).length;
   const finished = selected.filter((idea) => !postponable(idea)).length;
   const toggle = (next: Panel) => setPanel(panel === next ? null : next);
+  const bar = useRef<HTMLElement>(null);
+  // Toasts at the bottom of the screen rise above the bar while it is there, rather than covering its actions.
+  useEffect(() => {
+    const element = bar.current;
+    if (!element) {
+      return;
+    }
+    const root = document.documentElement;
+    const update = () => root.style.setProperty('--bulk-bar-height', `${element.offsetHeight}px`);
+    update();
+    root.classList.add('has-bulk-bar');
+    const resize = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(update);
+    resize?.observe(element);
+    return () => {
+      resize?.disconnect();
+      root.classList.remove('has-bulk-bar');
+      root.style.removeProperty('--bulk-bar-height');
+    };
+  }, []);
 
   const submitTag = (add: boolean) => {
     if (tag.trim() !== '') {
@@ -184,7 +203,7 @@ export function BulkBar({ workspaceId, selection }: { workspaceId: string; selec
   };
 
   return (
-    <section className="card bulk-bar stack tight" aria-label="Bulk actions">
+    <section ref={bar} className="card bulk-bar stack tight" aria-label="Bulk actions">
       <div className="row wrap bulk-row">
         <strong className="bulk-count" role="status">
           {selected.length} selected

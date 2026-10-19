@@ -244,13 +244,31 @@ describe('IdeasPage', () => {
     expect(router.state.location.pathname).toBe('/ideas');
   });
 
+  it('moves focus to the title when the New idea form opens, and back to New idea when it closes', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [anIdea()] } });
+    renderApp('/ideas');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'New idea' }));
+    await waitFor(() => expect(within(screen.getByRole('form', { name: 'New idea' })).getByLabelText('Title')).toHaveFocus());
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('button', { name: 'New idea' })).toHaveFocus();
+
+    // The N shortcut opens it the same way.
+    await userEvent.click(document.body);
+    await userEvent.keyboard('n');
+    const again = await screen.findByRole('form', { name: 'New idea' });
+    await waitFor(() => expect(within(again).getByLabelText('Title')).toHaveFocus());
+  });
+
   it('opens the new idea form only once when asked from the dashboard', async () => {
     fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [anIdea()] } });
     const router = renderApp('/');
 
     await userEvent.click(await screen.findByRole('link', { name: 'New idea' }));
 
-    expect(await screen.findByRole('form', { name: 'New idea' })).toBeInTheDocument();
+    const form = await screen.findByRole('form', { name: 'New idea' });
+    await waitFor(() => expect(within(form).getByLabelText('Title')).toHaveFocus());
     await waitFor(() => expect(router.state.location.state).toBeNull());
   });
 
@@ -306,9 +324,11 @@ describe('IdeasPage', () => {
         [`${ideasRoute}?status=Done&search=spring&tag=marketing&sort=Votes`]: { status: 200, body: [anIdea({ title: 'Spring launch', status: 'Done' })] },
         'GET /api/v1/workspaces/ws-1/tags': { status: 200, body: ['marketing', 'ops'] },
       });
-      renderApp('/ideas?status=Done&tag=marketing&q=spring&sort=Votes&view=list');
+      const router = renderApp('/ideas?status=Done&tag=marketing&q=spring&sort=Votes&view=list');
 
       expect(await screen.findByRole('link', { name: 'Spring launch' })).toBeInTheDocument();
+      // The link's List stays in the address, rather than giving way to the remembered board once the address is tidied.
+      await waitFor(() => expect(Object.fromEntries(new URLSearchParams(router.state.location.search))).toEqual({ status: 'Done', tag: 'marketing', q: 'spring', sort: 'Votes', view: 'list' }));
       expect(screen.getByRole('button', { name: 'Done' })).toHaveAttribute('aria-pressed', 'true');
       expect(screen.getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'true');
       expect(screen.getByLabelText('Search')).toHaveValue('spring');
@@ -319,6 +339,57 @@ describe('IdeasPage', () => {
       ]);
       // A shared link doesn't replace what the user chose for themselves.
       expect(JSON.parse(localStorage.getItem('ideaverse.ideas.ws-1')!)).toEqual({ tab: 'Planned', sort: 'Title', view: 'board' });
+    });
+
+    it('takes every filter from an address that has any, so a shared link shows everyone the same list', async () => {
+      localStorage.setItem('ideaverse.ideas.ws-1', JSON.stringify({ tab: 'Planned', tag: 'marketing', view: 'board' }));
+      const calls = fakeApi({ ...signedIn, [`${ideasRoute}?search=e&sort=Title`]: { status: 200, body: [anIdea()] } });
+      const router = renderApp('/ideas?sort=Title&q=e');
+
+      expect(await screen.findByText('Black Friday teaser')).toBeInTheDocument();
+      // The view only changes how the list is shown, so the remembered one still applies.
+      expect(screen.getByRole('button', { name: 'Board' })).toHaveAttribute('aria-pressed', 'true');
+      // The order of the parameters depends on timing, so compare them, not the string.
+      await waitFor(() => expect(Object.fromEntries(new URLSearchParams(router.state.location.search))).toEqual({ sort: 'Title', q: 'e', view: 'board' }));
+      expect(calls.filter((c) => c.path.startsWith('/api/v1/workspaces/ws-1/ideas')).map((c) => c.path)).toEqual(['/api/v1/workspaces/ws-1/ideas?search=e&sort=Title']);
+      expect(JSON.parse(localStorage.getItem('ideaverse.ideas.ws-1')!)).toEqual({ tab: 'Planned', tag: 'marketing', view: 'board' });
+    });
+
+    it('opens a tag chip’s link on that tag alone, without the remembered status', async () => {
+      localStorage.setItem('ideaverse.ideas.ws-1', JSON.stringify({ tab: 'Planned' }));
+      const calls = fakeApi({
+        ...signedIn,
+        [`${ideasRoute}?tag=ops`]: { status: 200, body: [anIdea()] },
+        'GET /api/v1/workspaces/ws-1/tags': { status: 200, body: ['marketing', 'ops'] },
+      });
+      renderApp('/ideas?tag=ops');
+
+      expect(await screen.findByText('Black Friday teaser')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+      expect(calls.some((c) => c.path.includes('status='))).toBe(false);
+    });
+
+    it('remembers the list as shown once a filter on a shared link is changed', async () => {
+      localStorage.setItem('ideaverse.ideas.ws-1', JSON.stringify({ tab: 'Planned' }));
+      fakeApi({
+        ...signedIn,
+        [ideasRoute]: { status: 200, body: [anIdea()] },
+        [`${ideasRoute}?tag=ops`]: { status: 200, body: [anIdea()] },
+        [`${ideasRoute}?tag=ops&sort=Votes`]: { status: 200, body: [anIdea()] },
+        [`${ideasRoute}?sort=Votes`]: { status: 200, body: [anIdea()] },
+        'GET /api/v1/workspaces/ws-1/tags': { status: 200, body: ['marketing', 'ops'] },
+      });
+      const router = renderApp('/ideas?tag=ops');
+      await screen.findByText('Black Friday teaser');
+
+      await userEvent.selectOptions(screen.getByLabelText('Sort by'), 'Votes');
+      expect(JSON.parse(localStorage.getItem('ideaverse.ideas.ws-1')!)).toMatchObject({ tab: 'All', tag: 'ops', sort: 'Votes' });
+
+      // With no tag left, the address still has the order, and the status stays as shown rather than the earlier Planned.
+      await userEvent.selectOptions(await screen.findByLabelText('Tag'), '');
+      expect(router.state.location.search).toBe('?sort=Votes');
+      expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+      expect(JSON.parse(localStorage.getItem('ideaverse.ideas.ws-1')!)).toMatchObject({ tab: 'All', tag: '', sort: 'Votes' });
     });
 
     it('puts the remembered choices in the address, so the list as it opens can be shared', async () => {
@@ -363,6 +434,24 @@ describe('IdeasPage', () => {
       await userEvent.click(screen.getByRole('button', { name: 'All' }));
       await userEvent.clear(screen.getByLabelText('Search'));
       await waitFor(() => expect(router.state.location.search).toBe(''));
+    });
+
+    it('shows a tag from the address that no idea has in the tag filter, so the empty list can be explained and cleared', async () => {
+      fakeApi({
+        ...signedIn,
+        [ideasRoute]: { status: 200, body: [anIdea()] },
+        [`${ideasRoute}?tag=nonexistent`]: { status: 200, body: [] },
+        'GET /api/v1/workspaces/ws-1/tags': { status: 200, body: ['marketing'] },
+      });
+      const router = renderApp('/ideas?tag=nonexistent');
+
+      expect(await screen.findByText('No ideas match these filters.')).toBeInTheDocument();
+      const tag = await screen.findByLabelText('Tag');
+      await waitFor(() => expect(tag).toHaveValue('nonexistent'));
+
+      await userEvent.selectOptions(tag, 'All tags');
+      expect(await screen.findByText('Black Friday teaser')).toBeInTheDocument();
+      expect(router.state.location.search).toBe('');
     });
 
     it('clears every filter at once from an empty result', async () => {
