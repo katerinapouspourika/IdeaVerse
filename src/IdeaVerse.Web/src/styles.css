@@ -2066,6 +2066,12 @@ a.tag:focus-visible {
   line-height: 1;
 }
 
+.stat-value .skeleton-line.stat-skeleton {
+  width: 2.5rem;
+  height: 2rem;
+  border-radius: var(--radius-small);
+}
+
 .stat-label {
   font-size: 0.85rem;
   font-weight: 700;
