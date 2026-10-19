@@ -26,7 +26,7 @@ const reminderChoices: { kind: ReminderKind; label: string; hint: string }[] = [
 
 const frequencyChoices: { frequency: EmailFrequency; label: string; hint: string }[] = [
   { frequency: 'RightAway', label: 'Send right away', hint: 'Within a minute; several updates at once arrive as one email' },
-  { frequency: 'DailyDigest', label: 'Daily digest', hint: 'One email a day at 8:00 in your time zone. Mentions are always sent right away.' },
+  { frequency: 'DailyDigest', label: 'Daily digest', hint: 'One email a day at 8:00 in your time zone. Mentions are still emailed right away.' },
 ];
 
 /** The signed-in user's own settings. The workspace's settings have their own page, linked from People. */
@@ -249,7 +249,10 @@ function RemindersForm({ account }: { account: Account }) {
           checked={email}
           onChange={(e) => settings.change({ ...settings.value, emailReminders: e.target.checked, emailComments: e.target.checked && comments })}
         />
-        <span>Also email me these reminders</span>
+        <span>
+          Email me about these
+          <span className="muted small block">The reminders above, and being mentioned, assigned a component, or added to an idea’s team.</span>
+        </span>
       </label>
       <label className="check">
         <input
@@ -260,7 +263,7 @@ function RemindersForm({ account }: { account: Account }) {
         />
         <span>
           Email me about new comments too
-          <span className="muted small block">Comments on ideas you own or are on the team of. Mentions are always emailed.</span>
+          <span className="muted small block">Comments on ideas you own or are on the team of. Mentions are emailed either way.</span>
         </span>
       </label>
       <fieldset className="choices" disabled={!email}>
