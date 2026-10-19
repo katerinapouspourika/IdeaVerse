@@ -7,6 +7,7 @@ import { Field } from '../components/Field';
 import { ErrorMessage, fieldError } from '../components/ErrorMessage';
 import { useConfirm, useToast } from '../components/Feedback';
 import { Skeleton } from '../components/Skeleton';
+import { requiredProblem, useInlineValidation } from '../components/useInlineValidation';
 import { usePageMeta } from '../seo/usePageMeta';
 import { BrandingCard } from '../workspaces/BrandingCard';
 import { CompanyDomainCard } from '../workspaces/CompanyDomainCard';
@@ -73,17 +74,21 @@ function WorkspaceName({ workspace }: { workspace: Workspace }) {
   const rename = useRenameWorkspace(workspace.id);
   const [name, setName] = useState(workspace.name);
   const [saved, setSaved] = useState(false);
+  const validation = useInlineValidation({ name: () => requiredProblem(name, 'Give your workspace a name.') });
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (!validation.validate(event)) {
+      return;
+    }
     setSaved(false);
     rename.mutate(name, { onSuccess: () => setSaved(true) });
   };
 
   return (
-    <form className="card stack" onSubmit={submit} aria-label="Rename workspace">
+    <form className="card stack" onSubmit={submit} aria-label="Rename workspace" noValidate>
       <h2>Name</h2>
-      <Field label="Workspace name" error={fieldError(rename.error, 'name')}>
+      <Field label="Workspace name" error={validation.errors.name ?? fieldError(rename.error, 'name')}>
         {(props) => (
           <input
             {...props}
@@ -94,6 +99,7 @@ function WorkspaceName({ workspace }: { workspace: Workspace }) {
               setName(e.target.value);
               setSaved(false);
             }}
+            onBlur={validation.blur('name')}
           />
         )}
       </Field>
