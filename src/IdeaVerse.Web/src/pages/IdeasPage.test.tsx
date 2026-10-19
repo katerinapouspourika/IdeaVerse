@@ -329,7 +329,8 @@ describe('IdeasPage', () => {
       expect(await screen.findByText('Black Friday teaser')).toBeInTheDocument();
       // The view only changes how the list is shown, so the remembered one still applies.
       expect(screen.getByRole('button', { name: 'Board' })).toHaveAttribute('aria-pressed', 'true');
-      await waitFor(() => expect(router.state.location.search).toBe('?sort=Title&q=e&view=board'));
+      // The order of the parameters depends on timing, so compare them, not the string.
+      await waitFor(() => expect(Object.fromEntries(new URLSearchParams(router.state.location.search))).toEqual({ sort: 'Title', q: 'e', view: 'board' }));
       expect(calls.filter((c) => c.path.startsWith('/api/v1/workspaces/ws-1/ideas')).map((c) => c.path)).toEqual(['/api/v1/workspaces/ws-1/ideas?search=e&sort=Title']);
       expect(JSON.parse(localStorage.getItem('ideaverse.ideas.ws-1')!)).toEqual({ tab: 'Planned', tag: 'marketing', view: 'board' });
     });
