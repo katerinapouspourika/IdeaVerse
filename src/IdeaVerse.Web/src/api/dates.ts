@@ -17,6 +17,11 @@ export function todayIso(now: Date = new Date(), timeZone: string = currentTimeZ
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
+/** The hour of the day, 0–23, in a time zone; by default the account's, so a greeting follows the user's own clock. */
+export function hourIn(now: Date = new Date(), timeZone: string = currentTimeZone): number {
+  return Number(new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', hourCycle: 'h23' }).format(now));
+}
+
 /** Adds days to a `YYYY-MM-DD` date. */
 export function addDays(isoDate: string, days: number): string {
   const date = new Date(`${isoDate}T00:00:00Z`);
