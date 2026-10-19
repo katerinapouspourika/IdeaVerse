@@ -436,6 +436,24 @@ describe('IdeasPage', () => {
       await waitFor(() => expect(router.state.location.search).toBe(''));
     });
 
+    it('shows a tag from the address that no idea has in the tag filter, so the empty list can be explained and cleared', async () => {
+      fakeApi({
+        ...signedIn,
+        [ideasRoute]: { status: 200, body: [anIdea()] },
+        [`${ideasRoute}?tag=nonexistent`]: { status: 200, body: [] },
+        'GET /api/v1/workspaces/ws-1/tags': { status: 200, body: ['marketing'] },
+      });
+      const router = renderApp('/ideas?tag=nonexistent');
+
+      expect(await screen.findByText('No ideas match these filters.')).toBeInTheDocument();
+      const tag = await screen.findByLabelText('Tag');
+      await waitFor(() => expect(tag).toHaveValue('nonexistent'));
+
+      await userEvent.selectOptions(tag, 'All tags');
+      expect(await screen.findByText('Black Friday teaser')).toBeInTheDocument();
+      expect(router.state.location.search).toBe('');
+    });
+
     it('clears every filter at once from an empty result', async () => {
       fakeApi({
         ...signedIn,

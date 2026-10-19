@@ -146,12 +146,14 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
       {(props) => <input {...props} type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Title or description" />}
     </Field>
   );
-  const tagField = tags.data && tags.data.length > 0 && (
+  // A tag from the address that no idea has, as from an old link, is still offered, so the select shows why nothing matches.
+  const tagOptions = tags.data && tag !== '' && !tags.data.includes(tag) ? [...tags.data, tag] : tags.data;
+  const tagField = tagOptions && tagOptions.length > 0 && (
     <Field label="Tag">
       {(props) => (
         <select {...props} value={tag} onChange={(e) => choose({ tag: e.target.value })}>
           <option value="">All tags</option>
-          {tags.data.map((t) => (
+          {tagOptions.map((t) => (
             <option key={t} value={t}>
               {t}
             </option>
