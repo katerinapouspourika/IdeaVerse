@@ -1657,13 +1657,16 @@ a.tag:focus-visible {
   position: relative;
 }
 
+/* Takes the page's font but keeps the weight of the nav links beside it. */
 .nav-group-toggle {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   border: 0;
   background: transparent;
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
   cursor: pointer;
 }
 
