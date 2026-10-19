@@ -88,12 +88,14 @@ describe('Idea side panel', () => {
     expect(await screen.findByRole('dialog', { name: 'Spring launch' })).toBeInTheDocument();
   });
 
-  it('says so when the idea cannot be found', async () => {
+  it('says so when the idea cannot be found, with no link to a page it has none of', async () => {
     fakeApi({ ...routes, 'GET /api/v1/ideas/idea-9': { status: 404 } });
     renderApp('/ideas?idea=idea-9');
 
     const panel = await screen.findByRole('dialog', { name: 'Idea unavailable' });
 
     expect(within(panel).getByText('This idea doesn’t exist or isn’t in one of your workspaces.')).toBeInTheDocument();
+    expect(within(panel).queryByRole('link', { name: 'Open full page' })).not.toBeInTheDocument();
+    expect(within(panel).getByRole('button', { name: 'Close' })).toBeInTheDocument();
   });
 });
