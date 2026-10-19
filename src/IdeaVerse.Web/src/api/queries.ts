@@ -6,6 +6,8 @@ import type {
   Assignment,
   AiStatus,
   BrainstormedIdea,
+  BulkIdeaRequest,
+  BulkIdeaResult,
   Comment,
   Component,
   ComponentSuggestion,
@@ -401,6 +403,21 @@ function useStoreIdea() {
     client.setQueryData(keys.idea(saved.id), saved);
     client.setQueriesData<Idea[]>({ queryKey: ['ideas'] }, (ideas) => ideas?.map((i) => (i.id === saved.id ? saved : i)));
   };
+}
+
+/** Applies one change to several ideas; each idea's result says whether it applied, so a partial failure can be reported. */
+export function useBulkIdeas() {
+  const client = useQueryClient();
+  const invalidate = useInvalidateIdea();
+  const store = useStoreIdea();
+  return useMutation({
+    mutationFn: (change: BulkIdeaRequest) => request<BulkIdeaResult[]>('POST', '/api/v1/ideas/bulk', change),
+    onSuccess: (results) => results.forEach((result) => result.idea && store(result.idea)),
+    onSettled: (results) => {
+      invalidate();
+      results?.forEach((result) => void client.invalidateQueries({ queryKey: keys.idea(result.id) }));
+    },
+  });
 }
 
 /** Votes for an idea, or withdraws the vote. */
