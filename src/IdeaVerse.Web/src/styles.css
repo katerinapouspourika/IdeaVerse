@@ -12,6 +12,8 @@
   --sky: #2fb2e6;
   --sun: #ffc94a;
   --coral: #ff7a6b;
+  /* Text on coral in either theme: white on it is too faint to read at small sizes. */
+  --on-coral: #16204a;
   --accent: #2b35b0;
   --accent-text: #ffffff;
   --accent-soft: #e8ebff;
@@ -756,7 +758,8 @@ textarea:focus-visible,
 .calendar-idea.is-overdue,
 .agenda-idea.is-overdue,
 .calendar-span.is-overdue,
-.timeline-bar.is-overdue {
+.timeline-bar.is-overdue,
+.timeline-earlier.is-overdue {
   --status-bg: var(--status-overdue-bg);
   --status-text: var(--status-overdue-text);
   --status-bar: var(--status-overdue-bar);
@@ -1461,7 +1464,7 @@ a.tag:focus-visible {
   padding: 0 6px;
   border-radius: 999px;
   background: var(--coral);
-  color: #ffffff;
+  color: var(--on-coral);
   font-size: 0.7rem;
   font-weight: 800;
 }
@@ -2064,6 +2067,12 @@ a.tag:focus-visible {
   font-size: 2rem;
   font-weight: 900;
   line-height: 1;
+}
+
+.stat-value .skeleton-line.stat-skeleton {
+  width: 2.5rem;
+  height: 2rem;
+  border-radius: var(--radius-small);
 }
 
 .stat-label {
@@ -3301,6 +3310,70 @@ a:focus-visible {
   width: 35%;
 }
 
+/* The ideas' views while they load: the board's columns, the calendar's and matrix's grids, the timeline's bars. */
+.skeleton-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.skeleton-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 240px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--bg-tint);
+}
+
+.skeleton-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.skeleton-grid.matrix {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.skeleton-cell {
+  height: 64px;
+  border-radius: var(--radius-small);
+  background: var(--bg-tint);
+}
+
+.skeleton-grid.matrix .skeleton-cell {
+  height: 76px;
+}
+
+.skeleton-timeline-row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.skeleton-line.skeleton-bar {
+  height: 20px;
+}
+
+@media (max-width: 600px) {
+  .skeleton-board {
+    grid-template-columns: 84vw;
+  }
+
+  .skeleton-column:not(:first-of-type) {
+    display: none;
+  }
+}
+
 @keyframes shimmer {
   from {
     background-position: 200% 0;
@@ -3312,6 +3385,17 @@ a:focus-visible {
 }
 
 /* Getting started checklist */
+/* Its close button sits beside the heading, overlapping the padding so the heading's line keeps its height. */
+.getting-started .header-icon {
+  margin: -8px -8px -8px 0;
+}
+
+/* The checklist's count and the first idea's text sit close under their headings, without a paragraph's margins. */
+.getting-started p,
+.first-idea p {
+  margin: 0;
+}
+
 .progress-track.wide {
   width: 100%;
   height: 8px;
@@ -3540,12 +3624,6 @@ a:focus-visible {
 /* An open menu sits above the card's tags and the cards below it. */
 .board-move:has(.menu-list) {
   z-index: 3;
-}
-
-/* The last card of a longer column opens its menu upwards, so it stays inside the board's scrolling area. */
-.board-cards > li:last-child:not(:first-child) .menu-list {
-  top: auto;
-  bottom: calc(100% + 6px);
 }
 
 .board-empty {
@@ -3861,13 +3939,14 @@ a:focus-visible {
 }
 
 .matrix-region-label {
-  color: var(--quadrant);
+  /* Leaning towards the text colour, so the label stays readable on its quadrant's tint in both themes. */
+  color: color-mix(in srgb, var(--quadrant) 80%, var(--text));
   font-weight: 800;
   font-size: 0.9rem;
 }
 
 .matrix-region-label .count {
-  opacity: 0.75;
+  font-weight: 600;
 }
 
 .matrix-region.NiceToHave .matrix-region-label {
@@ -4396,7 +4475,7 @@ button.chip:focus-visible {
   padding: 0 6px;
   border-radius: 999px;
   background: var(--coral);
-  color: #ffffff;
+  color: var(--on-coral);
   font-size: 0.7rem;
   font-weight: 800;
 }
@@ -4468,6 +4547,27 @@ button.chip:focus-visible {
 .timeline-bar.clipped {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
+  /* Fades in from the scale's start, so the bar reads as carrying on from before it. */
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 24px);
+  mask-image: linear-gradient(to right, transparent, #000 24px);
+}
+
+/* An idea due before the scale starts: a tag at its start, rather than a bar that would read as due in its first month. */
+.timeline-earlier {
+  position: absolute;
+  left: 0;
+  top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 20px;
+  padding: 0 8px 0 4px;
+  border-radius: 999px;
+  background: var(--status-bg);
+  color: var(--status-text);
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 /* No start date: a dot centred on the target date, ringed in the surface colour so it reads as a point, not a bar. */

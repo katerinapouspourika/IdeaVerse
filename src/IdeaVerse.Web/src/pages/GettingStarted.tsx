@@ -59,24 +59,24 @@ export function GettingStarted({ workspace, ideas, account }: { workspace: Works
 
   return (
     <section className="card stack getting-started" aria-labelledby="getting-started-heading">
-      <div className="row spread">
-        <div className="stack tight">
+      <div className="stack tight">
+        <div className="row spread">
           <h2 id="getting-started-heading">Get started</h2>
-          <p className="muted small">
-            {doneCount} of {steps.length} done
-          </p>
+          <button
+            type="button"
+            className="icon-button header-icon"
+            aria-label="Hide getting started"
+            onClick={() => {
+              saveHidden(workspace.id);
+              setHidden(true);
+            }}
+          >
+            <X aria-hidden="true" size={18} />
+          </button>
         </div>
-        <button
-          type="button"
-          className="icon-button header-icon"
-          aria-label="Hide getting started"
-          onClick={() => {
-            saveHidden(workspace.id);
-            setHidden(true);
-          }}
-        >
-          <X aria-hidden="true" size={18} />
-        </button>
+        <p className="muted small">
+          {doneCount} of {steps.length} done
+        </p>
       </div>
       <div className="progress-track wide" aria-hidden="true">
         <span className="progress-fill" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
