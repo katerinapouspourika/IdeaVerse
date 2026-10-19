@@ -172,6 +172,26 @@ describe('Board view', () => {
     await waitFor(() => expect(calls.find((c) => c.method === 'PUT')?.body).toMatchObject({ status: 'Postponed' }));
   });
 
+  it('opens the move menu below its grip, or above it when the window has no room below', async () => {
+    fakeApi(routes());
+    renderApp('/ideas');
+    await userEvent.click(await screen.findByRole('button', { name: 'Board' }));
+    // The menu is 200 pixels tall; the window, 768.
+    const height = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(200);
+    const grip = screen.getByRole('button', { name: 'Move Spring launch' });
+    const at = (top: number) => (grip.getBoundingClientRect = () => ({ left: 200, right: 240, top, bottom: top + 40, width: 40, height: 40 }) as DOMRect);
+
+    at(100);
+    await userEvent.click(grip);
+    expect(screen.getByRole('menu', { name: 'Move to' })).toHaveStyle({ position: 'fixed', top: '146px', bottom: 'auto' });
+    await userEvent.keyboard('{Escape}');
+
+    at(600);
+    await userEvent.click(grip);
+    expect(screen.getByRole('menu', { name: 'Move to' })).toHaveStyle({ position: 'fixed', top: 'auto', bottom: `${window.innerHeight - 600 + 6}px` });
+    height.mockRestore();
+  });
+
   it('puts an idea back when the move fails', async () => {
     fakeApi(routes(() => ({ status: 403, body: { detail: 'Only the idea’s team can change it.' } })));
     renderApp('/ideas');
