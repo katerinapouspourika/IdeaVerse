@@ -57,14 +57,14 @@ export function formatDate(isoDate: string): string {
   });
 }
 
-/** Formats a moment, such as when a comment was posted, in the account's time zone, e.g. "Sat, 10 Oct 2026, 14:32". */
+/** Formats a moment, such as when a comment was posted, in the account's time zone, with the hour as the locale writes it, e.g. "Sat, Oct 10, 2026, 9:30 AM" or "Sat, 10 Oct 2026, 09:30". */
 export function formatMoment(isoInstant: string, timeZone: string = currentTimeZone): string {
   return new Date(isoInstant).toLocaleString(undefined, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-    hour: '2-digit',
+    hour: 'numeric',
     minute: '2-digit',
     timeZone,
   });

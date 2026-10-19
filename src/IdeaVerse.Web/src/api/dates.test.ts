@@ -1,4 +1,4 @@
-import { addDays, daysUntil, describeDue, formatAgo, formatDate, setTimeZone, todayIso } from './dates';
+import { addDays, daysUntil, describeDue, formatAgo, formatDate, formatMoment, setTimeZone, todayIso } from './dates';
 
 describe('dates', () => {
   const now = new Date('2026-10-10T23:30:00Z');
@@ -54,5 +54,14 @@ describe('dates', () => {
 
   it('gives the date for moments over a week ago', () => {
     expect(formatAgo('2026-10-01T09:00:00Z', now, 'UTC')).toBe(formatDate('2026-10-01'));
+  });
+
+  it('writes the hour as the locale normally does, without a leading zero on a 12-hour clock', () => {
+    const twelveHour = /^h1[12]$/.test(new Intl.DateTimeFormat(undefined, { hour: 'numeric' }).resolvedOptions().hourCycle ?? '');
+    const moment = formatMoment('2026-10-10T09:30:00Z', 'UTC');
+    expect(moment).toContain('9:30');
+    if (twelveHour) {
+      expect(moment).not.toContain('09:30');
+    }
   });
 });
