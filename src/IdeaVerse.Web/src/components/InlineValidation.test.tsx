@@ -74,6 +74,28 @@ describe('Inline validation', () => {
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
   });
 
+  it('asks for a workspace name when renaming one', async () => {
+    const calls = fakeApi({
+      ...signedIn,
+      'GET /api/v1/workspaces': { status: 200, body: [aWorkspace({ role: 'Owner' })] },
+      'GET /api/v1/workspaces/ws-1/members': { status: 200, body: [] },
+      'GET /api/v1/workspaces/ws-1/invite-link': { status: 200, body: { url: null } },
+      'GET /api/v1/workspaces/ws-1/discovery': { status: 200, body: { domain: null, discoverable: false, suggestedDomain: 'example.com' } },
+      [ideasRoute]: { status: 200, body: [] },
+    });
+    renderApp('/workspace/settings');
+
+    const form = await screen.findByRole('form', { name: 'Rename workspace' });
+    expect(form).toHaveAttribute('novalidate');
+    await userEvent.clear(within(form).getByLabelText('Workspace name'));
+    await userEvent.click(within(form).getByRole('button', { name: 'Save' }));
+
+    const name = within(form).getByLabelText('Workspace name');
+    expect(name).toHaveAccessibleDescription('Give your workspace a name.');
+    expect(name).toHaveFocus();
+    expect(calls.some((c) => c.method === 'PUT')).toBe(false);
+  });
+
   it('asks for the address to invite', async () => {
     const calls = fakeApi({
       ...signedIn,
