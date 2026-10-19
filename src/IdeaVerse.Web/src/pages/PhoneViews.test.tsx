@@ -37,6 +37,21 @@ describe('Calendar and Timeline on a phone', () => {
     expect(within(calendar).getByRole('link', { name: 'Team offsite' })).toHaveAttribute('href', '/ideas/idea-3');
   });
 
+  it('opens an idea in the side panel from the calendar’s list', async () => {
+    fakeApi({
+      ...signedIn,
+      [ideasRoute]: { status: 200, body: [launch] },
+      'GET /api/v1/ideas/idea-1': { status: 200, body: launch },
+      'GET /api/v1/ideas/idea-1/components': { status: 200, body: [] },
+      'GET /api/v1/workspaces/ws-1/members': { status: 200, body: [] },
+    });
+    renderApp('/ideas');
+    await userEvent.click(await screen.findByRole('button', { name: 'Calendar' }));
+
+    await userEvent.click(screen.getByRole('link', { name: 'Spring launch' }));
+    expect(await screen.findByRole('dialog', { name: 'Spring launch' })).toBeInTheDocument();
+  });
+
   it('says so when no ideas are due in the month', async () => {
     fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [offsite] } });
     renderApp('/ideas');
