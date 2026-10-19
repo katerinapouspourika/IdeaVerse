@@ -107,6 +107,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const startAgain = () => {
     setPassword('');
     setRegistered(false);
+    validation.reset();
   };
 
   if (registered) {
