@@ -369,8 +369,9 @@ public sealed partial class ReminderService(
   /// </summary>
   /// <remarks>
   /// People who get emails right away get everything pending in one email; people who chose a daily digest get only their
-  /// mentions until their digest is due (see <see cref="DigestsDueAsync"/>), then everything. A failed email is logged and tried
-  /// again once <see cref="ReminderOptions.EmailRetryInterval"/> has passed; one failure does not stop the rest. Notifications that
+  /// mentions until their digest is due (see <see cref="DigestsDueAsync"/>), then everything else, with any mentions still in an
+  /// email of their own, as they would arrive any other time. A failed email is logged and tried again once
+  /// <see cref="ReminderOptions.EmailRetryInterval"/> has passed; one failure does not stop the rest. Notifications that
   /// no longer concern their recipient (see <see cref="NotificationAccess.StillRelevant"/>), about archived ideas, or for people
   /// who turned reminder emails off, are not emailed; nor are comments, unless the recipient asked for comment emails.
   /// </remarks>
@@ -415,32 +416,61 @@ public sealed partial class ReminderService(
         .Where(p => Retryable(p.Notification, lastFailure))
         .Where(p => digest is not null || p.Frequency == EmailFrequency.RightAway || p.Notification.Kind == ReminderKind.Mentioned)
         .ToList();
-      if (due.Count == 0)
+      var mentions = digest is null ? [] : due.FindAll(p => p.Notification.Kind == ReminderKind.Mentioned);
+      if (mentions.Count > 0 && !await TrySendAsync(person.Key, mentions, digest: false, cancellationToken).ConfigureAwait(false))
+      {
+        digests.Remove(person.Key);
+        continue;
+      }
+
+      sent += mentions.Count > 0 ? 1 : 0;
+      var rest = due.FindAll(p => !mentions.Contains(p));
+      if (rest.Count == 0)
       {
         continue;
       }
 
-      var mail = due.Count == 1 ? Single(due[0]) : Grouped(due, digest is not null);
-      try
+      if (await TrySendAsync(person.Key, rest, digest is not null, cancellationToken).ConfigureAwait(false))
       {
-        await mailSender.SendAsync(mail, cancellationToken).ConfigureAwait(false);
-        var emailedAt = timeProvider.GetUtcNow();
-        due.ForEach(p => p.Notification.EmailedAt = emailedAt);
-        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         sent++;
       }
-      catch (Exception ex) when (ex is not OperationCanceledException)
+      else
       {
-        LogEmailFailed(logger, ex, person.Key, due.Count);
-        var failedAt = timeProvider.GetUtcNow();
-        due.ForEach(p => p.Notification.EmailFailedAt = failedAt);
         digests.Remove(person.Key);
-        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
       }
     }
 
     await MarkDigestsSentAsync(digests, cancellationToken).ConfigureAwait(false);
     return sent;
+  }
+
+  /// <summary>
+  /// Sends one person one email for the given notifications, and records that they were emailed, or when it failed.
+  /// </summary>
+  /// <param name="userId">The person.</param>
+  /// <param name="items">The notifications, oldest first; one keeps its own email, several are grouped.</param>
+  /// <param name="digest">Whether this is the person's daily digest.</param>
+  /// <param name="cancellationToken">Token to cancel the operation.</param>
+  /// <returns><see langword="true"/> when the email was sent; a failure is logged, to be retried later.</returns>
+  private async Task<bool> TrySendAsync(string userId, List<PendingEmail> items, bool digest, CancellationToken cancellationToken)
+  {
+    var mail = items.Count == 1 ? Single(items[0]) : Grouped(items, digest);
+    try
+    {
+      await mailSender.SendAsync(mail, cancellationToken).ConfigureAwait(false);
+      var emailedAt = timeProvider.GetUtcNow();
+      items.ForEach(p => p.Notification.EmailedAt = emailedAt);
+      await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+      return true;
+    }
+    catch (Exception ex) when (ex is not OperationCanceledException)
+    {
+      LogEmailFailed(logger, ex, userId, items.Count);
+      var failedAt = timeProvider.GetUtcNow();
+      items.ForEach(p => p.Notification.EmailFailedAt = failedAt);
+      await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+      return false;
+    }
   }
 
   /// <summary>
