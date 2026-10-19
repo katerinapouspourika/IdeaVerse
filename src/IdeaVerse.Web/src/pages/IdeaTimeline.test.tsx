@@ -41,6 +41,25 @@ describe('Timeline view', () => {
     expect(screen.getByText(/^Planned · starts .* · due .*\(in 5 days\)$/)).toBeInTheDocument();
   });
 
+  it('tags ideas due before the scale as earlier, rather than drawing them in its first month', async () => {
+    const done = anIdea({ id: 'idea-4', title: 'Last year’s survey', status: 'Done', startDate: addDays(today, -120), targetDate: addDays(today, -100) });
+    const undated = anIdea({ id: 'idea-5', title: 'Old plan', status: 'Postponed', targetDate: addDays(today, -100) });
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [done, undated, soon] } });
+    renderApp('/ideas');
+    await userEvent.click(await screen.findByRole('button', { name: 'Timeline' }));
+
+    const rows = within(screen.getByRole('region', { name: 'Timeline' })).getAllByRole('listitem');
+    for (const [row, status] of [
+      [rows[0]!, 'status-done'],
+      [rows[1]!, 'status-postponed'],
+    ] as const) {
+      expect(row.querySelector('.timeline-bar')).toBeNull();
+      expect(within(row).getByText('Earlier')).toHaveClass('timeline-earlier', status);
+    }
+    expect(within(rows[2]!).queryByText('Earlier')).not.toBeInTheDocument();
+    expect(rows[2]!.querySelector('.timeline-bar')).toBeInTheDocument();
+  });
+
   it('marks an idea with no start date by a dot on its target date, and says so', async () => {
     fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [soon] } });
     renderApp('/ideas');
