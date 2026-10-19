@@ -1,27 +1,25 @@
 import { GripVertical } from 'lucide-react';
-import { useState, type DragEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
 import { Link } from 'react-router';
 
 import { describeDue } from '../api/dates';
 import { useMoveIdea } from '../api/queries';
 import { canChange, statuses, statusLabels, type Idea, type IdeaStatus } from '../api/types';
 import { useToast } from '../components/Feedback';
+import { Menu } from '../components/Menu';
 import { Progress } from '../components/Progress';
 import { Tags } from '../components/Tags';
 import { useIdeaPanel } from '../panel/useIdeaPanel';
-
-/** The drag payload's type, so the board ignores anything else dropped on it. */
-const dragType = 'application/x-ideaverse-idea';
+import { usePointerDrag } from './usePointerDrag';
 
 /**
- * The ideas as a board with a column per status. Ideas the user may edit can be dragged to another column, or moved
- * with their "Status" menu from the keyboard; the move shows at once and can be undone.
+ * The ideas as a board with a column per status. Ideas the user may edit can be dragged to another column with a mouse,
+ * pen, or finger, or moved with the menu on their grip; the move shows at once and can be undone.
  */
 export function IdeaBoard({ ideas }: { ideas: Idea[] }) {
   const move = useMoveIdea();
   const toast = useToast();
   const [moved, setMoved] = useState<Record<string, IdeaStatus>>({});
-  const [over, setOver] = useState<IdeaStatus | null>(null);
   const [shown, setShown] = useState(ideas);
   // Fresh ideas from the API carry the saved statuses, so moves made here no longer need overriding.
   if (shown !== ideas) {
@@ -52,32 +50,34 @@ export function IdeaBoard({ ideas }: { ideas: Idea[] }) {
     );
   };
 
-  const drop = (event: DragEvent, status: IdeaStatus) => {
-    event.preventDefault();
-    setOver(null);
-    const idea = ideas.find((i) => i.id === event.dataTransfer.getData(dragType));
+  const { container, drag, onPointerDown, onContextMenu } = usePointerDrag<IdeaStatus>((id, status) => {
+    const idea = ideas.find((i) => i.id === id);
     if (idea) {
       moveTo(idea, status);
     }
-  };
+  });
+  const dragged = drag && ideas.find((i) => i.id === drag.id);
+
+  // A card moved with its menu lands in another column as a new element, so focus follows it there to its grip.
+  const refocus = useRef<string | null>(null);
+  useEffect(() => {
+    if (refocus.current) {
+      container.current?.querySelector<HTMLElement>(`[data-idea="${refocus.current}"] .board-grip`)?.focus();
+      refocus.current = null;
+    }
+  });
 
   return (
-    <div className="board">
+    <div ref={container} className={drag ? 'board is-dragging' : 'board'}>
       {statuses.map((status) => {
         const column = ideas.filter((i) => statusOf(i) === status);
+        const target = drag?.over === status && dragged && statusOf(dragged) !== status;
         return (
           <section
             key={status}
-            className={`board-column status-${status.toLowerCase()}${over === status ? ' drop-target' : ''}`}
+            className={`board-column status-${status.toLowerCase()}${target ? ' drop-target' : ''}`}
             aria-labelledby={`column-${status}`}
-            onDragOver={(event) => {
-              if (event.dataTransfer.types.includes(dragType)) {
-                event.preventDefault();
-                setOver(status);
-              }
-            }}
-            onDragLeave={() => setOver((current) => (current === status ? null : current))}
-            onDrop={(event) => drop(event, status)}
+            data-drop={status}
           >
             <h2 id={`column-${status}`} className="board-heading">
               <span className={`badge status-badge status-${status.toLowerCase()}`}>{statusLabels[status]}</span>
@@ -85,55 +85,88 @@ export function IdeaBoard({ ideas }: { ideas: Idea[] }) {
             </h2>
             <ul className="board-cards">
               {column.map((idea) => (
-                <BoardCard key={idea.id} idea={idea} status={statusOf(idea)} onMove={(to) => moveTo(idea, to)} />
+                <BoardCard
+                  key={idea.id}
+                  idea={idea}
+                  status={statusOf(idea)}
+                  dragging={drag?.id === idea.id}
+                  onMove={(to) => {
+                    if (to !== statusOf(idea)) {
+                      refocus.current = idea.id;
+                      moveTo(idea, to);
+                    }
+                  }}
+                  onPointerDown={(event) => onPointerDown(event, idea.id)}
+                  onContextMenu={onContextMenu}
+                />
               ))}
+              {target && (
+                <li className="board-drop-slot small" aria-hidden="true">
+                  Move to {statusLabels[status]}
+                </li>
+              )}
             </ul>
-            {column.length === 0 && <p className="muted small board-empty">Drop ideas here</p>}
+            {column.length === 0 && !target && <p className="muted small board-empty">Drop ideas here</p>}
           </section>
         );
       })}
+      {drag && dragged && (
+        <div className="card board-card board-drag-preview" aria-hidden="true" style={{ left: drag.left, top: drag.top, width: drag.width }}>
+          <span className="board-title">{dragged.title}</span>
+        </div>
+      )}
     </div>
   );
 }
 
-/** A card that opens the idea from anywhere on it, as its title link does; its status menu stays above the link. */
-function BoardCard({ idea, status, onMove }: { idea: Idea; status: IdeaStatus; onMove: (status: IdeaStatus) => void }) {
-  const [dragging, setDragging] = useState(false);
+/**
+ * A card that opens the idea from anywhere on it, as its title link does. Its grip, above the link, opens a menu to move
+ * the idea to another column, the way to move it from the keyboard or a screen reader; the card itself can be dragged.
+ */
+function BoardCard({
+  idea,
+  status,
+  dragging,
+  onMove,
+  onPointerDown,
+  onContextMenu,
+}: {
+  idea: Idea;
+  status: IdeaStatus;
+  dragging: boolean;
+  onMove: (status: IdeaStatus) => void;
+  onPointerDown: (event: PointerEvent<HTMLElement>) => void;
+  onContextMenu: (event: MouseEvent<HTMLElement>) => void;
+}) {
   const { linkProps } = useIdeaPanel();
   const movable = canChange(idea);
   return (
     <li
-      className={['card', 'board-card', idea.isOverdue ? 'is-overdue' : '', dragging ? 'dragging' : ''].filter(Boolean).join(' ')}
-      draggable={movable}
-      onDragStart={(event) => {
-        event.dataTransfer.setData(dragType, idea.id);
-        event.dataTransfer.effectAllowed = 'move';
-        setDragging(true);
-      }}
-      onDragEnd={() => setDragging(false)}
+      data-idea={idea.id}
+      className={['card', 'board-card', idea.isOverdue ? 'is-overdue' : '', movable ? 'movable' : '', dragging ? 'dragging' : ''].filter(Boolean).join(' ')}
+      onPointerDown={movable ? onPointerDown : undefined}
+      onContextMenu={movable ? onContextMenu : undefined}
     >
       <div className="row spread">
-        {/* Stretched over the whole card, so a click anywhere opens the idea; not draggable itself, so dragging moves the card. */}
+        {/* Stretched over the whole card, so a click anywhere opens the idea. */}
         <Link {...linkProps(idea.id)} className="board-title stretched-link" draggable={false}>
           {idea.title}
         </Link>
-        {movable && <GripVertical aria-hidden="true" size={16} className="grip" />}
+        {movable && (
+          <div className="board-move">
+            <Menu
+              label={`Move ${idea.title}`}
+              listLabel="Move to"
+              trigger={<GripVertical aria-hidden="true" size={16} />}
+              triggerClassName="button ghost small icon-button board-grip"
+              items={statuses.map((s) => ({ label: statusLabels[s], checked: s === status, onSelect: () => onMove(s) }))}
+            />
+          </div>
+        )}
       </div>
       <span className={idea.isOverdue ? 'overdue-text small' : 'muted small'}>Target date {describeDue(idea.targetDate)}</span>
       <Progress done={idea.completedComponentCount} total={idea.componentCount} />
       <Tags tags={idea.tags} />
-      {movable && (
-        <label className="board-move small">
-          <span className="visually-hidden">Status of {idea.title}</span>
-          <select value={status} onChange={(e) => onMove(e.target.value as IdeaStatus)}>
-            {statuses.map((s) => (
-              <option key={s} value={s}>
-                {statusLabels[s]}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
     </li>
   );
 }
