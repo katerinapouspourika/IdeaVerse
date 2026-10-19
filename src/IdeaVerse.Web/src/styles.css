@@ -3542,12 +3542,6 @@ a:focus-visible {
   z-index: 3;
 }
 
-/* The last card of a longer column opens its menu upwards, so it stays inside the board's scrolling area. */
-.board-cards > li:last-child:not(:first-child) .menu-list {
-  top: auto;
-  bottom: calc(100% + 6px);
-}
-
 .board-empty {
   margin: 0;
   text-align: center;

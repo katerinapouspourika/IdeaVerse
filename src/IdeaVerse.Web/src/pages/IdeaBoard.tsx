@@ -159,6 +159,7 @@ function BoardCard({
               listLabel="Move to"
               trigger={<GripVertical aria-hidden="true" size={16} />}
               triggerClassName="button ghost small icon-button board-grip"
+              floating
               items={statuses.map((s) => ({ label: statusLabels[s], checked: s === status, onSelect: () => onMove(s) }))}
             />
           </div>
