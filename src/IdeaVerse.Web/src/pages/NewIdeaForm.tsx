@@ -141,18 +141,18 @@ export function NewIdeaForm({ workspaceId, initial, template: initialTemplate, o
           />
         )}
       </Field>
-      <div className="row wrap">
+      <div className="row wrap top">
         <Field
           label=<>Starts <span className="muted">(optional)</span></>
           hint="Plan a start to get reminders before it, from 10 days ahead."
           error={validation.errors.startDate ?? fieldError(create.error, 'startDate')}
         >
+          {/* No max: with both ends in one year, Chrome shows that year in the empty field ("mm/dd/2026"). The check above keeps it on or before the target date. */}
           {(props) => (
             <input
               {...props}
               type="date"
               min={today}
-              max={targetDate}
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               onBlur={validation.blur('startDate')}
