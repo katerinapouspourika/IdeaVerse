@@ -88,7 +88,8 @@ public sealed class NotificationService(IdeaVerseDbContext context, UserCalendar
         n.CreatedAt,
         n.ReadAt,
         n.CommentId,
-        n.ComponentId))
+        n.ComponentId,
+        n.ComponentTitle))
       .ToList();
     return new NotificationsResponse(items, unread);
   }
