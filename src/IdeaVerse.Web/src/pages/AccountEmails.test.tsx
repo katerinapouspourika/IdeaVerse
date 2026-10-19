@@ -33,6 +33,7 @@ describe('Registration and confirmation', () => {
     expect(await screen.findByRole('heading', { name: 'Create your account' })).toBeInTheDocument();
     expect(screen.getByLabelText('Email')).toHaveValue('wrong@example.com');
     expect(screen.getByLabelText('Password')).toHaveValue('');
+    expect(screen.getByLabelText('Password')).not.toHaveAccessibleDescription(expect.stringContaining('Choose a password.'));
   });
 
   it('explains an unconfirmed sign-in and resends the link', async () => {
