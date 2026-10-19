@@ -13,5 +13,6 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
   {
     builder.Property(u => u.DisplayName).HasMaxLength(User.DisplayNameMaxLength);
     builder.Property(u => u.TimeZone).HasMaxLength(User.TimeZoneMaxLength);
+    builder.Property(u => u.EmailFrequency).HasConversion<string>().HasMaxLength(20);
   }
 }

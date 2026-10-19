@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router';
 import { request } from '../api/client';
 import { browserTimeZone } from '../api/dates';
 import { currentZoneName, matchesZone, timeZoneOption, timeZoneOptions } from '../api/timeZones';
-import type { Account, ReminderKind, ReminderSettings } from '../api/types';
+import type { Account, EmailFrequency, ReminderKind, ReminderSettings } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { readAccountProblems } from '../auth/identityErrors';
 import { meetsPasswordRules, weakPasswordMessage } from '../auth/passwordRules';
@@ -22,6 +22,11 @@ const reminderChoices: { kind: ReminderKind; label: string; hint: string }[] = [
   { kind: 'Tomorrow', label: 'Due tomorrow', hint: 'The day before' },
   { kind: 'Today', label: 'Due today', hint: 'On the day' },
   { kind: 'Overdue', label: 'Overdue', hint: 'Once, when the date passes and it isn’t done' },
+];
+
+const frequencyChoices: { frequency: EmailFrequency; label: string; hint: string }[] = [
+  { frequency: 'RightAway', label: 'Send right away', hint: 'Within a minute; several updates at once arrive as one email' },
+  { frequency: 'DailyDigest', label: 'Daily digest', hint: 'One email a day at 8:00 in your time zone. Mentions are always sent right away.' },
 ];
 
 /** The signed-in user's own settings. The workspace's settings have their own page, linked from People. */
@@ -204,10 +209,15 @@ const searchPause = 800;
 function RemindersForm({ account }: { account: Account }) {
   const { updateReminders } = useAuth();
   const settings = useInstantSave<ReminderSettings>(
-    { emailReminders: account.emailReminders, reminderKinds: account.reminderKinds, emailComments: account.emailComments },
+    {
+      emailReminders: account.emailReminders,
+      reminderKinds: account.reminderKinds,
+      emailComments: account.emailComments,
+      emailFrequency: account.emailFrequency,
+    },
     updateReminders,
   );
-  const { emailReminders: email, reminderKinds: kinds, emailComments: comments } = settings.value;
+  const { emailReminders: email, reminderKinds: kinds, emailComments: comments, emailFrequency: frequency } = settings.value;
 
   const toggle = (kind: ReminderKind, on: boolean) =>
     settings.change({ ...settings.value, reminderKinds: reminderChoices.map((c) => c.kind).filter((k) => (k === kind ? on : kinds.includes(k))) });
@@ -253,6 +263,23 @@ function RemindersForm({ account }: { account: Account }) {
           <span className="muted small block">Comments on ideas you own or are on the team of. Mentions are always emailed.</span>
         </span>
       </label>
+      <fieldset className="choices" disabled={!email}>
+        <legend>When to email me</legend>
+        {frequencyChoices.map((choice) => (
+          <label key={choice.frequency} className="check">
+            <input
+              type="radio"
+              name="email-frequency"
+              checked={frequency === choice.frequency}
+              onChange={() => settings.change({ ...settings.value, emailFrequency: choice.frequency })}
+            />
+            <span>
+              {choice.label}
+              <span className="muted small block">{choice.hint}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
       {kinds.length === 0 && (
         <p className="muted small" role="note">
           With nothing ticked you won’t get any reminders.

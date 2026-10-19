@@ -47,6 +47,7 @@ export const signedInAccount: Account = {
   timeZone: 'UTC',
   emailReminders: true,
   emailComments: false,
+  emailFrequency: 'RightAway',
   reminderKinds: ['ComingUp', 'Tomorrow', 'Today', 'Overdue'],
 };
 

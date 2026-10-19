@@ -125,6 +125,7 @@ internal static class AccountEndpoints
 
     account.EmailReminders = request.EmailReminders;
     account.EmailComments = request.EmailComments;
+    account.EmailFrequency = request.EmailFrequency;
     account.MutedReminderKinds = User.MuteAllBut(request.ReminderKinds);
     await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     return TypedResults.Ok(AccountResponse.From(account));

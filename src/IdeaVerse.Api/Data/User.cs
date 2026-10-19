@@ -49,6 +49,17 @@ public sealed class User : IdentityUser
   public bool EmailComments { get; set; }
 
   /// <summary>
+  /// Gets or sets how often notifications are emailed, when <see cref="EmailReminders"/> is on.
+  /// </summary>
+  public EmailFrequency EmailFrequency { get; set; }
+
+  /// <summary>
+  /// Gets or sets the local date, in <see cref="TimeZone"/>, of the user's last daily digest, so it goes at most once a day;
+  /// <see langword="null"/> until the first one.
+  /// </summary>
+  public DateOnly? LastDigestDate { get; set; }
+
+  /// <summary>
   /// Gets or sets the countdown stages the user turned off, one bit per <see cref="ReminderKind"/>; zero means all are on.
   /// Teammates' actions, such as assignments and comments, are always notified.
   /// </summary>

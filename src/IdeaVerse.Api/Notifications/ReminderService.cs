@@ -79,13 +79,55 @@ public sealed partial class ReminderService(
     };
 
   /// <summary>
-  /// Logs a reminder email that could not be sent.
+  /// Labels the link to a notification in an email that lists several: what it leads to.
+  /// </summary>
+  /// <param name="notification">The notification.</param>
+  /// <returns>The link's label.</returns>
+  private static string LinkLabel(Notification notification)
+    => notification switch
+    {
+      { Kind: ReminderKind.AddComponents } => "Add components",
+      { CommentId: not null } => "View the comment",
+      { ComponentId: not null } => "View the component",
+      _ => "Open the idea",
+    };
+
+  /// <summary>
+  /// Gathers what a notification's message says.
+  /// </summary>
+  /// <param name="item">The notification and what its email needs.</param>
+  /// <returns>The message's content.</returns>
+  private static NotificationContent Content(PendingEmail item)
+  {
+    var notification = item.Notification;
+    return new NotificationContent(
+      notification.Kind,
+      item.IdeaTitle,
+      notification.TargetDate,
+      item.ComponentTitle,
+      item.ActorName,
+      notification.Detail,
+      StartContent.For(notification.StartsAt, notification.CreatedAt, TimeZones.Find(item.TimeZone), item.StartDate, item.StartHasTime));
+  }
+
+  /// <summary>
+  /// Returns whether a pending notification may be emailed now: it never failed, or its last failure was before <paramref name="lastFailure"/>.
+  /// </summary>
+  /// <param name="notification">The notification.</param>
+  /// <param name="lastFailure">The latest failure that may already be retried.</param>
+  /// <returns><see langword="true"/> when it can be emailed in this run.</returns>
+  private static bool Retryable(Notification notification, DateTimeOffset lastFailure)
+    => notification.EmailFailedAt is not { } failedAt || failedAt <= lastFailure;
+
+  /// <summary>
+  /// Logs a notification email that could not be sent.
   /// </summary>
   /// <param name="logger">Target logger.</param>
   /// <param name="exception">The failure.</param>
-  /// <param name="notificationId">The notification whose email failed.</param>
-  [LoggerMessage(Level = LogLevel.Warning, Message = "Could not email reminder {NotificationId}; it will be retried later")]
-  private static partial void LogEmailFailed(ILogger logger, Exception exception, Guid notificationId);
+  /// <param name="userId">The person whose email failed.</param>
+  /// <param name="count">How many notifications the email held.</param>
+  [LoggerMessage(Level = LogLevel.Warning, Message = "Could not email {Count} notifications to user {UserId}; they will be retried later")]
+  private static partial void LogEmailFailed(ILogger logger, Exception exception, string userId, int count);
 
   /// <summary>
   /// Raises the countdown reminders now due for ideas and for assigned components.
@@ -323,11 +365,13 @@ public sealed partial class ReminderService(
   }
 
   /// <summary>
-  /// Emails notifications that have not been emailed yet and are recent enough to still be useful.
+  /// Emails notifications that have not been emailed yet and are recent enough to still be useful, one email per person.
   /// </summary>
   /// <remarks>
-  /// A failed email is logged and tried again once <see cref="ReminderOptions.EmailRetryInterval"/> has passed; one failure does not stop the rest.
-  /// Notifications that no longer concern their recipient (see <see cref="NotificationAccess.StillRelevant"/>), about archived ideas, or for people
+  /// People who get emails right away get everything pending in one email; people who chose a daily digest get only their
+  /// mentions until their digest is due (see <see cref="DigestsDueAsync"/>), then everything. A failed email is logged and tried
+  /// again once <see cref="ReminderOptions.EmailRetryInterval"/> has passed; one failure does not stop the rest. Notifications that
+  /// no longer concern their recipient (see <see cref="NotificationAccess.StillRelevant"/>), about archived ideas, or for people
   /// who turned reminder emails off, are not emailed; nor are comments, unless the recipient asked for comment emails.
   /// </remarks>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
@@ -342,59 +386,164 @@ public sealed partial class ReminderService(
     var pending = await context.StillRelevant()
       .Where(n => n.EmailedAt == null && n.CreatedAt >= oldest && n.User!.EmailReminders && n.Idea!.ArchivedAt == null)
       .Where(n => n.Kind != ReminderKind.Commented || n.User!.EmailComments)
-      .Where(n => n.EmailFailedAt == null || n.EmailFailedAt <= lastFailure)
-      .Select(n => new
-      {
-        Notification = n,
+      .Select(n => new PendingEmail(
+        n,
         n.User!.Email,
         n.User.TimeZone,
-        IdeaTitle = n.Idea!.Title,
-        ComponentTitle = n.Component!.Title,
-        ActorName = n.Actor!.DisplayName,
-        ActorEmail = n.Actor.Email,
+        n.User.EmailFrequency,
+        n.Idea!.Title,
+        n.Component!.Title,
+        n.Actor!.DisplayName ?? n.Actor.Email,
         n.Idea.StartDate,
-        StartHasTime = n.Idea.StartTime != null,
-      })
+        n.Idea.StartTime != null))
       .ToListAsync(cancellationToken)
       .ConfigureAwait(false);
+    var digests = await DigestsDueAsync(cancellationToken).ConfigureAwait(false);
 
     var sent = 0;
-    foreach (var item in pending.Where(p => !string.IsNullOrEmpty(p.Email)))
+    var byPerson = pending.Where(p => !string.IsNullOrEmpty(p.Email)).OrderBy(p => p.Notification.CreatedAt).ToLookup(p => p.Notification.UserId, StringComparer.Ordinal);
+    foreach (var person in byPerson)
     {
-      var notification = item.Notification;
-      var zone = TimeZones.Find(item.TimeZone);
-      var content = new NotificationContent(
-        notification.Kind,
-        item.IdeaTitle,
-        notification.TargetDate,
-        item.ComponentTitle,
-        item.ActorName ?? item.ActorEmail,
-        notification.Detail,
-        StartContent.For(notification.StartsAt, notification.CreatedAt, zone, item.StartDate, item.StartHasTime));
-      var message = ReminderSchedule.Message(content, timeProvider.TodayIn(zone));
-      var link = app.Value.Link(PathTo(notification));
-      var reason = notification.Kind == ReminderKind.Mentioned
-        ? "You get this because someone mentioned you in IdeaVerse."
-        : notification.ComponentId is null
-          ? "You get this because you are on this idea's team in IdeaVerse."
-          : "You get this because this is assigned to you in IdeaVerse.";
-      var mail = EmailLayout.Compose(item.Email!, Subject(content), new EmailContent(item.IdeaTitle, [message], new EmailAction(notification.Kind == ReminderKind.AddComponents ? "Add components" : "Open the idea", new Uri(link)), reason), app.Value);
+      var digest = digests.GetValueOrDefault(person.Key);
+      if (digest is not null && person.Any(p => !Retryable(p.Notification, lastFailure)))
+      {
+        digests.Remove(person.Key);
+        continue;
+      }
 
+      var due = person
+        .Where(p => Retryable(p.Notification, lastFailure))
+        .Where(p => digest is not null || p.Frequency == EmailFrequency.RightAway || p.Notification.Kind == ReminderKind.Mentioned)
+        .ToList();
+      if (due.Count == 0)
+      {
+        continue;
+      }
+
+      var mail = due.Count == 1 ? Single(due[0]) : Grouped(due, digest is not null);
       try
       {
         await mailSender.SendAsync(mail, cancellationToken).ConfigureAwait(false);
-        notification.EmailedAt = timeProvider.GetUtcNow();
+        var emailedAt = timeProvider.GetUtcNow();
+        due.ForEach(p => p.Notification.EmailedAt = emailedAt);
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         sent++;
       }
       catch (Exception ex) when (ex is not OperationCanceledException)
       {
-        LogEmailFailed(logger, ex, notification.Id);
-        notification.EmailFailedAt = timeProvider.GetUtcNow();
+        LogEmailFailed(logger, ex, person.Key, due.Count);
+        var failedAt = timeProvider.GetUtcNow();
+        due.ForEach(p => p.Notification.EmailFailedAt = failedAt);
+        digests.Remove(person.Key);
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
       }
     }
 
+    await MarkDigestsSentAsync(digests, cancellationToken).ConfigureAwait(false);
     return sent;
+  }
+
+  /// <summary>
+  /// Finds the people whose daily digest is due: their local time has reached <see cref="ReminderOptions.SendAt"/> and they have
+  /// not had a digest on their local date yet.
+  /// </summary>
+  /// <remarks>
+  /// Loads only people with emails on who chose a digest and whose last digest is before the latest local date any time zone
+  /// has reached (the UTC date after today's), then judges each by their own local date and time.
+  /// </remarks>
+  /// <param name="cancellationToken">Token to cancel the query.</param>
+  /// <returns>Each due person, tracked, by identifier, with their local date.</returns>
+  private async Task<Dictionary<string, Digest>> DigestsDueAsync(CancellationToken cancellationToken)
+  {
+    var latest = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime).AddDays(1);
+    var people = await context.Users
+      .Where(u => u.EmailReminders && u.EmailFrequency == EmailFrequency.DailyDigest && (u.LastDigestDate == null || u.LastDigestDate < latest))
+      .ToListAsync(cancellationToken)
+      .ConfigureAwait(false);
+    var due = new Dictionary<string, Digest>(StringComparer.Ordinal);
+    foreach (var person in people)
+    {
+      var localNow = timeProvider.LocalNow(TimeZones.Find(person.TimeZone));
+      var today = DateOnly.FromDateTime(localNow);
+      if (TimeOnly.FromDateTime(localNow) >= options.Value.SendAt && (person.LastDigestDate is not { } last || last < today))
+      {
+        due[person.Id] = new Digest(person, today);
+      }
+    }
+
+    return due;
+  }
+
+  /// <summary>
+  /// Records that each person's digest went out today, including those who had nothing to receive, so anything raised later today
+  /// waits for tomorrow's digest rather than being emailed at once.
+  /// </summary>
+  /// <param name="digests">The people whose digest went out, with their local date; failed ones are left out so they are retried.</param>
+  /// <param name="cancellationToken">Token to cancel the save.</param>
+  /// <returns>A task that completes once saved.</returns>
+  private async Task MarkDigestsSentAsync(Dictionary<string, Digest> digests, CancellationToken cancellationToken)
+  {
+    if (digests.Count == 0)
+    {
+      return;
+    }
+
+    foreach (var digest in digests.Values)
+    {
+      digest.Person.LastDigestDate = digest.Today;
+    }
+
+    await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+  }
+
+  /// <summary>
+  /// Writes the email for a single notification: its own subject, its message, and a button to where it leads.
+  /// </summary>
+  /// <param name="item">The notification and what its email needs.</param>
+  /// <returns>The email.</returns>
+  private MailMessage Single(PendingEmail item)
+  {
+    var notification = item.Notification;
+    var content = Content(item);
+    var message = ReminderSchedule.Message(content, timeProvider.TodayIn(TimeZones.Find(item.TimeZone)));
+    var reason = notification.Kind == ReminderKind.Mentioned
+      ? "You get this because someone mentioned you in IdeaVerse."
+      : notification.ComponentId is null
+        ? "You get this because you are on this idea's team in IdeaVerse."
+        : "You get this because this is assigned to you in IdeaVerse.";
+    var action = new EmailAction(notification.Kind == ReminderKind.AddComponents ? "Add components" : "Open the idea", new Uri(app.Value.Link(PathTo(notification))));
+    return EmailLayout.Compose(item.Email!, Subject(content), new EmailContent(item.IdeaTitle, [message], action, reason), app.Value);
+  }
+
+  /// <summary>
+  /// Writes one email for several notifications, a section per idea with each notification's message and link, under a subject
+  /// that counts them.
+  /// </summary>
+  /// <param name="items">The notifications, oldest first, all for one person.</param>
+  /// <param name="digest">Whether this is the person's daily digest.</param>
+  /// <returns>The email.</returns>
+  private MailMessage Grouped(List<PendingEmail> items, bool digest)
+  {
+    var today = timeProvider.TodayIn(TimeZones.Find(items[0].TimeZone));
+    var sections = items
+      .GroupBy(p => p.Notification.IdeaId)
+      .Select(idea => new EmailSection(
+        idea.First().IdeaTitle,
+        [.. idea.Select(p => new EmailItem(ReminderSchedule.Message(Content(p), today), new EmailAction(LinkLabel(p.Notification), new Uri(app.Value.Link(PathTo(p.Notification))))))]))
+      .ToList();
+    var summary = sections.Count == 1
+      ? $"{items.Count} updates on “{sections[0].Heading}”"
+      : $"{items.Count} updates on {sections.Count} ideas";
+    var subject = digest ? $"Your daily digest: {summary}" : summary;
+    var (heading, intro) = digest
+      ? ("Your daily digest", "Here’s everything since your last digest, by idea.")
+      : sections.Count == 1
+        ? (sections[0].Heading, "Here’s what’s new on this idea.")
+        : ("What’s new on your ideas", "Here’s what’s new, by idea.");
+    var action = sections.Count == 1 ? new EmailAction("Open the idea", new Uri(app.Value.Link($"/ideas/{items[0].Notification.IdeaId}"))) : null;
+    var footnote = digest
+      ? "You get one email a day because you chose a daily digest in IdeaVerse; mentions still arrive right away."
+      : "You get this because you are on these ideas' teams, were assigned their work, or were mentioned in IdeaVerse.";
+    return EmailLayout.Compose(items[0].Email!, subject, new EmailContent(heading, [intro], action, footnote, sections), app.Value);
   }
 }

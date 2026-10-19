@@ -35,7 +35,8 @@ public static class EmailLayout
   }
 
   /// <summary>
-  /// The plain-text version: the paragraphs, the action's label with its link on a line of its own, and the footnote.
+  /// The plain-text version: the paragraphs, each section's title and items with their links on lines of their own, the
+  /// action's label with its link on a line of its own, and the footnote.
   /// </summary>
   /// <param name="content">What the email says.</param>
   /// <returns>The plain-text body.</returns>
@@ -43,6 +44,11 @@ public static class EmailLayout
   {
     ArgumentNullException.ThrowIfNull(content);
     var parts = new List<string>(content.Paragraphs);
+    foreach (var section in content.Sections ?? [])
+    {
+      parts.Add(string.Join("\n\n", section.Items.Select(i => $"- {i.Text}\n  {i.Link.Url.AbsoluteUri}").Prepend(section.Heading)));
+    }
+
     if (content.Action is { } action)
     {
       parts.Add($"{action.Label}:\n{action.Url.AbsoluteUri}");
@@ -57,7 +63,7 @@ public static class EmailLayout
   }
 
   /// <summary>
-  /// The HTML version: a header bar with the logo, a card with the heading, paragraphs, button, and the link written out
+  /// The HTML version: a header bar with the logo, a card with the heading, paragraphs, sections, button, and the link written out
   /// for when the button doesn't work, then the footnote and a link to the reader's settings.
   /// </summary>
   /// <param name="subject">The subject line, used as the document's title.</param>
@@ -102,6 +108,19 @@ public static class EmailLayout
     foreach (var paragraph in content.Paragraphs)
     {
       html.Append(CultureInfo.InvariantCulture, $"""<p class="text" style="margin:0 0 14px;font-size:16px;line-height:1.5;color:#1b2150;">{E(paragraph)}</p>""");
+    }
+
+    foreach (var section in content.Sections ?? [])
+    {
+      html.Append(CultureInfo.InvariantCulture, $"""<h2 class="text" style="margin:24px 0 12px;font-size:18px;line-height:1.3;color:#1b2150;">{E(section.Heading)}</h2>""");
+      foreach (var item in section.Items)
+      {
+        var line = $"""
+          <p class="text" style="margin:0 0 14px;padding-left:12px;border-left:3px solid #c9cdea;font-size:16px;line-height:1.5;color:#1b2150;">{E(item.Text)}<br>
+          <a class="link" href="{E(item.Link.Url.AbsoluteUri)}" style="font-size:14px;font-weight:bold;color:#2b35b0;">{E(item.Link.Label)}</a></p>
+          """;
+        html.Append(line);
+      }
     }
 
     if (content.Action is { } action)
