@@ -1,3 +1,4 @@
+import { ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router';
 
 import { describeDue, formatDate, todayIso } from '../api/dates';
@@ -29,8 +30,10 @@ function monthsFor(ideas: Idea[], today: string): string[] {
 
 /**
  * A roadmap of the ideas: each is a bar from its start date to its target date, against a scale of months with a line
- * for today; an idea with no start date is a dot on its target date, as there is no span to draw. Each row also says its
- * dates in words, which is what screen readers read; the bars are decoration.
+ * for today; an idea with no start date is a dot on its target date, as there is no span to draw. A bar that started
+ * before the scale fades in from its left edge, and an idea due before the scale is an "Earlier" tag there instead of a
+ * bar in its first month. Each row also says its dates in words, which is what screen readers read; the bars are
+ * decoration.
  */
 export function IdeaTimeline({ ideas }: { ideas: Idea[] }) {
   const narrow = useNarrowScreen();
@@ -95,7 +98,12 @@ export function IdeaTimeline({ ideas }: { ideas: Idea[] }) {
                   </div>
                   <div className="timeline-track" aria-hidden="true">
                     <span className="timeline-today-line" style={{ left: `${at(today)}%` }} />
-                    {start ? (
+                    {day(idea.targetDate) < from ? (
+                      <span className={`timeline-earlier ${state}`}>
+                        <ChevronLeft aria-hidden="true" size={12} strokeWidth={3} />
+                        Earlier
+                      </span>
+                    ) : start ? (
                       <span className={`timeline-bar ${state}${day(start) < from ? ' clipped' : ''}`} style={{ left: `${left}%`, width: `${width}%` }} />
                     ) : (
                       <span className={`timeline-bar timeline-marker ${state}`} style={{ left: `${left}%` }} />

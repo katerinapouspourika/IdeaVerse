@@ -756,7 +756,8 @@ textarea:focus-visible,
 .calendar-idea.is-overdue,
 .agenda-idea.is-overdue,
 .calendar-span.is-overdue,
-.timeline-bar.is-overdue {
+.timeline-bar.is-overdue,
+.timeline-earlier.is-overdue {
   --status-bg: var(--status-overdue-bg);
   --status-text: var(--status-overdue-text);
   --status-bar: var(--status-overdue-bar);
@@ -4437,6 +4438,27 @@ button.chip:focus-visible {
 .timeline-bar.clipped {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
+  /* Fades in from the scale's start, so the bar reads as carrying on from before it. */
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 24px);
+  mask-image: linear-gradient(to right, transparent, #000 24px);
+}
+
+/* An idea due before the scale starts: a tag at its start, rather than a bar that would read as due in its first month. */
+.timeline-earlier {
+  position: absolute;
+  left: 0;
+  top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 20px;
+  padding: 0 8px 0 4px;
+  border-radius: 999px;
+  background: var(--status-bg);
+  color: var(--status-text);
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 /* No start date: a dot centred on the target date, ringed in the surface colour so it reads as a point, not a bar. */
