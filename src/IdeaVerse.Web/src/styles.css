@@ -4485,6 +4485,37 @@ button.chip:focus-visible {
   border-top: 1px solid var(--border);
 }
 
+.palette-detail {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  white-space: nowrap;
+}
+
+/* A touch screen has no arrow keys or Tab to hint at. */
+@media (hover: none) and (pointer: coarse) {
+  .palette-hint {
+    display: none;
+  }
+}
+
+/* On a phone an idea's title takes the line, with its status and date on the line under it, in line with the title. */
+@media (max-width: 600px) {
+  .palette-option {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .palette-option > .grow {
+    flex-basis: calc(100% - 26px);
+  }
+
+  .palette-detail {
+    margin-left: 26px;
+  }
+}
+
 .modal.shortcuts {
   width: min(520px, 100%);
 }

@@ -289,7 +289,7 @@ export function CommandPalette({ ideaCommands, onClose }: { ideaCommands: IdeaCo
                         {entry.icon}
                       </span>
                       <span className="grow">{entry.label}</span>
-                      {entry.detail}
+                      {entry.detail && <span className="palette-detail">{entry.detail}</span>}
                     </div>
                   );
                 })}
