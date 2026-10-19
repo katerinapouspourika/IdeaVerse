@@ -227,7 +227,11 @@ describe('PeoplePage', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Leave workspace' }));
     await confirmDialog('Leave workspace');
 
-    await waitFor(() => expect(calls.some((c) => c.method === 'DELETE' && c.path === '/api/v1/workspaces/ws-1/members/u-me')).toBe(true));
+    expect(await screen.findByText('You left Acme Marketing')).toBeInTheDocument();
+    // Nothing asks about the workspace once left; it would only be refused.
+    const leftAt = calls.findIndex((c) => c.method === 'DELETE' && c.path === '/api/v1/workspaces/ws-1/members/u-me');
+    expect(leftAt).toBeGreaterThan(-1);
+    expect(calls.slice(leftAt + 1).filter((c) => c.path.startsWith('/api/v1/workspaces/ws-1') || c.path.includes('workspaceId=ws-1'))).toEqual([]);
   });
 
   it('shows a name over its email, each on one line with the full text on hover', async () => {
