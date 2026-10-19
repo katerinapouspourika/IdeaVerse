@@ -351,7 +351,9 @@ describe('Archived idea', () => {
     renderApp('/ideas/idea-1');
 
     const banner = await screen.findByText(/This idea is archived and read-only/);
-    expect(banner).toHaveTextContent('Restore it to make changes.');
+    expect(banner).toHaveTextContent('but you can still discuss it. Restore it to make changes.');
+    // Voting on an archived idea is closed, so the banner doesn't offer it.
+    expect(banner).not.toHaveTextContent(/vote/i);
     expect(await screen.findByText('Budget sign-off')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit details' })).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Status' })).not.toBeInTheDocument();

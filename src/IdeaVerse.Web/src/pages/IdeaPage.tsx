@@ -542,7 +542,7 @@ function ArchivedBanner({ idea }: { idea: Idea }) {
     <div className="archived-banner stack" role="status">
       <div className="row spread wrap">
         <span>
-          This idea is archived and read-only: it’s hidden from the list and sends no reminders, but you can still discuss it and vote for it.{' '}
+          This idea is archived and read-only: it’s hidden from the list and sends no reminders, but you can still discuss it.{' '}
           {idea.canManage ? 'Restore it to make changes.' : 'Its owner or a workspace admin can restore it.'}
         </span>
         {idea.canManage && (
