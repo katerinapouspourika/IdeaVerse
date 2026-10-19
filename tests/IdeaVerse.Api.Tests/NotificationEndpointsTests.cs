@@ -29,6 +29,7 @@ public class NotificationEndpointsTests
     await Assert.That(list.Items[0].Message).StartsWith("The target date for “Launch” is tomorrow");
     await Assert.That(list.Items[0].CommentId).IsNull();
     await Assert.That(list.Items[0].ComponentId).IsNull();
+    await Assert.That(list.Items[0].ComponentTitle).IsNull();
   }
 
   [Test]
