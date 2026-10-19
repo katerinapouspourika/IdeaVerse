@@ -708,6 +708,8 @@ textarea:focus-visible,
 
 .idea-card.is-overdue {
   border-left: 4px solid var(--danger);
+  /* Takes the wider border out of the padding, so the content lines up with the other cards'. */
+  padding-left: 17px;
 }
 
 .idea-title {
@@ -3750,13 +3752,18 @@ a:focus-visible {
   gap: 6px;
 }
 
+/* The details take only the room they need (the status above "Overdue", and the team over two lines at most), so the title gets the most. */
 .idea-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 11.5rem 8.5rem 10rem 9rem;
+  grid-template-columns: minmax(0, 1fr) 6.5rem 8.25rem 7rem 7.25rem;
   align-items: center;
-  gap: 4px 16px;
-  padding: 10px 84px 10px 16px;
+  gap: 4px 12px;
+  padding: 10px 76px 10px 16px;
   border-radius: var(--radius-small);
+}
+
+.idea-row.is-overdue {
+  padding-left: 13px;
 }
 
 .idea-row-main {
@@ -3774,6 +3781,9 @@ a:focus-visible {
 }
 
 .idea-row .badges {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   white-space: nowrap;
 }
 
@@ -3782,7 +3792,13 @@ a:focus-visible {
 }
 
 .idea-row .progress-track {
-  width: 56px;
+  width: 36px;
+  flex: none;
+}
+
+.idea-row .progress,
+.idea-row-details > :first-child {
+  white-space: nowrap;
 }
 
 .idea-list.compact .idea-item-vote {
@@ -3796,6 +3812,12 @@ a:focus-visible {
   .idea-row {
     grid-template-columns: minmax(0, 1fr) auto;
     padding-right: 16px;
+  }
+
+  .idea-row .badges {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
   }
 
   .idea-row-details {
