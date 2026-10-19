@@ -51,6 +51,9 @@ export function useBulkSelection(ideas: Idea[]) {
    * when `undo` can put the changed ideas back. Ideas it could not change stay selected, with the reasons shown in the bar.
    */
   const apply = (change: Omit<BulkIdeaRequest, 'ids'>, targets: Idea[], done: (count: number) => string, undo?: (before: Idea[]) => void) => {
+    if (targets.length === 0) {
+      return;
+    }
     bulk.mutate(
       { ...change, ids: targets.map((idea) => idea.id) },
       {
@@ -202,6 +205,34 @@ export function BulkBar({ workspaceId, selection }: { workspaceId: string; selec
     }
   };
 
+  const problemList = problems.length > 0 && (
+    <div className="bulk-problems small" role="alert">
+      <strong>Not changed:</strong>
+      <ul>
+        {problems.map((p) => (
+          <li key={p.id}>
+            “{p.title}”: {p.message}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+
+  // The ideas a change couldn't apply to may all have left the selection, as when they became read-only: with nothing
+  // left to act on, the bar keeps only their reasons, until dismissed.
+  if (selected.length === 0) {
+    return (
+      <section className="card bulk-bar stack tight" aria-label="Bulk actions">
+        {problemList}
+        <div className="row wrap bulk-row">
+          <button type="button" className="button small ghost" onClick={selection.clear}>
+            Dismiss
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section ref={bar} className="card bulk-bar stack tight" aria-label="Bulk actions">
       <div className="row wrap bulk-row">
@@ -321,18 +352,7 @@ export function BulkBar({ workspaceId, selection }: { workspaceId: string; selec
         </ul>
       )}
 
-      {problems.length > 0 && (
-        <div className="bulk-problems small" role="alert">
-          <strong>Not changed:</strong>
-          <ul>
-            {problems.map((p) => (
-              <li key={p.id}>
-                “{p.title}”: {p.message}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {problemList}
     </section>
   );
 }
