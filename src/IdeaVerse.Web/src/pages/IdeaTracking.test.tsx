@@ -127,6 +127,27 @@ describe('Idea tracking', () => {
     expect(within(screen.getByRole('table')).getByRole('link', { name: 'Spring launch' })).toBeInTheDocument();
   });
 
+  it('shows a busy day’s first ideas and opens the rest from “+N more”', async () => {
+    const today = todayIso();
+    const busy = ['a', 'b', 'c', 'd', 'e'].map((id) => anIdea({ id, title: `Task ${id}`, targetDate: today }));
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: busy } });
+    renderApp('/ideas');
+    await screen.findByText('Task a');
+    await userEvent.click(screen.getByRole('button', { name: 'Calendar' }));
+
+    const cell = screen.getByRole('table').querySelector('td.today') as HTMLElement;
+    expect(within(cell).getAllByRole('link').map((l) => l.textContent)).toEqual(['Task a', 'Task b']);
+    const more = within(cell).getByRole('button', { name: /^\+3 more on / });
+    await userEvent.click(more);
+
+    const day = screen.getByRole('dialog');
+    expect(within(day).getAllByRole('link').map((l) => l.textContent)).toEqual(['Task a', 'Task b', 'Task c', 'Task d', 'Task e']);
+    expect(within(day).getByRole('link', { name: 'Task a' })).toHaveFocus();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(more).toHaveFocus();
+  });
+
   it('shows a planned span in the calendar from its start day to its target date', async () => {
     const month = todayIso().slice(0, 7);
     const span = (id: string, title: string) => anIdea({ id, title, startDate: `${month}-01`, targetDate: `${month}-28` });
@@ -144,7 +165,8 @@ describe('Idea tracking', () => {
     const between = [...table.querySelectorAll('td')].filter((td) => td.querySelector('.calendar-spans'));
     expect(between).toHaveLength(26);
     expect(between[0]!.querySelectorAll('.calendar-span')).toHaveLength(3);
-    expect(between[0]).toHaveTextContent('+1');
+    expect(between[0]).toHaveTextContent('+1 more');
+    expect(within(between[0]!).getByText('4 ideas under way')).toHaveClass('visually-hidden');
     expect(screen.getByText(/on the start day, filled on the target date/)).toBeInTheDocument();
   });
 

@@ -1516,9 +1516,40 @@ a.tag:focus-visible {
 }
 
 .calendar-more {
-  font-size: 0.7rem;
-  line-height: 1;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
   color: var(--muted);
+}
+
+/* The rest of a busy day's ideas: a button under its first chips that opens all of them. */
+.calendar-day-more {
+  display: block;
+  margin-top: 2px;
+  padding: 1px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.calendar-day-more:hover {
+  background: var(--accent-soft);
+}
+
+/* Over the drop-downs' own spacing and width, which come later in this file. */
+.popover.calendar-day-popover {
+  gap: 2px;
+  width: 240px;
+  padding: 10px;
+}
+
+.calendar-day-popover .calendar-idea {
+  margin-top: 4px;
 }
 
 .calendar-legend .calendar-idea {
