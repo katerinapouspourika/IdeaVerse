@@ -55,7 +55,7 @@ docker compose up --build
 
 ### Recording the walkthroughs
 
-`scripts/record-walkthroughs.mjs` signs up two demo accounts, confirms them through the emails Mailpit caught, and records one short video per walkthrough (1024×640, saved as H.264 MP4 and as VP9 WebM for browsers without H.264), starting once the app is on screen, with a WebP poster image, for each walkthrough listed in `src/marketing/walkthroughs.ts`. The walkthroughs build on each other, so they are always recorded together. The How it works page shows each poster with a play button in the middle until the video is played. Re-record after visible changes to the app:
+`scripts/record-walkthroughs.mjs` signs up two demo accounts, confirms them through the emails Mailpit caught, and records one short video per walkthrough (1280×800, saved as H.264 MP4 and as VP9 WebM for browsers without H.264), starting once the app is on screen and smoothly centring each step and its result on screen, with a WebP poster image, for each walkthrough listed in `src/marketing/walkthroughs.ts`. The walkthroughs build on each other, so they are always recorded together. The How it works page shows each poster with a play button in the middle until the video is played. Re-record after visible changes to the app:
 
 ```bash
 docker compose up --build -d
