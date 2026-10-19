@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import { CtaBand } from '../components/CtaBand';
 import { publicPages } from '../seo/pages';
 import { usePageMeta } from '../seo/usePageMeta';
+import { HeroClip } from './HeroClip';
 import { walkthroughs } from './walkthroughs';
 
 const features = [
@@ -22,6 +23,9 @@ const features = [
   },
   { icon: <Sparkles size={24} />, title: 'AI help when you want it', text: 'Brainstorm new ideas, suggest what an idea needs, and sharpen how it’s written.' },
 ];
+
+/** Short promises under the hero; each must stay true to the pricing page, the FAQ, and the Privacy Policy and Terms. */
+const trust = ['Free in early access', 'No credit card needed', 'Your data is never sold', 'Delete your account any time'];
 
 /** The public home page for visitors who are not signed in. */
 export function LandingPage() {
@@ -47,8 +51,16 @@ export function LandingPage() {
               </Link>
             </div>
           </div>
-          <HeroPreview />
+          <HeroClip />
         </div>
+      </section>
+
+      <section className="trust-strip" aria-label="The small print, up front">
+        <ul className="landing-inner">
+          {trust.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
       </section>
 
       <section className="landing-section">
@@ -96,55 +108,6 @@ export function LandingPage() {
       </section>
 
       <CtaBand title="Ready to make your next idea happen?" text="Free to start. Invite your team whenever you’re ready." />
-    </div>
-  );
-}
-
-/** A decorative mock-up of the ideas list, built from the app's own styles. */
-function HeroPreview() {
-  return (
-    <div className="hero-preview" aria-hidden="true">
-      <div className="preview-card">
-        <div className="row spread">
-          <strong>Spring product launch</strong>
-          <span className="badge status-badge status-inprogress">In progress</span>
-        </div>
-        <div className="row spread small">
-          <span className="muted">Target date in 6 days</span>
-          <span className="progress-track">
-            <span className="progress-fill" style={{ width: '70%' }} />
-          </span>
-        </div>
-        <ul className="tags">
-          <li className="tag">marketing</li>
-          <li className="tag">q2</li>
-        </ul>
-      </div>
-      <div className="preview-card offset">
-        <div className="row spread">
-          <strong>Team offsite</strong>
-          <span className="badge status-badge status-postponed">Postponed</span>
-        </div>
-        <div className="row spread small">
-          <span className="muted">Target date in 3 weeks</span>
-          <span className="progress-track">
-            <span className="progress-fill" style={{ width: '35%' }} />
-          </span>
-        </div>
-      </div>
-      <div className="preview-card">
-        <div className="row spread">
-          <strong>Customer newsletter</strong>
-          <span className="badge status-badge status-done">Done</span>
-        </div>
-        <div className="row spread small">
-          <span className="muted">Finished on time</span>
-          <span className="progress-track">
-            <span className="progress-fill" style={{ width: '100%' }} />
-          </span>
-        </div>
-      </div>
-      <img src="/logo.png" alt="" className="preview-logo" width="64" height="64" />
     </div>
   );
 }
