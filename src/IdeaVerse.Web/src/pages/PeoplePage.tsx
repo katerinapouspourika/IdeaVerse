@@ -2,7 +2,7 @@ import { Settings } from 'lucide-react';
 import { Fragment, useEffect, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
 
-import { formatDate } from '../api/dates';
+import { formatDayOf } from '../api/dates';
 import {
   useChangeRole,
   useInvitations,
@@ -426,7 +426,7 @@ function OpenInvitations({ workspaceId }: { workspaceId: string }) {
             <span>
               {invitation.email}
               <span className="muted small block">
-                {invitation.role} · invited by {personLabel(invitation.invitedByName, invitation.invitedByEmail)} · until {formatDate(invitation.expiresAt.slice(0, 10))}
+                {invitation.role} · invited by {personLabel(invitation.invitedByName, invitation.invitedByEmail)} · until {formatDayOf(invitation.expiresAt)}
               </span>
             </span>
             <span className="row">
