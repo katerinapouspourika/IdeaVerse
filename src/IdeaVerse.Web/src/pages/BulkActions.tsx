@@ -47,21 +47,30 @@ export function useBulkSelection(ideas: Idea[]) {
   };
 
   /**
-   * Applies a change to `targets`, confirming it in a toast (`done` describes it, given how many ideas changed) with an Undo
-   * when `undo` can put the changed ideas back. Ideas it could not change stay selected, with the reasons shown in the bar.
+   * Applies a change to `targets`, confirming it in a toast (`done` describes it, given how many ideas it made a difference to
+   * and how many were already as asked) with an Undo when `undo` can put those ideas back. `differs` tells, from an idea as
+   * it was, whether the change makes a difference to it, as adding a tag it already has does not. Ideas it could not change
+   * stay selected, with the reasons shown in the bar.
    */
-  const apply = (change: Omit<BulkIdeaRequest, 'ids'>, targets: Idea[], done: (count: number) => string, undo?: (before: Idea[]) => void) => {
+  const apply = (
+    change: Omit<BulkIdeaRequest, 'ids'>,
+    targets: Idea[],
+    done: (count: number, already: number) => string,
+    undo?: (before: Idea[]) => void,
+    differs: (idea: Idea) => boolean = () => true,
+  ) => {
     bulk.mutate(
       { ...change, ids: targets.map((idea) => idea.id) },
       {
         onSuccess: (results) => {
           const changed = new Set(results.filter((r) => r.outcome === 'Changed').map((r) => r.id));
           const failed = results.filter((r) => r.outcome !== 'Changed');
-          const before = targets.filter((idea) => changed.has(idea.id));
+          const before = targets.filter((idea) => changed.has(idea.id) && differs(idea));
+          const message = done(before.length, changed.size - before.length);
           setChosen((current) => new Set([...current].filter((id) => !changed.has(id))));
           setProblems(failed.map((r) => ({ id: r.id, title: targets.find((idea) => idea.id === r.id)?.title ?? 'An idea', message: r.message ?? 'It couldn’t be changed.' })));
           toast({
-            message: failed.length === 0 ? done(changed.size) : `${done(changed.size)}. ${countIdeas(failed.length)} couldn’t be changed.`,
+            message: failed.length === 0 ? message : `${message}. ${countIdeas(failed.length)} couldn’t be changed.`,
             tone: failed.length > 0 ? 'error' : undefined,
             undo: undo && before.length > 0 ? () => undo(before) : undefined,
           });
@@ -92,31 +101,34 @@ export function useBulkSelection(ideas: Idea[]) {
       );
     });
 
+  // Counted, and undone, only where the tag was added or removed: not where the idea already had it, or never did.
   const addTag = (tag: string) => {
     const name = normalizeTag(tag);
-    apply({ operation: 'AddTag', tag: name }, selected, (n) => `Tagged ${countIdeas(n)} “${name}”`, (before) => {
-      const added = before.filter((idea) => !idea.tags.includes(name)).map((idea) => idea.id);
-      if (added.length > 0) {
-        revert([{ operation: 'RemoveTag', tag: name }], [added]);
-      }
-    });
+    apply(
+      { operation: 'AddTag', tag: name },
+      selected,
+      (n, already) => (n > 0 || already === 0 ? `Tagged ${countIdeas(n)} “${name}”` : already === 1 ? `The idea already had “${name}”` : `All ${already} ideas already had “${name}”`),
+      (added) => revert([{ operation: 'RemoveTag', tag: name }], [added.map((idea) => idea.id)]),
+      (idea) => !idea.tags.includes(name),
+    );
   };
 
   const removeTag = (tag: string) => {
     const name = normalizeTag(tag);
-    apply({ operation: 'RemoveTag', tag: name }, selected, (n) => `Removed “${name}” from ${countIdeas(n)}`, (before) => {
-      const removed = before.filter((idea) => idea.tags.includes(name)).map((idea) => idea.id);
-      if (removed.length > 0) {
-        revert([{ operation: 'AddTag', tag: name }], [removed]);
-      }
-    });
+    apply(
+      { operation: 'RemoveTag', tag: name },
+      selected,
+      (n, already) => (n > 0 || already === 0 ? `Removed “${name}” from ${countIdeas(n)}` : already === 1 ? `The idea didn’t have “${name}”` : `None of the ${already} ideas had “${name}”`),
+      (removed) => revert([{ operation: 'AddTag', tag: name }], [removed.map((idea) => idea.id)]),
+      (idea) => idea.tags.includes(name),
+    );
   };
 
   // A move has no Undo: a postponed idea is put back one at a time, from its own page, within a few minutes.
   const moveTo = (targetDate: string) =>
     apply({ operation: 'MoveTargetDate', targetDate }, selected, (n) => `Moved ${countIdeas(n)} to ${formatDate(targetDate)}`);
   const moveWeekLater = () =>
-    apply({ operation: 'MoveTargetDate', days: 7 }, selected.filter(postponable), (n) => `Moved ${countIdeas(n)} a week later`);
+    apply({ operation: 'MoveTargetDate', days: 7 }, selected.filter(postponable), (n) => `Postponed ${countIdeas(n)} by a week`);
 
   const archive = () =>
     apply({ operation: 'Archive' }, selected.filter(archivable), (n) => `Archived ${countIdeas(n)}`, (before) =>
