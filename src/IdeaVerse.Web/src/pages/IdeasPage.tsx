@@ -181,7 +181,7 @@ function WorkspaceIdeas({ workspace }: { workspace: Workspace }) {
       <FilterTab key={v} label={viewLabels[v]} icon={icons ? viewIcons[v] : undefined} active={view === v} onClick={() => choose({ view: v })} />
     ));
   const densityChoice = view === 'list' && (
-    <div className="tabs" role="group" aria-label="Density">
+    <div className="tabs segmented" role="group" aria-label="Density">
       {densities.map((d) => (
         <FilterTab key={d} label={densityLabels[d]} active={density === d} onClick={() => choose({ density: d })} />
       ))}

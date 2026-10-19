@@ -678,6 +678,37 @@ textarea:focus-visible,
   color: var(--accent-text);
 }
 
+/*
+ * A lighter control for a setting of how things look, such as the list's density, so it doesn't read as one more of the
+ * filled view or filter pills beside it: its options share one outline, the chosen one tinted.
+ */
+.tabs.segmented {
+  flex: none;
+  gap: 0;
+  overflow: visible;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.filter-sheet > .tabs.segmented {
+  align-self: flex-start;
+}
+
+.segmented .tab {
+  border-color: transparent;
+  background: transparent;
+  padding: 4px 12px;
+}
+
+.segmented .tab.active {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent);
+}
+
 .idea-list {
   list-style: none;
   margin: 0;
