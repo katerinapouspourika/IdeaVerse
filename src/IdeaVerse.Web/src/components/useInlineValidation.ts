@@ -5,44 +5,43 @@ type Check = () => string | undefined;
 
 /**
  * The app's own form validation, in place of the browser's bubbles (forms using it set `noValidate`). Every field is
- * checked when the form is submitted, the first one with a problem is focused, and from then on a field is checked
- * again as the user leaves it. Show `errors[field]` in the field's `Field` error slot so it is announced with it.
+ * checked when the form is submitted and the first one with a problem is focused. From then on every field is checked
+ * again as it changes, so a message clears while the user corrects it, before they reach for the button, and nothing
+ * moves under the pointer. Show `errors[field]` in the field's `Field` error slot so it is announced with it.
  */
 export function useInlineValidation<K extends string>(checks: Record<K, Check>) {
   const [submitted, setSubmitted] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<K, string>>>({});
+  const [attempts, setAttempts] = useState(0);
   const focusIn = useRef<HTMLFormElement | null>(null);
 
   useEffect(() => {
     focusIn.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
     focusIn.current = null;
-  }, [errors]);
+  }, [attempts]);
+
+  const errors: Partial<Record<K, string>> = {};
+  if (submitted) {
+    for (const field of Object.keys(checks) as K[]) {
+      errors[field] = checks[field]();
+    }
+  }
 
   /** Checks every field of the form being submitted, shows what is wrong, and says whether the form can be sent. */
   const validate = (event: FormEvent) => {
-    const found: Partial<Record<K, string>> = {};
-    for (const field of Object.keys(checks) as K[]) {
-      found[field] = checks[field]();
-    }
-    const valid = Object.values(found).every((message) => !message);
+    const valid = (Object.keys(checks) as K[]).every((field) => !checks[field]());
     focusIn.current = !valid && event.currentTarget instanceof HTMLFormElement ? event.currentTarget : null;
     setSubmitted(true);
-    setErrors(found);
+    setAttempts((count) => count + 1);
     return valid;
   };
 
-  /** A blur handler that checks the field again once the form has been submitted. */
+  /** A blur handler for the field; its message already follows every change once the form has been submitted. */
   const blur = (field: K) => () => {
-    if (submitted) {
-      setErrors((current) => ({ ...current, [field]: checks[field]() }));
-    }
+    void field;
   };
 
   /** Clears every message, such as after the form is sent and emptied. */
-  const reset = () => {
-    setSubmitted(false);
-    setErrors({});
-  };
+  const reset = () => setSubmitted(false);
 
   return { errors, validate, blur, reset };
 }

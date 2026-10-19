@@ -320,7 +320,7 @@ internal static class IdeaEndpoints
     {
       ChangeOutcome.Changed => TypedResults.NoContent(),
       ChangeOutcome.NotFound => TypedResults.NotFound(),
-      ChangeOutcome.Forbidden => TypedResults.Problem(detail: "Only the idea's owner and the workspace's admins can delete it.", statusCode: StatusCodes.Status403Forbidden),
+      ChangeOutcome.Forbidden => TypedResults.Problem(detail: "Only the idea’s owner and the workspace’s admins can delete it.", statusCode: StatusCodes.Status403Forbidden),
       ChangeOutcome.Invalid or ChangeOutcome.Conflict or _ => throw new UnreachableException("Deleting an idea is never invalid or conflicting."),
     };
 

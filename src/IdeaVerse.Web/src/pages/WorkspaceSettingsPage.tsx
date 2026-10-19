@@ -89,7 +89,19 @@ function WorkspaceName({ workspace }: { workspace: Workspace }) {
     <form className="card stack" onSubmit={submit} aria-label="Rename workspace" noValidate>
       <h2>Name</h2>
       <Field label="Workspace name" error={validation.errors.name ?? fieldError(rename.error, 'name')}>
-        {(props) => <input {...props} required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} onBlur={validation.blur('name')} />}
+        {(props) => (
+          <input
+            {...props}
+            required
+            maxLength={100}
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setSaved(false);
+            }}
+            onBlur={validation.blur('name')}
+          />
+        )}
       </Field>
       <ErrorMessage error={rename.error} />
       {saved && (
@@ -134,7 +146,12 @@ function DangerZone({ workspace }: { workspace: Workspace }) {
 
   const deleteWorkspace = (event: FormEvent) => {
     event.preventDefault();
-    remove.mutate(undefined, { onSuccess: () => void navigate('/') });
+    remove.mutate(undefined, {
+      onSuccess: () => {
+        toast({ message: `Deleted ${workspace.name}` });
+        void navigate('/');
+      },
+    });
   };
 
   return (

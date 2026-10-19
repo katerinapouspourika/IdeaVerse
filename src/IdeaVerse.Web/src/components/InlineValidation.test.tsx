@@ -22,7 +22,7 @@ describe('Inline validation', () => {
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
   });
 
-  it('checks a field again as it is left after the first submit', async () => {
+  it('checks a field again as it changes after the first submit', async () => {
     fakeApi(signedOut);
     renderApp('/register');
 
@@ -34,8 +34,8 @@ describe('Inline validation', () => {
 
     expect(email).toHaveAccessibleDescription('Enter a valid email address, like name@company.com.');
     await userEvent.clear(email);
+    expect(email).toHaveAccessibleDescription('Enter your email address.');
     await userEvent.type(email, 'kat@example.com');
-    await userEvent.tab();
 
     expect(email).not.toHaveAccessibleDescription(expect.stringContaining('valid email'));
   });

@@ -126,7 +126,7 @@ describe('SettingsPage', () => {
     const form = await screen.findByRole('form', { name: 'Reminders' });
     await userEvent.click(within(form).getByRole('checkbox', { name: /Coming up/ }));
     await userEvent.click(within(form).getByRole('checkbox', { name: /Due tomorrow/ }));
-    await userEvent.click(within(form).getByRole('checkbox', { name: 'Also email me these reminders' }));
+    await userEvent.click(within(form).getByRole('checkbox', { name: /^Email me about these/ }));
 
     expect(await within(form).findByText('Saved')).toBeInTheDocument();
     await waitFor(() => expect(calls.filter((c) => c.method === 'PUT')).toHaveLength(3));
@@ -147,12 +147,16 @@ describe('SettingsPage', () => {
     const form = await screen.findByRole('form', { name: 'Reminders' });
     const comments = within(form).getByRole('checkbox', { name: /Email me about new comments too/ });
     expect(comments).not.toBeChecked();
+    expect(comments).toHaveAccessibleName(expect.stringContaining('Mentions are emailed either way.'));
+    expect(within(form).getByRole('checkbox', { name: /^Email me about these/ })).toHaveAccessibleName(
+      expect.stringContaining('being mentioned, assigned a component, or added to an idea’s team'),
+    );
     await userEvent.click(comments);
 
     expect(await within(form).findByText('Saved')).toBeInTheDocument();
     expect(calls.find((c) => c.method === 'PUT')?.body).toMatchObject({ emailReminders: true, emailComments: true });
 
-    await userEvent.click(within(form).getByRole('checkbox', { name: 'Also email me these reminders' }));
+    await userEvent.click(within(form).getByRole('checkbox', { name: /^Email me about these/ }));
     expect(comments).toBeDisabled();
     expect(comments).not.toBeChecked();
   });
@@ -168,14 +172,14 @@ describe('SettingsPage', () => {
     const group = within(form).getByRole('group', { name: 'When to email me' });
     expect(within(group).getByRole('radio', { name: /Send right away/ })).toBeChecked();
     const digest = within(group).getByRole('radio', { name: /Daily digest/ });
-    expect(digest).toHaveAccessibleName(expect.stringContaining('Mentions are always sent right away'));
+    expect(digest).toHaveAccessibleName(expect.stringContaining('Mentions are still emailed right away.'));
     await userEvent.click(digest);
 
     expect(await within(form).findByText('Saved')).toBeInTheDocument();
     expect(digest).toBeChecked();
     expect(calls.find((c) => c.method === 'PUT')?.body).toMatchObject({ emailReminders: true, emailFrequency: 'DailyDigest' });
 
-    await userEvent.click(within(form).getByRole('checkbox', { name: 'Also email me these reminders' }));
+    await userEvent.click(within(form).getByRole('checkbox', { name: /^Email me about these/ }));
     expect(digest).toBeDisabled();
   });
 

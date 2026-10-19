@@ -116,7 +116,7 @@ public class StartReminderTests
     await Assert.That(twoDays.Raised).IsEqualTo(1);
     await Assert.That(again.Raised).IsEqualTo(0);
     await Assert.That(factory.Mail.Sent.Select(m => m.Subject))
-      .IsEquivalentTo(["Starting soon: Launch", "2 updates on “Launch”", "Starting soon: Launch"]);
+      .IsEquivalentTo(["Starting soon: “Launch”", "2 updates on “Launch”", "Starting soon: “Launch”"]);
     await Assert.That(factory.Mail.Sent[0].Body).Contains("“Launch” starts in 10 days, on ");
     await Assert.That(factory.Mail.Sent[1].Body).Contains("starts in 5 days").And.Contains("it has no components yet");
   }
@@ -135,7 +135,7 @@ public class StartReminderTests
     factory.Time.Advance(TimeSpan.FromDays(9));
     await factory.RunRemindersAsync();
 
-    await Assert.That(factory.Mail.Sent.Select(m => m.Subject)).DoesNotContain("Add components to Launch");
+    await Assert.That(factory.Mail.Sent.Select(m => m.Subject)).DoesNotContain("Add components to “Launch”");
   }
 
   [Test]
@@ -154,7 +154,7 @@ public class StartReminderTests
 
     await Assert.That(before).IsEmpty();
     await Assert.That(await StartRemindersAsync(owner)).HasSingleItem();
-    var mail = factory.Mail.Sent.Single(m => m.Subject == "Starting soon: Standup");
+    var mail = factory.Mail.Sent.Single(m => m.Subject == "Starting soon: “Standup”");
     await Assert.That(mail.Body).Contains("“Standup” starts in 15 minutes, at 10:00.");
   }
 
@@ -195,7 +195,7 @@ public class StartReminderTests
     factory.Time.Advance(TimeSpan.FromDays(1));
     await factory.RunRemindersAsync();
 
-    var toOwner = factory.Mail.Sent.Where(m => m.To == "owner@example.com" && m.Subject == "Starting soon: Launch").ToList();
+    var toOwner = factory.Mail.Sent.Where(m => m.To == "owner@example.com" && m.Subject == "Starting soon: “Launch”").ToList();
     var toMember = factory.Mail.Sent.Single(m => m.To == "member@example.com");
     await Assert.That(toOwner.Count).IsEqualTo(2);
     await Assert.That(toMember.Body).Contains("added you to the team").And.Contains("starts in 2 days");

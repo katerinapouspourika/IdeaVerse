@@ -59,7 +59,7 @@ internal sealed class IdentityEmailSender(IMailSender mailSender, IOptions<AppOp
           "Confirm your new email address",
           ["Someone asked to change the email address of an IdeaVerse account to this one. Confirm it to make the change."],
           new EmailAction("Confirm new email", new Uri(link)),
-          "Until you do, the account keeps its current address. If this wasn't you, ignore this email."),
+          "Until you do, the account keeps its current address. If this wasn’t you, ignore this email."),
         app.Value)
       : EmailLayout.Compose(
         email,
@@ -68,7 +68,7 @@ internal sealed class IdentityEmailSender(IMailSender mailSender, IOptions<AppOp
           "Welcome to IdeaVerse!",
           ["Confirm your email address to start using your account."],
           new EmailAction("Confirm your email", new Uri(link)),
-          "If you didn't sign up, you can ignore this email."),
+          "If you didn’t sign up, you can ignore this email."),
         app.Value);
     return mailSender.SendAsync(message, CancellationToken.None);
   }
@@ -100,7 +100,7 @@ internal sealed class IdentityEmailSender(IMailSender mailSender, IOptions<AppOp
           "Your email address was changed",
           [
             $"Your IdeaVerse account now signs in with {current} instead of this address.",
-            "If you didn't make this change, contact us right away so we can secure your account.",
+            "If you didn’t make this change, contact us right away so we can secure your account.",
           ],
           new EmailAction("Contact us", new Uri(app.Value.Link("/contact"))),
           "If you made this change, there is nothing more to do."),
@@ -122,7 +122,7 @@ internal sealed class IdentityEmailSender(IMailSender mailSender, IOptions<AppOp
           "Reset your password",
           ["Someone asked to reset the password for your IdeaVerse account. The link works for one day."],
           new EmailAction("Choose a new password", new Uri(link)),
-          "If you didn't ask for this, ignore this email; your password stays the same."),
+          "If you didn’t ask for this, ignore this email; your password stays the same."),
         app.Value),
       CancellationToken.None);
 }

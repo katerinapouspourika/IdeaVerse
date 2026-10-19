@@ -1,24 +1,30 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 
 import { formatDate, todayIso } from '../api/dates';
 import type { Idea } from '../api/types';
 import { StatusBadge } from '../components/StatusBadge';
 import { useNarrowScreen } from '../components/useNarrowScreen';
+import { useIdeaPanel } from '../panel/useIdeaPanel';
 
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 /** How many planned spans a day shows before summing up the rest, so busy months stay readable. */
 const maxSpans = 3;
 
+/** How many chips a day shows; a busier day shows one fewer and a "+N more" that opens them all, so its week keeps its height. */
+const maxChips = 3;
+
 /**
  * A month grid with each idea on its target date, starting on the user's current month. An idea with a start date also
  * shows on its start day, as an outlined chip, with a thin line on each day in between. On a phone, where a grid's cells
- * are too small to read, the month's ideas are a list grouped by target date instead.
+ * are too small to read, the month's ideas are a list grouped by target date instead. Either way an idea opens in the
+ * side panel, as on the other views.
  */
 export function IdeaCalendar({ ideas }: { ideas: Idea[] }) {
   const narrow = useNarrowScreen();
+  const { linkProps } = useIdeaPanel();
   const today = todayIso();
   const [month, setMonth] = useState(today.slice(0, 7));
   const [year, monthIndex] = month.split('-').map(Number) as [number, number];
@@ -40,6 +46,25 @@ export function IdeaCalendar({ ideas }: { ideas: Idea[] }) {
     .sort((a, b) => a.startDate!.localeCompare(b.startDate!) || a.targetDate.localeCompare(b.targetDate));
   const spanning = (date: string) => planned.filter((i) => i.startDate! < date && date < i.targetDate);
   const chipClass = (idea: Idea) => `status-${idea.status.toLowerCase()}${idea.isOverdue ? ' is-overdue' : ''}`;
+  // A day's ideas due on it, filled, then those starting on it, outlined.
+  const chipsOn = (date: string) => [
+    ...(byDate.get(date) ?? []).map((idea) => (
+      <Link key={idea.id} {...linkProps(idea.id)} className={`calendar-idea ${chipClass(idea)}`} title={idea.title}>
+        {idea.title}
+      </Link>
+    )),
+    ...(byStart.get(date) ?? []).map((idea) => (
+      <Link
+        key={`start-${idea.id}`}
+        {...linkProps(idea.id)}
+        aria-label={`Starts: ${idea.title}`}
+        title={`Starts: ${idea.title}`}
+        className={`calendar-idea calendar-start ${chipClass(idea)}`}
+      >
+        {idea.title}
+      </Link>
+    )),
+  ];
 
   const nav = (
     <div className="row spread calendar-nav">
@@ -84,21 +109,7 @@ export function IdeaCalendar({ ideas }: { ideas: Idea[] }) {
                 ) : (
                   <td key={date} className={date === today ? 'today' : undefined}>
                     <span className="day">{Number(date.slice(8))}</span>
-                    {byDate.get(date)?.map((idea) => (
-                      <Link key={idea.id} to={`/ideas/${idea.id}`} className={`calendar-idea ${chipClass(idea)}`}>
-                        {idea.title}
-                      </Link>
-                    ))}
-                    {byStart.get(date)?.map((idea) => (
-                      <Link
-                        key={`start-${idea.id}`}
-                        to={`/ideas/${idea.id}`}
-                        aria-label={`Starts: ${idea.title}`}
-                        className={`calendar-idea calendar-start ${chipClass(idea)}`}
-                      >
-                        {idea.title}
-                      </Link>
-                    ))}
+                    <DayChips date={date} chips={chipsOn(date)} />
                     <Spans ideas={spanning(date)} className={chipClass} />
                   </td>
                 ),
@@ -126,6 +137,7 @@ interface CalendarAgendaProps {
 
 /** The month's ideas as a list grouped by target date, each noting when work starts, for screens too narrow for a grid. */
 function CalendarAgenda({ month, title, byDate, today }: CalendarAgendaProps) {
+  const { linkProps } = useIdeaPanel();
   const days = [...byDate.keys()].filter((date) => date.startsWith(month)).sort();
   if (days.length === 0) {
     return <p className="muted">No ideas due in {title}.</p>;
@@ -142,7 +154,7 @@ function CalendarAgenda({ month, title, byDate, today }: CalendarAgendaProps) {
           <ul className="agenda-ideas">
             {byDate.get(date)!.map((idea) => (
               <li key={idea.id} className={`agenda-idea status-${idea.status.toLowerCase()}${idea.isOverdue ? ' is-overdue' : ''}`}>
-                <Link to={`/ideas/${idea.id}`} className="agenda-title stretched-link">
+                <Link {...linkProps(idea.id)} className="agenda-title stretched-link">
                   {idea.title}
                 </Link>
                 <span className="row small muted wrap">
@@ -158,17 +170,120 @@ function CalendarAgenda({ month, title, byDate, today }: CalendarAgendaProps) {
   );
 }
 
-/** The thin lines of the ideas under way on a day, up to `maxSpans`; their start and target chips name them. */
+/**
+ * A day's chips, up to `maxChips`. A busier day shows one fewer and a "+N more" button that opens all of them in a
+ * popover, placed against the window so the day's cell does not cut it off. Escape or a click elsewhere closes it.
+ */
+function DayChips({ date, chips }: { date: string; chips: ReactNode[] }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  const button = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+    const place = () => {
+      const anchor = button.current?.getBoundingClientRect();
+      const box = panel.current;
+      if (!anchor || !box) {
+        return;
+      }
+      const gap = 4;
+      const upwards = window.innerHeight - anchor.bottom < box.offsetHeight + gap && anchor.top > window.innerHeight - anchor.bottom;
+      const width = document.documentElement.clientWidth;
+      Object.assign(box.style, {
+        position: 'fixed',
+        left: `${Math.max(8, Math.min(anchor.left, width - box.offsetWidth - 8))}px`,
+        right: 'auto',
+        top: upwards ? 'auto' : `${anchor.bottom + gap}px`,
+        bottom: upwards ? `${window.innerHeight - anchor.top + gap}px` : 'auto',
+      });
+    };
+    place();
+    panel.current?.querySelector<HTMLElement>('a')?.focus();
+    const closeOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (!panel.current?.contains(target) && !button.current?.contains(target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', closeOutside);
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+    return () => {
+      document.removeEventListener('mousedown', closeOutside);
+      window.removeEventListener('scroll', place, true);
+      window.removeEventListener('resize', place);
+    };
+  }, [open]);
+
+  if (chips.length <= maxChips) {
+    return chips;
+  }
+  const close = () => {
+    setOpen(false);
+    button.current?.focus();
+  };
+  return (
+    <>
+      {chips.slice(0, maxChips - 1)}
+      <button
+        ref={button}
+        type="button"
+        className="calendar-day-more"
+        aria-expanded={open}
+        aria-controls={open ? id : undefined}
+        onClick={() => setOpen((o) => !o)}
+      >
+        +{chips.length - maxChips + 1} more <span className="visually-hidden">on {formatDate(date)}</span>
+      </button>
+      {open && (
+        <div
+          ref={panel}
+          id={id}
+          role="dialog"
+          aria-label={formatDate(date)}
+          className="popover calendar-day-popover"
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.stopPropagation();
+              close();
+            }
+          }}
+          // Opening an idea from it closes it, with the idea in the side panel or its page.
+          onClick={(event) => (event.target as Element).closest('a') && setOpen(false)}
+        >
+          <strong className="small">{formatDate(date)}</strong>
+          {chips}
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
+ * The thin lines of the ideas under way on a day, up to `maxSpans`, then how many more; their start and target chips
+ * name them. Screen readers hear how many are under way instead of the lines.
+ */
 function Spans({ ideas, className }: { ideas: Idea[]; className: (idea: Idea) => string }) {
   if (ideas.length === 0) {
     return null;
   }
   return (
-    <span className="calendar-spans" aria-hidden="true">
+    <span className="calendar-spans">
+      <span className="visually-hidden">
+        {ideas.length} {ideas.length === 1 ? 'idea' : 'ideas'} under way
+      </span>
       {ideas.slice(0, maxSpans).map((idea) => (
-        <span key={idea.id} className={`calendar-span ${className(idea)}`} title={idea.title} />
+        <span key={idea.id} className={`calendar-span ${className(idea)}`} title={idea.title} aria-hidden="true" />
       ))}
-      {ideas.length > maxSpans && <span className="calendar-more">+{ideas.length - maxSpans}</span>}
+      {ideas.length > maxSpans && (
+        <span className="calendar-more" aria-hidden="true">
+          +{ideas.length - maxSpans} more
+        </span>
+      )}
     </span>
   );
 }

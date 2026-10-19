@@ -12,5 +12,5 @@ public sealed record ComponentChangeResult(ChangeOutcome Outcome, Component? Com
   /// <summary>
   /// Why a user who can see an idea may not change its components.
   /// </summary>
-  public const string ForbiddenMessage = "Only the idea's team and the workspace's admins can change its components.";
+  public const string ForbiddenMessage = "Only the idea’s team and the workspace’s admins can change its components.";
 }

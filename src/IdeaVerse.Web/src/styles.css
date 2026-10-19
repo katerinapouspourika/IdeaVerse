@@ -861,11 +861,13 @@ textarea:focus-visible,
   cursor: pointer;
 }
 
+/* The box lines up with the label's first line; the whole label is the tap target, so it skips the phones' 44px minimum. */
 .check input {
   flex-shrink: 0;
   margin-top: 4px;
   width: 18px;
   height: 18px;
+  min-height: 0;
   accent-color: var(--ok);
 }
 
@@ -1519,9 +1521,40 @@ a.tag:focus-visible {
 }
 
 .calendar-more {
-  font-size: 0.7rem;
-  line-height: 1;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
   color: var(--muted);
+}
+
+/* The rest of a busy day's ideas: a button under its first chips that opens all of them. */
+.calendar-day-more {
+  display: block;
+  margin-top: 2px;
+  padding: 1px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.calendar-day-more:hover {
+  background: var(--accent-soft);
+}
+
+/* Over the drop-downs' own spacing and width, which come later in this file. */
+.popover.calendar-day-popover {
+  gap: 2px;
+  width: 240px;
+  padding: 10px;
+}
+
+.calendar-day-popover .calendar-idea {
+  margin-top: 4px;
 }
 
 .calendar-legend .calendar-idea {
@@ -1626,13 +1659,16 @@ a.tag:focus-visible {
   position: relative;
 }
 
+/* Takes the page's font but keeps the weight of the nav links beside it. */
 .nav-group-toggle {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   border: 0;
   background: transparent;
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
   cursor: pointer;
 }
 
@@ -1916,7 +1952,8 @@ a.tag:focus-visible {
     min-height: 44px;
   }
 
-  .button {
+  .button,
+  .check {
     min-height: 44px;
   }
 
@@ -2715,16 +2752,29 @@ textarea:disabled {
   outline: none;
 }
 
+.tag-input .tags {
+  max-width: 100%;
+}
+
 .tag.removable {
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  max-width: 100%;
   padding-right: 2px;
   font-size: 0.85rem;
 }
 
+.tag-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .tag-remove {
   display: inline-flex;
+  flex: none;
   align-items: center;
   justify-content: center;
   width: 22px;
@@ -2760,6 +2810,14 @@ textarea:disabled {
 .invite-problems {
   margin: 0;
   padding-left: 20px;
+  overflow-wrap: anywhere;
+}
+
+/* On a phone the address box takes the whole width, with the role and the button on the line below. */
+@media (max-width: 600px) {
+  .invite-fields > .grow {
+    flex-basis: 100%;
+  }
 }
 
 .not-found {
@@ -2923,7 +2981,7 @@ a:focus-visible {
   padding: 14px 16px;
 }
 
-/* The bell's drop-down: a header with Mark all read, the latest few notifications, and a link to the rest. */
+/* The bell's drop-down: a header with Mark all as read, the latest few notifications, and a link to the rest. */
 .notification-popover {
   gap: 6px;
   padding: 12px 8px 8px;

@@ -26,7 +26,7 @@ const reminderChoices: { kind: ReminderKind; label: string; hint: string }[] = [
 
 const frequencyChoices: { frequency: EmailFrequency; label: string; hint: string }[] = [
   { frequency: 'RightAway', label: 'Send right away', hint: 'Within a minute; several updates at once arrive as one email' },
-  { frequency: 'DailyDigest', label: 'Daily digest', hint: 'One email a day at 8:00 in your time zone. Mentions are always sent right away.' },
+  { frequency: 'DailyDigest', label: 'Daily digest', hint: 'One email a day at 8:00 in your time zone. Mentions are still emailed right away.' },
 ];
 
 /** The signed-in user's own settings. The workspace's settings have their own page, linked from People. */
@@ -249,7 +249,10 @@ function RemindersForm({ account }: { account: Account }) {
           checked={email}
           onChange={(e) => settings.change({ ...settings.value, emailReminders: e.target.checked, emailComments: e.target.checked && comments })}
         />
-        <span>Also email me these reminders</span>
+        <span>
+          Email me about these
+          <span className="muted small block">The reminders above, and being mentioned, assigned a component, or added to an idea’s team.</span>
+        </span>
       </label>
       <label className="check">
         <input
@@ -260,7 +263,7 @@ function RemindersForm({ account }: { account: Account }) {
         />
         <span>
           Email me about new comments too
-          <span className="muted small block">Comments on ideas you own or are on the team of. Mentions are always emailed.</span>
+          <span className="muted small block">Comments on ideas you own or are on the team of. Mentions are emailed either way.</span>
         </span>
       </label>
       <fieldset className="choices" disabled={!email}>
@@ -310,7 +313,10 @@ function useSave() {
     }
   };
 
-  return { error, pending, done, run };
+  /** Takes back the "saved" message, such as once the user edits what was saved. */
+  const clearDone = () => setDone(false);
+
+  return { error, pending, done, run, clearDone };
 }
 
 function ProfileForm({ account }: { account: Account }) {
@@ -327,7 +333,18 @@ function ProfileForm({ account }: { account: Account }) {
     <form id="profile" className="card stack" onSubmit={submit} aria-label="Profile">
       <h2>Profile</h2>
       <Field label="Your name" hint="Shown to your teams instead of your email address." error={fieldError(save.error, 'displayName')}>
-        {(props) => <input {...props} maxLength={100} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Alex Morgan" />}
+        {(props) => (
+          <input
+            {...props}
+            maxLength={100}
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              save.clearDone();
+            }}
+            placeholder="e.g. Alex Morgan"
+          />
+        )}
       </Field>
       <ErrorMessage error={save.error} />
       {save.done && (

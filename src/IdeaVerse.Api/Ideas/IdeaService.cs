@@ -25,7 +25,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
   /// <summary>
   /// Why a user who can see an idea may not change it.
   /// </summary>
-  private const string NotOnTeamMessage = "Only the idea's team and the workspace's admins can change this idea.";
+  private const string NotOnTeamMessage = "Only the idea’s team and the workspace’s admins can change this idea.";
 
   /// <summary>
   /// How long after postponing an idea the postponement can be taken back.
@@ -496,7 +496,7 @@ public sealed class IdeaService(IdeaVerseDbContext context, UserCalendar calenda
     {
       return IdeaChangeResult.Denied(
         await context.DenialAsync(userId, id, cancellationToken).ConfigureAwait(false),
-        "Only the idea's owner and the workspace's admins can archive or restore it.");
+        "Only the idea’s owner and the workspace’s admins can archive or restore it.");
     }
 
     if ((idea.ArchivedAt is not null) == archive)
