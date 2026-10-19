@@ -39,7 +39,14 @@ export function IdeaBoard({ ideas }: { ideas: Idea[] }) {
       {
         onSuccess: () => {
           if (undoable) {
-            toast({ message: `Moved “${idea.title}” to ${statusLabels[status]}`, undo: () => moveTo(idea, from, { from: status, undoable: false }) });
+            toast({
+              message: `Moved “${idea.title}” to ${statusLabels[status]}`,
+              // Undo's button goes with its toast, so focus moves back with the card to its grip.
+              undo: () => {
+                refocus.current = idea.id;
+                moveTo(idea, from, { from: status, undoable: false });
+              },
+            });
           }
         },
         onError: (error) => {
@@ -58,7 +65,8 @@ export function IdeaBoard({ ideas }: { ideas: Idea[] }) {
   });
   const dragged = drag && ideas.find((i) => i.id === drag.id);
 
-  // A card moved with its menu lands in another column as a new element, so focus follows it there to its grip.
+  // A card moved with its menu, or back with Undo, lands in another column as a new element, so focus follows it there
+  // to its grip.
   const refocus = useRef<string | null>(null);
   useEffect(() => {
     if (refocus.current) {
@@ -159,6 +167,7 @@ function BoardCard({
               listLabel="Move to"
               trigger={<GripVertical aria-hidden="true" size={16} />}
               triggerClassName="button ghost small icon-button board-grip"
+              floating
               items={statuses.map((s) => ({ label: statusLabels[s], checked: s === status, onSelect: () => onMove(s) }))}
             />
           </div>
