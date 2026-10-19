@@ -156,7 +156,7 @@ public sealed class DiscoveryService(IdeaVerseDbContext context, IMailSender mai
       await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
       if (throttle.TryAcquire($"joinRequest:{workspaceId}:{userId}", RequestEmailsPerDay, TimeSpan.FromDays(1)))
       {
-        await EmailManagersAsync(workspaceId, workspace.Name, email!, cancellationToken).ConfigureAwait(false);
+        await EmailManagersAsync(workspaceId, workspace.Name, userId, cancellationToken).ConfigureAwait(false);
       }
     }
 
@@ -317,11 +317,18 @@ public sealed class DiscoveryService(IdeaVerseDbContext context, IMailSender mai
   /// </summary>
   /// <param name="workspaceId">The workspace identifier.</param>
   /// <param name="workspaceName">The workspace's name.</param>
-  /// <param name="requester">The email of the person asking.</param>
+  /// <param name="requesterId">The person asking, named in the email as invitations name their sender: "Name (email)", or the
+  /// email alone while they have no name.</param>
   /// <param name="cancellationToken">Token to cancel the operation.</param>
   /// <returns>A task that completes when the emails are sent.</returns>
-  private async Task EmailManagersAsync(Guid workspaceId, string workspaceName, string requester, CancellationToken cancellationToken)
+  private async Task EmailManagersAsync(Guid workspaceId, string workspaceName, string requesterId, CancellationToken cancellationToken)
   {
+    var person = await context.Users
+      .Where(u => u.Id == requesterId)
+      .Select(u => new { u.Email, u.DisplayName })
+      .SingleAsync(cancellationToken)
+      .ConfigureAwait(false);
+    var requester = person.DisplayName is { } name ? $"{name} ({person.Email})" : person.Email;
     var managers = await context.WorkspaceMembers
       .Where(m => m.WorkspaceId == workspaceId && (m.Role == WorkspaceRole.Owner || m.Role == WorkspaceRole.Admin))
       .Select(m => m.User!.Email)
