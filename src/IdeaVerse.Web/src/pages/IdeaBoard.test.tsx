@@ -154,6 +154,8 @@ describe('Board view', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Undo' }));
 
     await waitFor(() => expect(calls.filter((c) => c.method === 'PUT').map((c) => (c.body as { status: string }).status)).toEqual(['InProgress', 'Planned']));
+    // Focus goes back with the card, to its grip, rather than being lost with the toast.
+    expect(within(screen.getByRole('region', { name: /Planned/ })).getByRole('button', { name: 'Move Spring launch' })).toHaveFocus();
   });
 
   it('moves an idea from the keyboard with the menu on its grip', async () => {
