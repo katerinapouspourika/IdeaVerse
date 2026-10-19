@@ -3193,6 +3193,13 @@ a:focus-visible {
   }
 }
 
+/* Above the ideas list's bulk bar while it is shown (it sets its height), clear of its actions. */
+@media (min-width: 701px) {
+  .has-bulk-bar .toasts {
+    bottom: calc(24px + var(--bulk-bar-height) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* Confirmation dialog */
 .modal-backdrop {
   position: fixed;
