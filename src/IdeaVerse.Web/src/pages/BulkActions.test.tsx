@@ -120,6 +120,23 @@ describe('Bulk actions on the ideas list', () => {
     expect(screen.getByRole('checkbox', { name: 'Select Spring launch' })).not.toBeChecked();
   });
 
+  it('says no idea was changed, rather than counting none, when the change applies to none of them', async () => {
+    fakeApi({
+      ...signedIn,
+      [ideasRoute]: { status: 200, body: [launch, webinar] },
+      'POST /api/v1/ideas/bulk': bulkRoute([launch, webinar], { a: 'The idea was changed by someone else.', c: 'The idea was changed by someone else.' }),
+    });
+    renderApp('/ideas');
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Select all' }));
+    const bar = screen.getByRole('region', { name: 'Bulk actions' });
+
+    await userEvent.selectOptions(within(bar).getByLabelText('Change status'), 'Done');
+
+    expect(await screen.findByText('None of the 2 ideas could be changed.')).toBeInTheDocument();
+    expect(screen.queryByText(/Set 0 ideas/)).not.toBeInTheDocument();
+    expect(within(bar).getByText('2 selected')).toBeInTheDocument();
+  });
+
   it('keeps only the reasons, with nothing to act on, once the ideas left unchanged can no longer be selected', async () => {
     let refused = false;
     const calls = fakeApi({
