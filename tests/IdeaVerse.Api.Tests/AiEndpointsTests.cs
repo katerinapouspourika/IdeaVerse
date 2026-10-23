@@ -153,6 +153,29 @@ public class AiEndpointsTests
   }
 
   [Test]
+  [Arguments("Grow sign-ups for our spring webinars")]
+  [Arguments("Help our support team reduce first-response time without adding staff")]
+  public async Task Brainstorm_Brief_PromptIncludesGuidanceAndPreservesBrief(string brief)
+  {
+    await using var factory = new IdeaVerseApiFactory();
+    using var client = await factory.CreateSignedInClientAsync();
+    factory.Model.Answer("GenerateIdeas", GeneratedIdeas);
+    factory.Model.Answer("CritiqueIdeas", Critiques);
+
+    using var response = await client.PostAsJsonAsync(
+      $"/api/v1/workspaces/{await client.WorkspaceIdAsync()}/ai/brainstorm",
+      new BrainstormRequest(brief),
+      Json.Options);
+    var prompt = factory.Model.Prompts.Single(p => p.Operation == "GenerateIdeas");
+
+    await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+    await Assert.That(prompt.User).Contains(brief);
+    await Assert.That(prompt.User).Contains("Default to campaign, content, and launch ideas a marketing team could plan, run, and measure");
+    await Assert.That(prompt.User).Contains("If the brief specifies another team or purpose, follow that context instead of forcing a marketing angle");
+    await Assert.That(prompt.User).Contains("Respect the stated audience, goal, budget, and constraints; do not invent company facts or promise results");
+  }
+
+  [Test]
   public async Task Brainstorm_CritiquesInAnotherOrder_PairsThemByTitle()
   {
     await using var factory = new IdeaVerseApiFactory();

@@ -26,6 +26,9 @@ public sealed class ComponentSuggesterAgent(IStructuredModelClient client)
     Each suggestion is one concrete thing a team could tick off, with a short note on why it is needed.
     Order them by what should be started first, given the target date. Suggest at most eight.
     Never repeat anything the team already listed.
+    For marketing ideas, consider the audience, brief, creative, approvals, and measurement where relevant.
+    For ideas outside marketing, follow the team's stated purpose instead; do not force campaign tasks into its plan.
+    Do not invent company facts, budgets, or approvals.
     """;
 
   /// <summary>

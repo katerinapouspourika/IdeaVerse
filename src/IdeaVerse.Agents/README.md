@@ -29,6 +29,7 @@ dotnet run --project samples/IdeaVerse.Agents.Sample -- --topic "Helping remote 
 - **`IdeaImproverAgent`** critiques an existing idea and rewrites its title and description to answer the critique.
 - **`IdeationPipeline`** runs generate → critique → rank, then refines the top ideas concurrently.
 - Every agent uses structured outputs, so responses deserialize straight into C# records.
+- The component suggester and idea improver use marketing expertise for campaigns, content, and launches, but follow another team's stated purpose rather than forcing a marketing angle. They are instructed not to invent company facts or results. The generator stays general-purpose; the API supplies its marketing-first defaults through the request's constraints.
 - Requests are traced on the `Pouspourika.IdeaVerse.Agents` `ActivitySource`, tagged with model and token usage.
 
 ## Configuration

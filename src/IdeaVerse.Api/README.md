@@ -1,6 +1,6 @@
 # IdeaVerse.Api
 
-Web API for planning ideas in shared workspaces: each idea belongs to a company's workspace and has a target date, a status, an owner, a team, and the components it needs, and its team is reminded as the date approaches.
+Web API for planning ideas in shared workspaces, built first for marketing teams planning campaigns, content, and launches without restricting other teams. Each idea has a target date, a status, an owner, a team, and the components it needs, and its team is reminded as the date approaches.
 
 ## Getting Started
 

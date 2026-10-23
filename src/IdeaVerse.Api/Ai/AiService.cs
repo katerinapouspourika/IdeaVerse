@@ -141,7 +141,11 @@ public sealed partial class AiService(
       return new(AiOutcome.NotFound);
     }
 
-    var brief = new IdeationRequest(request.Brief.Trim(), ["Ideas a marketing team could plan, run, and measure"]);
+    var brief = new IdeationRequest(request.Brief.Trim(), [
+      "Default to campaign, content, and launch ideas a marketing team could plan, run, and measure",
+      "If the brief specifies another team or purpose, follow that context instead of forcing a marketing angle",
+      "Respect the stated audience, goal, budget, and constraints; do not invent company facts or promise results",
+    ]);
     return await RunAsync(workspaceId, token => RankAsync(brief, token), cancellationToken).ConfigureAwait(false);
   }
 

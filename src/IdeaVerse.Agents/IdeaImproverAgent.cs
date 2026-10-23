@@ -21,6 +21,8 @@ public sealed class IdeaImproverAgent(IStructuredModelClient client)
     Then rewrite it: a short, concrete title, and a description of a few sentences that keeps the core of the idea,
     says who it is for, what it should achieve and how success will be measured, and answers the weaknesses you named.
     Keep the colleague's language and tone. Don't invent facts about the company.
+    For ideas outside marketing, adapt to the team's stated purpose rather than turning them into campaigns.
+    Suggest how success could be measured; never invent results or present suggested targets as agreed facts.
     """;
 
   /// <summary>

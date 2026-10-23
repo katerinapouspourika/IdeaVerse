@@ -22,18 +22,23 @@ public class IdeaImproverAgentTests
   }
 
   [Test]
-  public async Task ImproveAsync_Idea_PromptIncludesTitleAndDescription()
+  [Arguments("Black Friday teaser", "TikTok series ahead of the sale")]
+  [Arguments("Reduce first response time", "A weekly support team process improvement")]
+  public async Task ImproveAsync_Idea_PromptIncludesGuidanceAndPreservesIdea(string title, string description)
   {
     StructuredPrompt? captured = null;
     client.CompleteAsync<IdeaImprovement>(Arg.Do<StructuredPrompt>(p => captured = p), Arg.Any<CancellationToken>())
       .Returns(new IdeaImprovement([], [], "Title", "Description"));
     var agent = new IdeaImproverAgent(client);
 
-    await agent.ImproveAsync(TestData.Brief);
+    await agent.ImproveAsync(new IdeaBrief(title, description, new DateOnly(2026, 11, 27)));
 
     await Assert.That(captured!.Operation).IsEqualTo("ImproveIdea");
-    await Assert.That(captured.User).Contains("Black Friday teaser");
-    await Assert.That(captured.User).Contains("TikTok series ahead of the sale");
+    await Assert.That(captured.User).Contains(title);
+    await Assert.That(captured.User).Contains(description);
+    await Assert.That(captured.System).Contains("For ideas outside marketing, adapt to the team's stated purpose rather than turning them into campaigns");
+    await Assert.That(captured.System).Contains("Suggest how success could be measured; never invent results or present suggested targets as agreed facts");
+    await Assert.That(captured.System).Contains("Don't invent facts about the company");
   }
 
   [Test]
