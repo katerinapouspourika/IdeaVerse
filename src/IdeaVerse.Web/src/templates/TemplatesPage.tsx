@@ -16,7 +16,7 @@ export function TemplatesPage() {
         <div className="landing-inner stack center">
           <p className="eyebrow">Templates</p>
           <h1 className="display">Start from a plan that already works</h1>
-          <p className="lead">Each template fills in a new idea with a date and a checklist of everything it needs. Change anything to fit.</p>
+          <p className="lead">Plan your next campaign, newsletter, or launch with a date and a checklist of what it needs. Other team plans are here too; change anything to fit.</p>
         </div>
       </section>
 

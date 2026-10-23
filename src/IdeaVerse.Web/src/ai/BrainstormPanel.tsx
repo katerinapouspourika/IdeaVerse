@@ -33,7 +33,11 @@ export function BrainstormPanel({ workspaceId, onPick, onClose }: BrainstormPane
         </button>
       </div>
       <form className="stack" onSubmit={submit} aria-label="Brainstorm">
-        <Field label="What do you want ideas for?" error={fieldError(brainstorm.error, 'brief')}>
+        <Field
+          label="What do you want ideas for?"
+          hint="Tell us your audience, goal, budget, and constraints. Campaigns are a good place to start, but any team’s brief is welcome."
+          error={fieldError(brainstorm.error, 'brief')}
+        >
           {(props) => (
             <textarea
               {...props}

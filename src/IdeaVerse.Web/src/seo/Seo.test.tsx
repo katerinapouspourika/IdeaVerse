@@ -47,7 +47,9 @@ describe('Remembered sign-in', () => {
     fakeApi(signedOut);
     renderApp('/');
 
-    expect(await screen.findByRole('heading', { level: 1, name: /Turn bright ideas/ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /Turn campaign ideas/ })).toBeInTheDocument();
+    expect(document.title).toBe('IdeaVerse — Turn campaign ideas into action');
+    expect(description()).toMatch(/marketing teams/);
     expect(localStorage.getItem('ideaverse.session')).toBeNull();
   });
 

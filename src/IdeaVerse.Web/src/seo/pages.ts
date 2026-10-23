@@ -6,7 +6,7 @@ export const siteName = 'IdeaVerse';
 
 /** One sentence on what IdeaVerse is, used where a page has no description of its own. */
 export const siteDescription =
-  'IdeaVerse helps teams capture ideas, plan what each one needs, share the work, and get reminded before dates slip.';
+  'IdeaVerse helps marketing teams turn campaign, content, and launch ideas into plans with clear owners, checklists, and reminders.';
 
 /** The image link previews show, in `public/`. */
 export const shareImagePath = '/og-image.png';
@@ -27,7 +27,7 @@ export const publicPages = {
   '/': {
     title: null,
     description:
-      'Turn bright ideas into done ideas. IdeaVerse is where teams capture ideas, plan what each one needs, assign the work, and get reminded before dates slip.',
+      'Turn campaign ideas into action. IdeaVerse helps marketing teams capture ideas, prioritise campaigns, assign the work, and stay on track for launch.',
   },
   '/how-it-works': {
     title: 'How it works',
@@ -56,12 +56,12 @@ export const publicPages = {
   '/templates': {
     title: 'Templates',
     description:
-      'Free idea templates for product launches, campaigns, events, hiring, website refreshes, newsletters, trade shows, customer research, and office moves, each with a checklist of everything it needs.',
+      'Start with free marketing templates for campaigns, product launches, newsletters, and more, plus flexible plans for other teams. Each includes a checklist.',
   },
   '/use-cases': {
     title: 'Use cases',
     description:
-      'How marketing teams, product teams, event planners, small businesses, people teams, and nonprofits use IdeaVerse to plan ideas and finish them on time.',
+      'Built for marketing teams planning campaigns, content, and launches, and flexible enough for product teams, small businesses, event planners, and more.',
   },
   '/compare': {
     title: 'Compare',
@@ -90,5 +90,5 @@ export const notFoundMeta: PageMeta = {
 
 /** The browser tab title for a page, such as "How it works · IdeaVerse". */
 export function fullTitle(title: string | null): string {
-  return title ? `${title} · ${siteName}` : `${siteName} — Plan ideas together, on time`;
+  return title ? `${title} · ${siteName}` : `${siteName} — Turn campaign ideas into action`;
 }

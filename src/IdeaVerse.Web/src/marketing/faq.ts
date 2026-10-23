@@ -4,6 +4,11 @@
  */
 export const faq: { question: string; answer: string }[] = [
   {
+    question: 'Who is IdeaVerse for?',
+    answer:
+      'IdeaVerse is built for marketing teams turning campaign, content, and launch ideas into action. Other teams are welcome too: workspaces, checklists, dates, and discussions work for any shared idea.',
+  },
+  {
     question: 'Is IdeaVerse free?',
     answer: 'Yes. IdeaVerse is free while it is in early access, with every feature included and no credit card needed.',
   },

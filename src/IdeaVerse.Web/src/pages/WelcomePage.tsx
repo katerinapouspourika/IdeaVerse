@@ -25,7 +25,7 @@ export function WelcomePage({ onCreated }: { onCreated?: () => void }) {
         </>
       ) : (
         <>
-          <p className="muted">Ideas live in a workspace you share with your company or team. Let’s set yours up; it takes a minute.</p>
+          <p className="muted">Bring your campaign, content, and launch ideas into one shared workspace. Planning something else? Any team is welcome.</p>
           <CompanyWorkspaces />
           <SetupSteps current={1} />
           <CreateWorkspaceForm heading="Name your workspace" onCreated={onCreated} askName />

@@ -48,7 +48,7 @@ export const useCases: UseCase[] = [
       { title: 'Plan what each needs', text: 'Break a campaign into the things it needs, assign each to someone with a due date, and track them on a board.' },
       { title: 'Reminders before dates', text: 'The team is reminded as dates approach, and overdue ideas stand out in red.' },
     ],
-    templates: ['marketing-campaign', 'customer-newsletter', 'product-launch'],
+    templates: ['marketing-campaign', 'customer-newsletter', 'product-launch', 'trade-show', 'customer-research'],
   },
   {
     slug: 'product-teams',

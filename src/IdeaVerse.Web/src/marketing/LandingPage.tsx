@@ -8,9 +8,9 @@ import { HeroClip } from './HeroClip';
 import { walkthroughs } from './walkthroughs';
 
 const features = [
-  { icon: <Lightbulb size={24} />, title: 'Capture every idea', text: 'Give each idea a title, a description, tags, and a date to make it real by.' },
-  { icon: <Puzzle size={24} />, title: 'Plan what it needs', text: 'Break ideas into components and tick them off. Progress shows at a glance.' },
-  { icon: <Users size={24} />, title: 'Work as a team', text: 'Shared workspaces, idea teams, comments, and tasks with owners and due dates.' },
+  { icon: <Lightbulb size={24} />, title: 'Capture every idea', text: 'Keep campaign, content, and launch ideas together, with tags and a target date.' },
+  { icon: <Puzzle size={24} />, title: 'Plan what it needs', text: 'List the brief, copy, creative, approvals, and tracking each idea needs. Tick them off as they’re ready.' },
+  { icon: <Users size={24} />, title: 'Work as a team', text: 'Give each piece of work an owner and a due date, and keep feedback in the idea’s discussion.' },
   {
     icon: <Target size={24} />,
     title: 'Decide what’s worth doing',
@@ -21,7 +21,7 @@ const features = [
     title: 'Never miss a date',
     text: 'A calendar of everything coming, and reminders a week before, the day before, and on the day — in your own time zone.',
   },
-  { icon: <Sparkles size={24} />, title: 'AI help when you want it', text: 'Brainstorm new ideas, suggest what an idea needs, and sharpen how it’s written.' },
+  { icon: <Sparkles size={24} />, title: 'AI help when you want it', text: 'Brainstorm campaign ideas, suggest what they need, and sharpen the audience, goal, and success measure. You choose what to keep.' },
 ];
 
 /** Short promises under the hero; each must stay true to the pricing page, the FAQ, and the Privacy Policy and Terms. */
@@ -35,12 +35,12 @@ export function LandingPage() {
       <section className="landing-hero">
         <div className="landing-inner hero-grid">
           <div className="stack">
-            <p className="eyebrow">Idea planning for teams</p>
+            <p className="eyebrow">Idea planning for marketing teams</p>
             <h1 className="display">
-              Turn bright ideas into <span className="highlight">done</span> ideas.
+              Turn campaign ideas into <span className="highlight">action</span>.
             </h1>
             <p className="lead">
-              IdeaVerse is where your team captures ideas, plans what each one needs, and gets reminded before dates slip.
+              Give your marketing team one place to capture ideas, decide what to run, and plan the work before launch dates slip.
             </p>
             <div className="row wrap">
               <Link to="/register" className="button primary large">
@@ -67,7 +67,7 @@ export function LandingPage() {
         <div className="landing-inner stack">
           <div className="section-heading">
             <h2 className="section-title">Everything an idea needs to happen</h2>
-            <p className="lead muted">Simple enough for one person, organised enough for the whole company.</p>
+            <p className="lead muted">Built around campaigns, content, and launches. Flexible enough for any team’s ideas.</p>
           </div>
           <ul className="feature-grid">
             {features.map((f) => (
@@ -107,7 +107,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <CtaBand title="Ready to make your next idea happen?" text="Free to start. Invite your team whenever you’re ready." />
+      <CtaBand title="Ready to plan your next campaign?" text="Start with an idea or a marketing template. Free during early access, with no credit card needed." />
     </div>
   );
 }
