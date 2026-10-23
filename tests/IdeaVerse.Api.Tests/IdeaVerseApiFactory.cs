@@ -26,7 +26,11 @@ using Pouspourika.IdeaVerse.Api.Workspaces;
 /// </remarks>
 /// <param name="webRoot">Optional folder to serve as the web app's <c>wwwroot</c>.</param>
 /// <param name="settings">Optional configuration overrides, such as AI help settings.</param>
-internal sealed class IdeaVerseApiFactory(string? webRoot = null, IReadOnlyDictionary<string, string?>? settings = null) : WebApplicationFactory<Program>
+/// <param name="configureTestServices">Optional additional service overrides for a test.</param>
+internal sealed class IdeaVerseApiFactory(
+  string? webRoot = null,
+  IReadOnlyDictionary<string, string?>? settings = null,
+  Action<IServiceCollection>? configureTestServices = null) : WebApplicationFactory<Program>
 {
   public const string Password = "Passw0rd!-long";
 
@@ -125,6 +129,8 @@ internal sealed class IdeaVerseApiFactory(string? webRoot = null, IReadOnlyDicti
 
       services.RemoveAll<TimeProvider>();
       services.AddSingleton<TimeProvider>(Time);
+
+      configureTestServices?.Invoke(services);
     });
   }
 

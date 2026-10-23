@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json.Serialization;
 
 using Anthropic;
@@ -15,8 +16,10 @@ using Pouspourika.IdeaVerse.Api.Comments;
 using Pouspourika.IdeaVerse.Api.Components;
 using Pouspourika.IdeaVerse.Api.Contact;
 using Pouspourika.IdeaVerse.Api.Data;
+using Pouspourika.IdeaVerse.Api.Deployment;
 using Pouspourika.IdeaVerse.Api.Discovery;
 using Pouspourika.IdeaVerse.Api.Email;
+using Pouspourika.IdeaVerse.Api.Health;
 using Pouspourika.IdeaVerse.Api.Ideas;
 using Pouspourika.IdeaVerse.Api.Invitations;
 using Pouspourika.IdeaVerse.Api.InviteLinks;
@@ -82,12 +85,22 @@ builder.Services.AddScoped<AiService>();
 builder.Services.AddHostedService<ReminderWorker>();
 builder.Services.AddContactForm();
 builder.Services.AddWebAppCompression();
+builder.Services.AddOperationalHealth();
+using var keyCertificate = Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider"
+  ? null
+  : builder.ConfigureDeployment();
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
 app.UseSecurityHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+if (app.Environment.IsProduction() || app.Environment.IsStaging())
+{
+  app.UseHsts();
+}
+
 app.UseWebAppFiles();
 
 if (app.Environment.IsDevelopment())
@@ -113,6 +126,7 @@ app.MapCommentEndpoints();
 app.MapNotificationEndpoints();
 app.MapAiEndpoints();
 app.MapContactEndpoints();
+app.MapOperationalHealth();
 app.MapWebAppFallback();
 
 await app.MigrateDatabaseIfEnabledAsync();
