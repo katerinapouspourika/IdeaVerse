@@ -148,6 +148,10 @@ Notifications that no longer concern the user (they left the team or workspace, 
 | `Auth:RequireConfirmedEmail` | `true` | Accounts must confirm their email before signing in. |
 | `ConnectionStrings:IdeaVerse` | local `ideaverse` database in Development | PostgreSQL connection string. |
 | `Database:MigrateOnStartup` | `true` in Development, otherwise `false` | Applies pending EF Core migrations at startup. Other environments use the Docker `migrations` target. |
+| `Deployment:KeyRingPath` | empty | Absolute path to a persistent, writable directory for Data Protection keys. Required in Production and Staging; separate directories per environment. |
+| `Deployment:CertificatePath` | empty | Absolute path to a PKCS#12 certificate with its private key, required alongside `KeyRingPath` to encrypt keys at rest. |
+| `Deployment:CertificatePassword` | empty | Certificate password, supplied through secrets or environment configuration, never committed. |
+| `Deployment:TrustedProxies` | `[]` | Exact proxy IP addresses trusted for one hop of `X-Forwarded-For` and `X-Forwarded-Proto`. No forwarded headers are accepted when empty. |
 | `Reminders:Enabled` | `true` | Runs the reminder background job. |
 | `Reminders:Interval` | `00:01:00` | How often the job runs; a minute keeps the 15-minute start reminders on time. |
 | `Reminders:SendAt` | `08:00` | Local time of day from which each person's reminders go out, in their own time zone. |
@@ -168,8 +172,12 @@ Notifications that no longer concern the user (they left the team or workspace, 
 
 ## Caveats
 
+Production and Staging fail startup without persistent encrypted keys (using an RSA certificate), a database connection, an absolute HTTPS `App:PublicUrl`, or SMTP with required TLS and a valid non-placeholder sender. Automatic startup migrations are refused in those environments. Authentication cookies are HTTPS-only, and HTTPS responses include HSTS. Development and Testing retain their existing local behavior. The framework's build-time OpenAPI entry point skips deployment-only setup so builds do not need production secrets; running the application normally does not bypass these checks. See the [production runbook](../../docs/production.md) for deployment, restore, and rollback procedures.
+
+Anonymous operational probes are available at `/api/v1/health/live` (process only) and `/api/v1/health/ready` (database connectivity, with a five-second check timeout). Healthy probes return 200 and `Healthy`; failed readiness returns 503 problem details without dependency exception details. These are not schema/migration checks and do not call SMTP or Claude. Keep them out of public caching and use readiness, not liveness, to withdraw traffic during a database outage.
+
 > [!WARNING]
-> The contact form's rate limit is per client address as the API sees it. Behind a reverse proxy or load balancer, configure ASP.NET Core's forwarded headers for that proxy before going live; otherwise every visitor shares the proxy's address and one limit.
+> The contact form's rate limit is per client address as the API sees it. Behind a reverse proxy or load balancer, configure its exact IP in `Deployment:TrustedProxies`; otherwise every visitor shares the proxy's address and one limit. Only one proxy hop is supported by this configuration.
 
 > [!NOTE]
 > "Today" is each user's local date in their time zone: it decides `isOverdue`, whether a new or changed target date is in the past, and reminder stages and wording. Target dates themselves are plain dates with no time zone. The Docker image's `-extra` Alpine base includes the time zone database this needs.
@@ -184,4 +192,4 @@ Notifications that no longer concern the user (they left the team or workspace, 
 > The `AddsWorkspaces` migration gives every existing account a workspace of its own, moves its ideas there, and adds the people on their teams as members, so nobody loses sight of an idea. Because everyone in a workspace sees all of its ideas, those team members also start seeing the owner's other ideas.
 
 > [!IMPORTANT]
-> Cookie encryption keys are not yet persisted. Before deploying more than one instance, or a container that restarts, configure ASP.NET Core Data Protection to store keys outside the container, or users will be signed out.
+> Mount `Deployment:KeyRingPath` outside the container and retain the encryption certificate and private key across restarts. Losing either invalidates protected data, including login cookies and confirmation/reset tokens. Only the app's runtime identity should access them. Persistent keys do not make the reminder job safe for multiple instances.
