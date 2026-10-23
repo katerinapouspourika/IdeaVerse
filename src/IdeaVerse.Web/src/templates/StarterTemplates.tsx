@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { findTemplate, type IdeaTemplate } from './templates';
 
 /** The templates offered to a workspace with no ideas yet, as a quicker start than a blank idea. */
-const starterSlugs = ['product-launch', 'marketing-campaign', 'company-event'];
+const starterSlugs = ['marketing-campaign', 'customer-newsletter', 'product-launch'];
 
 /** Links that open the New idea form filled in from one of the starter templates. */
 export function StarterTemplates() {

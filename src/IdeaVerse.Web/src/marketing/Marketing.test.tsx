@@ -31,7 +31,9 @@ describe('Public pages', () => {
     fakeApi(signedOut);
     const router = renderApp('/');
 
-    expect(await screen.findByRole('heading', { level: 1, name: /Turn bright ideas into done ideas/ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /Turn campaign ideas into action/ })).toBeInTheDocument();
+    expect(screen.getByText('Idea planning for marketing teams')).toBeInTheDocument();
+    expect(screen.getByText(/Flexible enough for any team’s ideas/)).toBeInTheDocument();
     await userEvent.click(within(screen.getByRole('main')).getAllByRole('link', { name: 'Get started free' })[0]!);
 
     expect(await screen.findByRole('heading', { name: 'Create your account' })).toBeInTheDocument();

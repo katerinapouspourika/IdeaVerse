@@ -9,6 +9,25 @@ import { findTemplate, templates } from './templates';
 const launch = findTemplate('product-launch')!;
 
 describe('Template gallery', () => {
+  it('offers marketing starter plans without removing templates for other teams', async () => {
+    fakeApi({ ...signedIn, [ideasRoute]: { status: 200, body: [] } });
+    renderApp('/ideas');
+
+    const main = within(await screen.findByRole('main'));
+    await main.findByRole('link', { name: 'Start from Marketing campaign' });
+    expect(main.getAllByRole('link', { name: /^Start from / }).map((link) => link.textContent)).toEqual([
+      'Start from Marketing campaign',
+      'Start from Customer newsletter',
+      'Start from Product launch',
+    ]);
+    await userEvent.click(main.getByRole('link', { name: 'Start from Marketing campaign' }));
+
+    const form = await screen.findByRole('form', { name: 'New idea' });
+    expect(within(form).getByLabelText('Start from')).toHaveValue('marketing-campaign');
+    await userEvent.selectOptions(within(form).getByLabelText('Start from'), 'hiring');
+    expect(within(form).getByLabelText('Start from')).toHaveValue('hiring');
+  });
+
   it('lists every template and opens one', async () => {
     fakeApi(signedOut);
     const router = renderApp('/templates');

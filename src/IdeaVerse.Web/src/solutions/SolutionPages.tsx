@@ -41,7 +41,7 @@ export function UseCasesPage() {
   usePageMeta(publicPages['/use-cases'].title, { description: publicPages['/use-cases'].description });
   return (
     <div className="landing">
-      <Hero eyebrow="Use cases" title="Made for teams with more ideas than time" lead="See how different teams use IdeaVerse to plan their ideas and finish them on time." />
+      <Hero eyebrow="Use cases" title="Made for teams with more ideas than time" lead="Built for marketing teams planning campaigns, content, and launches. See how other teams make it their own too." />
       <section className="landing-section">
         <ul className={`landing-inner ${cardGridClass(useCases.length)}`}>
           {useCases.map((u) => (
